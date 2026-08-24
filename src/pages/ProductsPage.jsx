@@ -7,7 +7,7 @@ import {
   Compass, Cpu
 } from 'lucide-react';
 import useCart from '../hooks/useCart';
-import { supabase } from '../supabaseClient';
+import { fetchStoreProducts, DEFAULT_PRODUCTS } from '../utils/productStore';
 import ProductCard from '../components/product/ProductCard';
 
 const containerVariants = {
@@ -28,44 +28,11 @@ const cardVariants = {
   },
 };
 
-const DEFAULT_PRODUCTS = [
-  {
-    id: "sync-screenguard-ez-fit",
-    name: "Sync EZ Fit Glass Screenguard",
-    category: "glass",
-    price: 640,
-    original_price: 999,
-    description: "Automatic auto-aligning ion-tempered glass.",
-    stock: 120,
-    images: ["https://images.unsplash.com/photo-1611532736597-de2d4265fba3?auto=format&fit=crop&q=80&w=600"],
-    rating: 4.9,
-  },
-  {
-    id: "sync-matte-privacy-ez-fit",
-    name: "Sync 28° Matte Privacy Glass",
-    category: "privacy",
-    price: 799,
-    original_price: 1299,
-    description: "Military-grade 28° privacy louver technology.",
-    stock: 85,
-    images: ["https://images.unsplash.com/photo-1581090464711-c30ec09b2e2d?auto=format&fit=crop&q=80&w=600"],
-    rating: 4.85,
-  },
-  {
-    id: "sync-diamond-sparkle-ez-fit",
-    name: "Sync Diamond Sparkle Guard",
-    category: "sparkle",
-    price: 890,
-    original_price: 1499,
-    description: "Light-refractive diamond crystal finish.",
-    stock: 65,
-    images: ["https://images.unsplash.com/photo-1605236453806-6ff36851218e?auto=format&fit=crop&q=80&w=600"],
-    rating: 4.92,
-  }
-];
+
 
 export default function ProductsPage() {
-  const [products, setProducts] = useState(DEFAULT_PRODUCTS);
+  const [products, setProducts] = useState([]);
+  const [categoriesList, setCategoriesList] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [sortBy, setSortBy] = useState('featured');
@@ -74,17 +41,42 @@ export default function ProductsPage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    async function loadProducts() {
-      const { data } = await supabase.from('products').select('*');
-      if (data && data.length > 0) setProducts([...data, ...DEFAULT_PRODUCTS]);
+    async function loadData() {
+      const [items, cats] = await Promise.all([
+        fetchStoreProducts(),
+        fetchCategories()
+      ]);
+      setProducts(items || []);
+      setCategoriesList(cats || []);
     }
-    loadProducts();
+    loadData();
+
+    window.addEventListener('products_updated', loadData);
+    window.addEventListener('categories_updated', loadData);
+    window.addEventListener('storage', loadData);
+    return () => {
+      window.removeEventListener('products_updated', loadData);
+      window.removeEventListener('categories_updated', loadData);
+      window.removeEventListener('storage', loadData);
+    };
   }, []);
+
+  const filterTabs = useMemo(() => {
+    return [
+      { id: 'all', name: 'All Products' },
+      { id: 'bestseller', name: '🔥 Best Sellers' },
+      ...categoriesList.map(c => ({ id: c.id, name: c.name }))
+    ];
+  }, [categoriesList]);
 
   const processedProducts = useMemo(() => {
     let result = [...products];
     if (searchQuery) result = result.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()));
-    if (categoryFilter !== 'all') result = result.filter(p => p.category === categoryFilter);
+    if (categoryFilter === 'bestseller') {
+      result = result.filter(p => p.is_best_seller);
+    } else if (categoryFilter !== 'all') {
+      result = result.filter(p => p.category === categoryFilter);
+    }
     if (sortBy === 'price-low') result.sort((a, b) => a.price - b.price);
     if (sortBy === 'price-high') result.sort((a, b) => b.price - a.price);
     return result;
@@ -155,12 +147,16 @@ export default function ProductsPage() {
           </div>
 
           <div className="flex items-center gap-3 overflow-x-auto w-full no-scrollbar pb-2 xl:pb-0">
-            {['all', 'glass', 'privacy', 'sparkle'].map(cat => (
+            {filterTabs.map((tab) => (
               <button 
-                key={cat} onClick={() => setCategoryFilter(cat)}
-                className={`px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${categoryFilter === cat ? 'bg-sky-600 text-sky-50 shadow-lg shadow-sky-400/40' : 'bg-sky-300/20 text-sky-600 border border-sky-400/20 hover:bg-sky-300/40'}`}
+                key={tab.id} onClick={() => setCategoryFilter(tab.id)}
+                className={`px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
+                  categoryFilter === tab.id 
+                    ? (tab.id === 'bestseller' ? 'bg-amber-500 text-slate-950 shadow-lg shadow-amber-500/40' : 'bg-sky-600 text-sky-50 shadow-lg shadow-sky-400/40') 
+                    : 'bg-sky-300/20 text-sky-600 border border-sky-400/20 hover:bg-sky-300/40'
+                }`}
               >
-                {cat}
+                {tab.name}
               </button>
             ))}
           </div>
@@ -179,18 +175,36 @@ export default function ProductsPage() {
         </motion.div>
 
         {/* Product Grid - 2 columns on mobile, 3/4 columns on laptop */}
-        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6 lg:gap-8 items-stretch">
-          <AnimatePresence mode="popLayout">
-            {processedProducts.map((p) => (
-              <ProductCard
-                key={p.id}
-                product={p}
-                onAddToCart={handleAddToCart}
-                isAdded={!!addedMap[p.id]}
-              />
-            ))}
-          </AnimatePresence>
-        </div>
+        {processedProducts.length > 0 ? (
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6 lg:gap-8 items-stretch">
+            <AnimatePresence mode="popLayout">
+              {processedProducts.map((p) => (
+                <ProductCard
+                  key={p.id}
+                  product={p}
+                  onAddToCart={handleAddToCart}
+                  isAdded={!!addedMap[p.id]}
+                />
+              ))}
+            </AnimatePresence>
+          </div>
+        ) : (
+          <div className="bg-sky-200/40 border border-sky-300/50 rounded-[40px] p-16 text-center max-w-xl mx-auto space-y-4 my-12">
+            <div className="w-14 h-14 rounded-3xl bg-sky-300/40 text-sky-700 flex items-center justify-center mx-auto">
+              <ShieldCheck className="w-8 h-8" />
+            </div>
+            <h3 className="text-2xl font-black text-sky-950 uppercase tracking-tight">No Products Added Yet</h3>
+            <p className="text-xs text-sky-700 font-bold uppercase tracking-wider leading-relaxed">
+              Only admin-added products are shown in the catalog. Log in to the Admin Panel to add new products.
+            </p>
+            <button
+              onClick={() => navigate('/admin/products')}
+              className="px-8 py-4 bg-sky-900 text-sky-50 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-sky-800 transition-all inline-flex items-center gap-2 cursor-pointer shadow-lg"
+            >
+              Add Product in Admin Panel
+            </button>
+          </div>
+        )}
 
         {/* Trust Interface: Horizontal Glass Bar */}
         <section className="p-8 sm:p-12 rounded-[50px] bg-sky-900 border border-sky-500/30 grid grid-cols-1 md:grid-cols-3 gap-10">

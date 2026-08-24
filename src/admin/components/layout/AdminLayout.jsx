@@ -25,7 +25,7 @@ export default function AdminLayout() {
         <AdminHeader onMenuToggle={toggleSidebar} />
 
         {/* Dynamic Page Outlet Container */}
-        <main className="flex-grow overflow-x-hidden overflow-y-auto p-4 sm:p-6 lg:p-8 bg-slate-950">
+        <main className="flex-grow overflow-x-hidden overflow-y-auto p-3.5 sm:p-6 lg:p-8 bg-slate-950">
           <Outlet />
         </main>
       </div>

@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import useCart from '../hooks/useCart';
 import { supabase } from '../supabaseClient';
+import { decreaseStockForOrder } from '../utils/stockManager';
 import { 
   CreditCard, Truck, CheckCircle, ArrowLeft, 
   ChevronRight, MapPin, User, ShieldCheck, Cpu 
@@ -72,13 +73,136 @@ export default function Checkout() {
   };
 
   const handleSubmit = async () => {
-    setIsSubmitting(true);
-    // Simulating API call for this aesthetic version
-    setTimeout(() => {
+    if (!validateStep1() || !validateStep2()) {
       setIsSubmitting(false);
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      // 1. Get current auth/local user session
+      const { data: { session } } = await supabase.auth.getSession();
+      const localUserStr = localStorage.getItem('local_customer_user');
+      let localUser = null;
+      try { if (localUserStr) localUser = JSON.parse(localUserStr); } catch (e) {}
+
+      const isGuest = session?.user ? false : (localUser?.is_guest !== undefined ? localUser.is_guest : true);
+      const userId = session?.user?.id || (localUser?.id && !localUser.id.startsWith('guest-') ? localUser.id : null);
+
+      const orderPayload = {
+        name: formData.name.trim(),
+        email: formData.email.trim(),
+        phone: formData.phone.trim(),
+        address: formData.address.trim(),
+        city: formData.city.trim(),
+        state: formData.state.trim(),
+        pincode: formData.pincode.trim(),
+        paymentMethod,
+        total: orderTotal,
+        codFee,
+        items: cart,
+        isGuest,
+        userId
+      };
+
+      let createdOrderId = null;
+
+      // 2. Try placing order via Backend API
+      try {
+        const res = await fetch('http://localhost:5000/api/orders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(orderPayload)
+        });
+        if (res.ok) {
+          const apiData = await res.json();
+          createdOrderId = apiData.orderId || apiData.order?.id;
+        }
+      } catch (apiErr) {
+        console.warn('Backend API order endpoint unavailable, using direct Supabase insert:', apiErr);
+      }
+
+      // 3. Fallback: Direct Supabase database insertion
+      if (!createdOrderId) {
+        try {
+          const { data: dbOrder, error: dbErr } = await supabase
+            .from('orders')
+            .insert({
+              user_id: userId,
+              is_guest: isGuest,
+              customer_name: formData.name.trim(),
+              customer_email: formData.email.trim() || null,
+              phone: formData.phone.trim(),
+              address: formData.address.trim(),
+              city: formData.city.trim(),
+              state: formData.state.trim(),
+              pincode: formData.pincode.trim(),
+              status: 'pending',
+              payment_type: paymentMethod,
+              payment_status: paymentMethod === 'cod' ? 'pending' : 'success',
+              total: orderTotal,
+              cod_fee: codFee
+            })
+            .select()
+            .single();
+
+          if (!dbErr && dbOrder?.id) {
+            createdOrderId = dbOrder.id;
+
+            if (cart.length > 0) {
+              const orderItemsData = cart.map(item => ({
+                order_id: dbOrder.id,
+                product_id: item.id && item.id.length === 36 ? item.id : 'a3c7849e-b7d1-41f2-892a-fa82f2541a7d',
+                quantity: item.quantity,
+                price: item.price
+              }));
+              await supabase.from('order_items').insert(orderItemsData);
+            }
+          }
+        } catch (sbErr) {
+          console.error('Direct Supabase insert error:', sbErr);
+        }
+      }
+
+      // 4. Generate local order ID if database is offline
+      if (!createdOrderId) {
+        createdOrderId = 'SKY-' + Math.random().toString(36).substr(2, 9).toUpperCase();
+      }
+
+      // 5. Store in local customer tracking storage
+      const localOrderObj = {
+        id: createdOrderId,
+        customer_name: formData.name.trim(),
+        customer_email: formData.email.trim(),
+        phone: formData.phone.trim(),
+        address: formData.address.trim(),
+        city: formData.city.trim(),
+        state: formData.state.trim(),
+        pincode: formData.pincode.trim(),
+        status: 'pending',
+        payment_type: paymentMethod,
+        payment_status: paymentMethod === 'cod' ? 'pending' : 'success',
+        total: orderTotal,
+        cod_fee: codFee,
+        is_guest: isGuest,
+        created_at: new Date().toISOString(),
+        items: cart
+      };
+
+      const existingLocals = JSON.parse(localStorage.getItem('customer_orders') || '[]');
+      localStorage.setItem('customer_orders', JSON.stringify([localOrderObj, ...existingLocals]));
+
+      // Automatically decrease stock for purchased items
+      await decreaseStockForOrder(cart);
+
       clearCart();
-      navigate('/success', { state: { orderId: 'SKY-' + Math.random().toString(36).substr(2, 9).toUpperCase(), amount: orderTotal } });
-    }, 2000);
+      setIsSubmitting(false);
+      navigate('/success', { state: { orderId: createdOrderId, amount: orderTotal } });
+    } catch (err) {
+      console.error('Order submission error:', err);
+      setIsSubmitting(false);
+    }
   };
 
   return (

@@ -28,15 +28,27 @@ export async function ensureStorageBucketExists() {
       public: true
     });
     if (error) {
-      if (error.message?.includes('already exists') || error.status === 409) {
-        console.log("Supabase storage bucket 'product-images' already exists.");
+      if (
+        error.message?.includes('already exists') ||
+        error.status === 409 ||
+        error.message?.includes('duplicate')
+      ) {
+        // Bucket already exists — this is fine
+      } else if (
+        error.message?.includes('row-level security') ||
+        error.message?.includes('policy') ||
+        error.message?.includes('permission')
+      ) {
+        // This happens when SUPABASE_SERVICE_ROLE_KEY is not set correctly.
+        // Run: npm run db:setup <your-service-role-key>  to fix this once.
+        // The bucket will be created automatically during setup.
       } else {
-        console.warn("Could not create Supabase storage bucket 'product-images':", error.message);
+        console.warn(`⚠️  Storage bucket setup skipped: ${error.message}`);
       }
     } else {
-      console.log("Successfully verified/created Supabase storage bucket 'product-images'.");
+      console.log("✅ Storage bucket 'product-images' ready.");
     }
   } catch (err) {
-    console.error("Error creating storage bucket:", err.message);
+    // Non-critical — app works without storage bucket for now
   }
 }

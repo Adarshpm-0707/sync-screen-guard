@@ -23,24 +23,11 @@ import Dashboard from './admin/pages/Dashboard';
 import Orders from './admin/pages/Orders';
 import OrderDetail from './admin/pages/OrderDetail';
 import Products from './admin/pages/Products';
+import Inventory from './admin/pages/Inventory';
+import Categories from './admin/pages/Categories';
 import Shipments from './admin/pages/Shipments';
 import Settings from './admin/pages/Settings';
 import AdminNotFound from './admin/pages/AdminNotFound';
-
-// Shareable flagship product config
-const FLAGSHIP_PRODUCT = {
-  id: 'sync-screenguard-ez-fit',
-  name: 'Sync EZ Fit Glass Screenguard',
-  price: 640,
-  original_price: 999,
-  description: 'Our premium tempered glass screenguard comes with the revolutionary EZ Fit alignment box. No alignment issues, no dust, no bubbles—just perfect, edge-to-edge application in less than 30 seconds.',
-  stock: 120,
-  images: [
-    'https://images.unsplash.com/photo-1611532736597-de2d4265fba3?auto=format&fit=crop&q=80&w=600',
-    'https://images.unsplash.com/photo-1581090464711-c30ec09b2e2d?auto=format&fit=crop&q=80&w=600',
-    'https://images.unsplash.com/photo-1605236453806-6ff36851218e?auto=format&fit=crop&q=80&w=600'
-  ]
-};
 
 import { CustomerThemeProvider, useCustomerTheme } from './context/CustomerThemeContext';
 
@@ -49,7 +36,7 @@ function CustomerLayoutWrapper() {
 
   return (
     <div
-      className="relative flex min-h-screen flex-col antialiased text-neutral-950 transition-colors duration-700 overflow-x-hidden"
+      className="relative flex min-h-screen flex-col antialiased text-neutral-950 transition-colors duration-700"
       style={{
         background: `linear-gradient(to bottom, ${activeTheme.bgFrom}, ${activeTheme.bgMid}, ${activeTheme.bgTo})`,
         transition: 'background 0.8s cubic-bezier(0.4,0,0.2,1)',
@@ -93,9 +80,9 @@ export default function AppRoutes() {
     <Routes>
       {/* Customer Pages */}
       <Route path="/" element={<Layout />}>
-        <Route index element={<Home product={FLAGSHIP_PRODUCT} />} />
+        <Route index element={<Home />} />
         <Route path="products" element={<ProductsPage />} />
-        <Route path="product" element={<ProductDetail product={FLAGSHIP_PRODUCT} />} />
+        <Route path="product" element={<ProductDetail />} />
         <Route path="cart" element={<Cart />} />
         <Route path="checkout" element={<Checkout />} />
         <Route path="success" element={<OrderSuccess />} />
@@ -114,6 +101,8 @@ export default function AppRoutes() {
           <Route path="orders" element={<Orders />} />
           <Route path="orders/:id" element={<OrderDetail />} />
           <Route path="products" element={<Products />} />
+          <Route path="inventory" element={<Inventory />} />
+          <Route path="categories" element={<Categories />} />
           <Route path="shipments" element={<Shipments />} />
           <Route path="settings" element={<Settings />} />
           <Route path="*" element={<AdminNotFound />} />

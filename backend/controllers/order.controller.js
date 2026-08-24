@@ -15,14 +15,23 @@ export async function createOrder(req, res, next) {
       paymentMethod,
       total,
       codFee,
-      items
+      items,
+      isGuest,
+      is_guest,
+      userId,
+      user_id
     } = req.body;
+
+    const guestFlag = isGuest !== undefined ? Boolean(isGuest) : (is_guest !== undefined ? Boolean(is_guest) : !(userId || user_id));
+    const effectiveUserId = userId || user_id || null;
 
     const newOrderId = 'ORD-' + Math.floor(Math.random() * 900000 + 100000);
     const createdAt = new Date().toISOString();
 
     const orderData = {
       id: newOrderId,
+      user_id: effectiveUserId,
+      is_guest: guestFlag,
       customer_name: name,
       customer_email: email || '',
       phone: phone,
@@ -65,6 +74,8 @@ export async function createOrder(req, res, next) {
     const { data: dbOrder, error: orderErr } = await supabaseAdmin
       .from('orders')
       .insert({
+        user_id: effectiveUserId,
+        is_guest: guestFlag,
         customer_name: name,
         customer_email: email || null,
         phone: phone,

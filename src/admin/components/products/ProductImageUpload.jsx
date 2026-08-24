@@ -1,176 +1,225 @@
-import React, { useState } from 'react';
-import { Upload, X, Link as LinkIcon, AlertCircle } from 'lucide-react';
-import { supabase } from '../../../supabaseClient';
-import AdminButton from '../common/AdminButton';
+import React, { useState, useRef } from 'react';
+import { Upload, X, Link as LinkIcon, AlertCircle, CheckCircle, ImageIcon } from 'lucide-react';
 
 export default function ProductImageUpload({ images = [], onImagesChange }) {
   const [urlInput, setUrlInput] = useState('');
-  const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState('');
-  const [diagnostics, setDiagnostics] = useState('');
-  const [diagnosing, setDiagnosing] = useState(false);
+  const [status, setStatus] = useState(null); // { type: 'error'|'success', msg }
+  const [converting, setConverting] = useState(false);
+  const fileInputRef = useRef(null);
 
+  // ── Show status then auto-clear ───────────────────────────────────────────
+  const showStatus = (type, msg, ms = 3000) => {
+    setStatus({ type, msg });
+    setTimeout(() => setStatus(null), ms);
+  };
+
+  // ── Add image via URL ─────────────────────────────────────────────────────
   const handleUrlAdd = (e) => {
     e.preventDefault();
-    if (urlInput.trim()) {
-      onImagesChange([...images, urlInput.trim()]);
-      setUrlInput('');
+    const val = urlInput.trim();
+    if (!val) return;
+    if (!val.startsWith('http')) {
+      showStatus('error', 'Please enter a valid URL starting with http(s)://');
+      return;
     }
+    onImagesChange([...images, val]);
+    setUrlInput('');
+    showStatus('success', 'Image URL added successfully.');
   };
 
-  const handleRemoveImage = (indexToRemove) => {
-    onImagesChange(images.filter((_, idx) => idx !== indexToRemove));
-  };
-
+  // ── Upload file → convert to base64 → store in DB ─────────────────────────
   const handleFileUpload = async (e) => {
-    const file = e.target.files[0];
+    const file = e.target.files?.[0];
     if (!file) return;
-    
-    setUploading(true);
-    setError('');
+
+    // Validate type & size (max 2MB)
+    if (!file.type.startsWith('image/')) {
+      showStatus('error', 'Please select an image file (JPG, PNG, WebP, etc.)');
+      e.target.value = '';
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      showStatus('error', 'Image too large. Please use an image under 2MB.');
+      e.target.value = '';
+      return;
+    }
+
+    setConverting(true);
+    setStatus(null);
 
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}-${Math.floor(Math.random() * 1000)}.${fileExt}`;
-      const filePath = `products/${fileName}`;
-
-      // Best-effort automatic bucket creation
-      try {
-        await supabase.storage.createBucket('product-images', { public: true });
-      } catch (e) {
-        // Ignore error if it already exists or if client permissions restrict bucket management
-      }
-
-      // Upload file to Supabase storage bucket 'product-images'
-      const { data, error: uploadError } = await supabase.storage
-        .from('product-images')
-        .upload(filePath, file);
-
-      if (uploadError) {
-        throw uploadError;
-      }
-
-      // Retrieve public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('product-images')
-        .getPublicUrl(filePath);
-
-      onImagesChange([...images, publicUrl]);
+      const dataUrl = await readFileAsDataURL(file);
+      onImagesChange([...images, dataUrl]);
+      showStatus('success', `"${file.name}" uploaded successfully.`);
     } catch (err) {
-      console.error('Error uploading image to Supabase:', err);
-      setError(err.message || 'Failed to upload image asset.');
+      showStatus('error', 'Failed to read image. Please try again.');
     } finally {
-      setUploading(false);
+      setConverting(false);
+      e.target.value = '';
     }
   };
 
-  const runDiagnostics = async () => {
-    setDiagnosing(true);
-    setDiagnostics('Running...');
-    try {
-      const currentUrl = supabase.supabaseUrl;
-      const keyLength = supabase.supabaseKey?.length || 0;
-      let logs = `Supabase URL: ${currentUrl}\nKey Length: ${keyLength}\n`;
-
-      logs += 'Testing connection... ';
-      const { data: dbTest, error: dbError } = await supabase.from('products').select('id').limit(1);
-      if (dbError) {
-        logs += `FAIL (${dbError.message})\n`;
-      } else {
-        logs += 'OK (Connected to Products)\n';
-      }
-
-      logs += 'Checking Storage... ';
-      const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
-      if (bucketsError) {
-        logs += `FAIL (${bucketsError.message})\n`;
-      } else {
-        const bucketNames = buckets.map(b => b.name).join(', ') || 'none';
-        logs += `OK (Found buckets: ${bucketNames})\n`;
-      }
-
-      logs += 'Attempting to create bucket... ';
-      const { data: createData, error: createError } = await supabase.storage.createBucket('product-images', { public: true });
-      if (createError) {
-        logs += `FAIL (${createError.message})\n`;
-      } else {
-        logs += 'SUCCESS (Created/Verified bucket)\n';
-      }
-
-      setDiagnostics(logs);
-    } catch (err) {
-      setDiagnostics(prev => prev + `\nUnexpected Error: ${err.message}`);
-    } finally {
-      setDiagnosing(false);
-    }
+  // ── Drag & drop support ───────────────────────────────────────────────────
+  const handleDrop = async (e) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files?.[0];
+    if (!file) return;
+    // Re-use same logic by triggering synthetic event
+    await handleFileUpload({ target: { files: [file], value: '' } });
   };
+
+  const handleDragOver = (e) => e.preventDefault();
+
+  const handleRemoveImage = (idx) => {
+    onImagesChange(images.filter((_, i) => i !== idx));
+  };
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+  const readFileAsDataURL = (file) =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => resolve(e.target.result);
+      reader.onerror = () => reject(new Error('FileReader error'));
+      reader.readAsDataURL(file);
+    });
 
   return (
-    <div className="space-y-4">
-      {/* File selector */}
-      <div className="w-full">
-        {/* Supabase Storage File Upload */}
-        <div className="border border-dashed border-slate-800 rounded-2xl p-6 flex flex-col items-center justify-center text-center bg-slate-950/20 hover:border-primary-500/50 transition-colors">
-          <Upload className="h-8 w-8 text-slate-550 mb-2" />
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Upload via Supabase Storage</span>
-          <label className="mt-3 inline-flex items-center justify-center px-4 py-2 border border-slate-800 bg-slate-900 text-white rounded-xl text-[10px] font-bold uppercase tracking-wider cursor-pointer hover:bg-slate-800">
-            {uploading ? 'Uploading...' : 'Choose File'}
-            <input 
-              type="file" 
-              accept="image/*" 
-              onChange={handleFileUpload} 
-              disabled={uploading} 
-              className="hidden" 
+    <div className="space-y-5">
+
+      {/* ── URL Input (Primary) ───────────────────────────────────────── */}
+      <div className="space-y-2">
+        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+          Add Image via URL
+        </p>
+        <form onSubmit={handleUrlAdd} className="flex gap-2">
+          <div className="relative flex-1">
+            <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500 pointer-events-none" />
+            <input
+              type="url"
+              value={urlInput}
+              onChange={(e) => setUrlInput(e.target.value)}
+              placeholder="https://example.com/product.jpg"
+              className="w-full pl-9 pr-3 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-[11px] text-slate-200 placeholder-slate-600 focus:outline-none focus:border-violet-500/70 transition-colors"
             />
-          </label>
-        </div>
+          </div>
+          <button
+            type="submit"
+            className="px-4 py-2.5 bg-violet-600 hover:bg-violet-500 active:scale-95 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all shrink-0 cursor-pointer"
+          >
+            Add URL
+          </button>
+        </form>
       </div>
 
-      {error && (
-        <div className="flex flex-col space-y-2">
-          <div className="flex items-center space-x-2 text-[10px] font-bold text-rose-450 uppercase tracking-wide">
-            <AlertCircle className="h-4 w-4" />
-            <span>{error}</span>
-          </div>
-          
-          <div className="pt-1">
-            <button
-              type="button"
-              onClick={runDiagnostics}
-              disabled={diagnosing}
-              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-705 border border-slate-700 hover:border-slate-650 rounded-lg text-[9px] font-bold text-slate-350 hover:text-white uppercase tracking-wider transition-colors cursor-pointer"
-            >
-              {diagnosing ? 'Diagnosing...' : 'Diagnose Storage & Environment'}
-            </button>
-          </div>
+      {/* ── Divider ───────────────────────────────────────────────────── */}
+      <div className="flex items-center gap-3">
+        <div className="flex-1 h-px bg-slate-800" />
+        <span className="text-[9px] font-bold text-slate-600 uppercase tracking-widest">
+          or upload from device
+        </span>
+        <div className="flex-1 h-px bg-slate-800" />
+      </div>
 
-          {diagnostics && (
-            <pre className="p-3 bg-slate-950 border border-slate-800 text-[10px] text-left text-slate-300 font-mono rounded-xl overflow-x-auto whitespace-pre-wrap">
-              {diagnostics}
-            </pre>
-          )}
+      {/* ── Drag & Drop / File Upload ─────────────────────────────────── */}
+      <div
+        onDrop={handleDrop}
+        onDragOver={handleDragOver}
+        onClick={() => !converting && fileInputRef.current?.click()}
+        className="border-2 border-dashed border-slate-700 hover:border-violet-500/60 rounded-2xl p-8 flex flex-col items-center justify-center text-center bg-slate-950/20 hover:bg-violet-950/10 transition-all cursor-pointer group"
+      >
+        {converting ? (
+          <>
+            <div className="w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full animate-spin mb-3" />
+            <span className="text-[10px] font-bold text-violet-400 uppercase tracking-wide">
+              Processing image…
+            </span>
+          </>
+        ) : (
+          <>
+            <Upload className="h-8 w-8 text-slate-600 group-hover:text-violet-500 mb-3 transition-colors" />
+            <p className="text-[11px] font-bold text-slate-400 group-hover:text-slate-300 transition-colors">
+              Drag & drop an image here, or click to browse
+            </p>
+            <p className="mt-1.5 text-[9px] text-slate-600">
+              JPG, PNG, WebP · Max 2MB · Saved directly to database
+            </p>
+          </>
+        )}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleFileUpload}
+          disabled={converting}
+          className="hidden"
+        />
+      </div>
+
+      {/* ── Status Banner ─────────────────────────────────────────────── */}
+      {status && (
+        <div
+          className={`flex items-start gap-2.5 text-[10px] font-bold uppercase tracking-wide rounded-xl px-4 py-3 transition-all ${
+            status.type === 'error'
+              ? 'bg-rose-950/50 border border-rose-700/50 text-rose-400'
+              : 'bg-emerald-950/50 border border-emerald-700/50 text-emerald-400'
+          }`}
+        >
+          {status.type === 'error'
+            ? <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+            : <CheckCircle className="h-4 w-4 shrink-0 mt-0.5" />
+          }
+          <span>{status.msg}</span>
         </div>
       )}
 
-      {/* Grid gallery of current images */}
+      {/* ── Image Gallery ─────────────────────────────────────────────── */}
       {images.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-2">
-          {images.map((url, idx) => (
-            <div key={idx} className="relative rounded-xl border border-slate-850 bg-slate-950/40 p-1.5 group overflow-hidden">
-              <img 
-                src={url} 
-                alt={`Product thumbnail ${idx + 1}`} 
-                className="h-20 w-full object-contain rounded-lg"
-              />
-              <button
-                type="button"
-                onClick={() => handleRemoveImage(idx)}
-                className="absolute top-1 right-1 p-1 rounded-lg bg-rose-650/90 text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer shadow-md"
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3">
+            Product Images&nbsp;
+            <span className="text-violet-400 font-bold">({images.length})</span>
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {images.map((url, idx) => (
+              <div
+                key={idx}
+                className="relative rounded-xl border border-slate-800 bg-slate-950/40 p-1.5 group overflow-hidden"
               >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          ))}
+                {url.startsWith('data:') || url.startsWith('http') ? (
+                  <img
+                    src={url}
+                    alt={`Product image ${idx + 1}`}
+                    className="h-20 w-full object-contain rounded-lg"
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                      e.target.nextSibling.style.display = 'flex';
+                    }}
+                  />
+                ) : null}
+                <div
+                  className="h-20 w-full rounded-lg bg-slate-800 items-center justify-center hidden"
+                >
+                  <ImageIcon className="w-6 h-6 text-slate-600" />
+                </div>
+
+                {/* Remove button */}
+                <button
+                  type="button"
+                  onClick={() => handleRemoveImage(idx)}
+                  className="absolute top-1.5 right-1.5 p-1 rounded-lg bg-rose-600/90 hover:bg-rose-500 text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer shadow-md"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+
+                {/* Main badge */}
+                {idx === 0 && (
+                  <span className="absolute bottom-2.5 left-2 text-[8px] font-black bg-violet-600 text-white px-1.5 py-0.5 rounded-md uppercase tracking-wider">
+                    Main
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>

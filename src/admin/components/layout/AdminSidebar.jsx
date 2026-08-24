@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, ShoppingCart, Box, Truck, Settings, LogOut, ShieldAlert, X } from 'lucide-react';
+import { LayoutDashboard, ShoppingCart, Box, Warehouse, FolderTree, Truck, Settings, LogOut, ShieldAlert, X } from 'lucide-react';
 import useAdminAuth from '../../hooks/useAdminAuth';
 
 export default function AdminSidebar({ isOpen, onClose }) {
@@ -10,6 +10,8 @@ export default function AdminSidebar({ isOpen, onClose }) {
     { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, end: true },
     { to: '/admin/orders', label: 'Orders', icon: ShoppingCart },
     { to: '/admin/products', label: 'Products', icon: Box },
+    { to: '/admin/inventory', label: 'Inventory', icon: Warehouse },
+    { to: '/admin/categories', label: 'Categories', icon: FolderTree },
     { to: '/admin/shipments', label: 'Shipments', icon: Truck },
     { to: '/admin/settings', label: 'Settings', icon: Settings },
   ];

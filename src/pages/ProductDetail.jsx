@@ -10,18 +10,48 @@ import {
 import useCart from '../hooks/useCart';
 import { AVAILABLE_MODELS, DEFAULT_MODEL } from '../constants/models';
 
+import { fetchStoreProducts } from '../utils/productStore';
+
 export default function ProductDetail({ product: propProduct }) {
   const { addToCart } = useCart();
   const navigate = useNavigate();
   const location = useLocation();
-  const product = location.state?.product || propProduct;
+  const [product, setProduct] = useState(location.state?.product || propProduct || null);
 
   const [quantity, setQuantity] = useState(1);
   const [selectedModel, setSelectedModel] = useState(DEFAULT_MODEL);
   const [activeTab, setActiveTab] = useState('description');
   const [isAdded, setIsAdded] = useState(false);
 
-  if (!product) return null;
+  React.useEffect(() => {
+    if (!product) {
+      fetchStoreProducts().then(items => {
+        if (items && items.length > 0) {
+          setProduct(items[0]);
+        }
+      });
+    }
+  }, [product]);
+
+  if (!product) {
+    return (
+      <div className="min-h-screen pt-32 pb-20 flex flex-col items-center justify-center bg-sky-100 px-4 text-center">
+        <div className="bg-sky-200/40 border border-sky-300/50 rounded-[40px] p-12 max-w-md w-full space-y-4 shadow-xl">
+          <ShieldCheck className="w-10 h-10 text-sky-700 mx-auto" />
+          <h2 className="text-xl font-black text-sky-950 uppercase tracking-tight">No Products Available</h2>
+          <p className="text-xs text-sky-700 font-bold uppercase tracking-wider">
+            Only admin-added products are shown. Please check back after products are added.
+          </p>
+          <button
+            onClick={() => navigate('/products')}
+            className="px-6 py-3 bg-sky-900 text-sky-50 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-sky-800 transition-all cursor-pointer"
+          >
+            Return to Products
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const handleAddToCart = () => {
     addToCart(product, quantity, selectedModel);
@@ -89,7 +119,12 @@ export default function ProductDetail({ product: propProduct }) {
           >
             {/* Holographic Product Header */}
             <header className="space-y-4">
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                {product.is_best_seller && (
+                  <span className="text-[9px] font-black tracking-[0.2em] bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 px-4 py-2 rounded-2xl shadow-md uppercase flex items-center gap-1 animate-pulse">
+                    🔥 BEST SELLER
+                  </span>
+                )}
                 <span className="text-[9px] font-black tracking-[0.2em] text-sky-50 bg-sky-600 px-4 py-2 rounded-2xl shadow-md uppercase">
                   Tray System Alpha
                 </span>
@@ -111,18 +146,31 @@ export default function ProductDetail({ product: propProduct }) {
             </header>
 
             {/* Price Node */}
-            <div className="bg-sky-300/30 border border-sky-400/20 rounded-[32px] p-8 space-y-2">
-              <div className="flex items-baseline gap-4">
-                <span className="text-5xl font-light text-sky-950 tracking-tighter">₹{product.price}</span>
-                {product.original_price && (
-                  <span className="text-xl text-sky-600/50 line-through font-medium">₹{product.original_price}</span>
-                )}
-              </div>
-              <div className="flex items-center gap-2 text-[10px] font-black text-sky-700 uppercase tracking-widest pt-2 border-t border-sky-400/20">
-                <Truck className="h-4 w-4" />
-                <span>Priority Logistics Activated. No Delivery Cost.</span>
-              </div>
-            </div>
+            {(() => {
+              const discountPercent = product.original_price && product.price && Number(product.original_price) > Number(product.price)
+                ? Math.round(((Number(product.original_price) - Number(product.price)) / Number(product.original_price)) * 100)
+                : 0;
+
+              return (
+                <div className="bg-sky-300/30 border border-sky-400/20 rounded-[32px] p-8 space-y-2">
+                  <div className="flex flex-wrap items-baseline gap-4">
+                    <span className="text-5xl font-light text-sky-950 tracking-tighter">₹{product.price}</span>
+                    {product.original_price && (
+                      <span className="text-xl text-sky-600/50 line-through font-medium">₹{product.original_price}</span>
+                    )}
+                    {discountPercent > 0 && (
+                      <span className="text-xs font-black text-white bg-emerald-600 px-3 py-1 rounded-xl shadow-sm uppercase tracking-wider">
+                        {discountPercent}% OFF
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 text-[10px] font-black text-sky-700 uppercase tracking-widest pt-2 border-t border-sky-400/20">
+                    <Truck className="h-4 w-4" />
+                    <span>Priority Logistics Activated. No Delivery Cost.</span>
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Device Matrix Selector */}
             <section className="space-y-4">

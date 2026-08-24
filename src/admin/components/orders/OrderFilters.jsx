@@ -8,9 +8,12 @@ export default function OrderFilters({
   setStatusFilter,
   paymentFilter,
   setPaymentFilter,
+  customerTypeFilter = 'all',
+  setCustomerTypeFilter,
 }) {
   const statuses = ['all', 'pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];
   const payments = ['all', 'cod', 'razorpay'];
+  const customerTypes = ['all', 'guest', 'registered'];
 
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col md:flex-row items-center gap-4 text-left">
@@ -30,6 +33,23 @@ export default function OrderFilters({
 
       {/* Dropdown Filters */}
       <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+        {setCustomerTypeFilter && (
+          <div className="flex-1 sm:flex-initial">
+            <label className="block text-[8px] font-extrabold uppercase tracking-widest text-slate-500 mb-1.5">Customer Type</label>
+            <select
+              value={customerTypeFilter}
+              onChange={(e) => setCustomerTypeFilter(e.target.value)}
+              className="w-full rounded-xl border border-slate-800 bg-slate-950/60 px-3.5 py-2.5 text-xs text-amber-300 focus:border-amber-500 focus:outline-none transition-colors capitalize font-bold"
+            >
+              {customerTypes.map((type) => (
+                <option key={type} value={type} className="bg-slate-900 capitalize text-white">
+                  {type === 'all' ? 'All Customers' : type === 'guest' ? '⚡ Guest Purchases' : '👤 Registered Accounts'}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
         <div className="flex-1 sm:flex-initial">
           <label className="block text-[8px] font-extrabold uppercase tracking-widest text-slate-500 mb-1.5">Order Status</label>
           <select

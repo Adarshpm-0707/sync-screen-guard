@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../supabaseClient';
+import { restoreStockForCancelledOrder } from '../utils/stockManager';
 
 export default function OrderTracking() {
   const [searchParams] = useSearchParams();
@@ -80,6 +81,45 @@ export default function OrderTracking() {
       else setError('No signal found with this ID');
       setLoading(false);
     }, 800)
+  };
+
+  const handleCancelOrder = async () => {
+    if (!trackingData) return;
+    if (!window.confirm('Are you sure you want to cancel this order? Item stock will be automatically added back to inventory.')) {
+      return;
+    }
+
+    const targetId = trackingData.id;
+    try {
+      // 1. Restore stock for items in cancelled order
+      if (trackingData.items && trackingData.items.length > 0) {
+        await restoreStockForCancelledOrder(trackingData.items);
+      }
+
+      // 2. Update status in Supabase
+      try {
+        await supabase
+          .from('orders')
+          .update({ status: 'cancelled' })
+          .eq('id', targetId);
+      } catch (e) {
+        console.warn('Supabase order cancel status update warning:', e);
+      }
+
+      // 3. Update status in localStorage
+      const localSaved = JSON.parse(localStorage.getItem('customer_orders') || '[]');
+      const updated = localSaved.map(o => o.id === targetId ? { ...o, status: 'cancelled' } : o);
+      localStorage.setItem('customer_orders', JSON.stringify(updated));
+
+      // 4. Update UI tracking state
+      const updatedOrder = updated.find(o => o.id === targetId) || { ...trackingData, status: 'cancelled' };
+      buildTrackingView(updatedOrder);
+      setCustomerOrders(updated);
+      alert('Order cancelled successfully. Purchased stock has been added back to inventory.');
+    } catch (err) {
+      console.error('Error cancelling order:', err);
+      alert('Failed to cancel order: ' + err.message);
+    }
   };
 
   return (
@@ -235,6 +275,18 @@ export default function OrderTracking() {
                     <p className="text-xl font-light text-sky-100 tracking-tighter">₹{trackingData.total}</p>
                  </div>
               </div>
+
+              {/* Cancel Order Option for Active Customer Orders */}
+              {trackingData.status !== 'delivered' && trackingData.status !== 'cancelled' && (
+                <div className="pt-4 border-t border-sky-500/20 flex justify-end">
+                  <button
+                    onClick={handleCancelOrder}
+                    className="px-6 py-3 rounded-2xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 text-xs font-black uppercase tracking-widest transition-all cursor-pointer shadow-lg"
+                  >
+                    🚫 Cancel Order & Restore Stock
+                  </button>
+                </div>
+              )}
             </motion.div>
           )}
         </AnimatePresence>

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { X, User, Phone, MapPin, CreditCard, Box, Truck, CheckCircle2, Ban } from 'lucide-react';
 import { supabase } from '../../../supabaseClient';
+import { restoreStockForCancelledOrder } from '../../../utils/stockManager';
 import OrderStatusBadge from './OrderStatusBadge';
 import AdminButton from '../common/AdminButton';
 
@@ -111,6 +112,11 @@ export default function OrderDetailDrawer({ isOpen, onClose, orderId, initialOrd
         .update({ status: newStatus })
         .eq('id', orderId);
 
+      // If cancelling order, automatically restore stock into inventory
+      if (newStatus === 'cancelled' && order?.items && order.items.length > 0) {
+        await restoreStockForCancelledOrder(order.items);
+      }
+
       // Update localStorage fallback
       const localSaved = JSON.parse(localStorage.getItem('customer_orders') || '[]');
       const updatedLocals = localSaved.map(o => o.id === orderId ? { ...o, status: newStatus } : o);
@@ -165,9 +171,18 @@ export default function OrderDetailDrawer({ isOpen, onClose, orderId, initialOrd
             <>
               {/* Customer Info Card */}
               <div className="border border-slate-800/80 bg-slate-950/20 rounded-2xl p-4.5 space-y-4">
-                <div className="flex items-center space-x-2 text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
-                  <User className="h-4 w-4 text-indigo-400" />
-                  <span>Customer Profile</span>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2 text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
+                    <User className="h-4 w-4 text-indigo-400" />
+                    <span>Customer Profile</span>
+                  </div>
+                  <span className={`inline-flex items-center text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border ${
+                    order.is_guest || !order.user_id
+                      ? 'bg-amber-500/10 border-amber-500/30 text-amber-400'
+                      : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                  }`}>
+                    {order.is_guest || !order.user_id ? '⚡ Guest Checkout Customer' : '👤 Registered Customer'}
+                  </span>
                 </div>
                 <div className="space-y-2.5 text-xs">
                   <div>

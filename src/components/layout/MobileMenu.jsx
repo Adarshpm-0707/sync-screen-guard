@@ -41,11 +41,11 @@ export default function MobileMenu({ isOpen, onClose, customer, onOpenAuth, onLo
             animate="open"
             exit="closed"
             variants={menuVariants}
-            className="fixed top-0 right-0 bottom-0 z-50 w-80 max-w-[85vw] bg-slate-950 border-l border-violet-900/40 p-5 shadow-2xl flex flex-col justify-between overflow-y-auto"
+            className="fixed top-0 right-0 bottom-0 z-50 w-84 max-w-[88vw] bg-neutral-950/95 backdrop-blur-2xl border-l border-white/10 p-6 shadow-2xl flex flex-col justify-between overflow-y-auto"
           >
             <div>
               {/* Header inside drawer */}
-              <div className="flex items-center justify-between pb-4 border-b border-violet-900/40">
+              <div className="flex items-center justify-between pb-5 border-b border-white/10">
                 <Link to="/" onClick={onClose} className="flex items-center space-x-2 outline-none">
                   <img
                     src={syncLogo}
@@ -55,7 +55,7 @@ export default function MobileMenu({ isOpen, onClose, customer, onOpenAuth, onLo
                 </Link>
                 <button
                   onClick={onClose}
-                  className="flex h-9 w-9 items-center justify-center rounded-full border border-violet-800/40 bg-violet-950/40 text-violet-300 hover:text-white transition-colors cursor-pointer"
+                  className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/15 bg-white/5 text-neutral-300 hover:text-white hover:bg-white/10 transition-all active:scale-95 cursor-pointer"
                   aria-label="Close menu"
                 >
                   <X className="h-5 w-5" />
@@ -63,16 +63,18 @@ export default function MobileMenu({ isOpen, onClose, customer, onOpenAuth, onLo
               </div>
 
               {/* Account / Auth Card */}
-              <div className="mt-5 p-3.5 rounded-2xl bg-violet-950/40 border border-violet-800/30">
+              <div className="mt-6 p-4 rounded-3xl bg-gradient-to-br from-violet-950/50 to-indigo-950/30 border border-violet-500/30 shadow-lg shadow-violet-950/50">
                 {customer ? (
                   <div className="space-y-3">
                     <div className="flex items-center space-x-3">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-tr from-violet-600 to-indigo-600 text-white font-extrabold text-xs shadow-md shrink-0">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-tr from-violet-600 to-indigo-500 text-white font-black text-sm shadow-md shrink-0 ring-2 ring-violet-400/30">
                         {customerInitial}
                       </div>
                       <div className="overflow-hidden">
-                        <p className="text-xs font-bold text-white truncate">{customerDisplayName}</p>
-                        <p className="text-[9px] font-semibold text-emerald-400">● Logged In Customer</p>
+                        <p className="text-xs font-black text-white truncate">{customerDisplayName}</p>
+                        <span className="inline-flex items-center gap-1 text-[9px] font-bold text-emerald-400 uppercase tracking-widest">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Verified User
+                        </span>
                       </div>
                     </div>
                     <button
@@ -80,9 +82,9 @@ export default function MobileMenu({ isOpen, onClose, customer, onOpenAuth, onLo
                         onClose();
                         if (onLogout) onLogout();
                       }}
-                      className="w-full flex items-center justify-center space-x-2 py-2 rounded-xl text-xs font-bold text-rose-400 bg-rose-950/30 border border-rose-800/30 hover:bg-rose-900/40 transition-colors cursor-pointer"
+                      className="w-full flex items-center justify-center space-x-2 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider text-rose-400 bg-rose-950/40 border border-rose-500/30 hover:bg-rose-900/50 transition-all active:scale-95 cursor-pointer"
                     >
-                      <LogOut className="h-3.5 w-3.5" />
+                      <LogOut className="h-4 w-4" />
                       <span>Sign Out</span>
                     </button>
                   </div>
@@ -92,43 +94,43 @@ export default function MobileMenu({ isOpen, onClose, customer, onOpenAuth, onLo
                       onClose();
                       if (onOpenAuth) onOpenAuth();
                     }}
-                    className="w-full flex items-center justify-center space-x-2 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-xs font-bold text-white transition-all shadow-md shadow-violet-900/50 cursor-pointer"
+                    className="w-full flex items-center justify-center space-x-2 py-3 rounded-2xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-xs font-black uppercase tracking-wider text-white transition-all shadow-lg shadow-violet-900/50 active:scale-95 cursor-pointer"
                   >
                     <User className="h-4 w-4" />
-                    <span>Sign In / Create Account</span>
+                    <span>Sign In / Register</span>
                   </button>
                 )}
               </div>
 
               {/* Navigation Links */}
-              <nav className="mt-5 flex flex-col space-y-2">
+              <nav className="mt-6 flex flex-col space-y-2">
                 <Link
                   to="/"
                   onClick={onClose}
-                  className="flex items-center space-x-3 rounded-xl p-3 text-slate-200 hover:bg-violet-950/50 hover:text-violet-200 transition-all font-semibold text-xs uppercase tracking-wider"
+                  className="flex items-center space-x-3 rounded-2xl p-3.5 text-neutral-200 hover:bg-white/10 hover:text-white border border-transparent hover:border-white/10 transition-all font-black text-xs uppercase tracking-widest active:scale-98"
                 >
-                  <Home className="h-4.5 w-4.5 text-violet-400" />
+                  <Home className="h-4.5 w-4.5 text-sky-400" />
                   <span>Home</span>
                 </Link>
                 <Link
                   to="/products"
                   onClick={onClose}
-                  className="flex items-center space-x-3 rounded-xl p-3 text-slate-200 hover:bg-violet-950/50 hover:text-violet-200 transition-all font-semibold text-xs uppercase tracking-wider"
+                  className="flex items-center space-x-3 rounded-2xl p-3.5 text-neutral-200 hover:bg-white/10 hover:text-white border border-transparent hover:border-white/10 transition-all font-black text-xs uppercase tracking-widest active:scale-98"
                 >
-                  <ShoppingBag className="h-4.5 w-4.5 text-violet-400" />
-                  <span>Products</span>
+                  <ShoppingBag className="h-4.5 w-4.5 text-sky-400" />
+                  <span>Products Catalog</span>
                 </Link>
                 <Link
                   to="/cart"
                   onClick={onClose}
-                  className="flex items-center justify-between rounded-xl p-3 text-slate-200 hover:bg-violet-950/50 hover:text-violet-200 transition-all font-semibold text-xs uppercase tracking-wider"
+                  className="flex items-center justify-between rounded-2xl p-3.5 text-neutral-200 hover:bg-white/10 hover:text-white border border-transparent hover:border-white/10 transition-all font-black text-xs uppercase tracking-widest active:scale-98"
                 >
                   <div className="flex items-center space-x-3">
-                    <ShoppingCart className="h-4.5 w-4.5 text-violet-400" />
-                    <span>Shopping Cart</span>
+                    <ShoppingCart className="h-4.5 w-4.5 text-sky-400" />
+                    <span>Cart</span>
                   </div>
                   {cartCount > 0 && (
-                    <span className="px-2 py-0.5 rounded-full bg-violet-600 text-[10px] font-bold text-white">
+                    <span className="px-2.5 py-0.5 rounded-full bg-sky-500 text-[10px] font-black text-slate-950 shadow-md">
                       {cartCount}
                     </span>
                   )}
@@ -136,19 +138,19 @@ export default function MobileMenu({ isOpen, onClose, customer, onOpenAuth, onLo
                 <Link
                   to="/tracking"
                   onClick={onClose}
-                  className="flex items-center space-x-3 rounded-xl p-3 text-slate-200 hover:bg-violet-950/50 hover:text-violet-200 transition-all font-semibold text-xs uppercase tracking-wider"
+                  className="flex items-center space-x-3 rounded-2xl p-3.5 text-neutral-200 hover:bg-white/10 hover:text-white border border-transparent hover:border-white/10 transition-all font-black text-xs uppercase tracking-widest active:scale-98"
                 >
-                  <Truck className="h-4.5 w-4.5 text-violet-400" />
+                  <Truck className="h-4.5 w-4.5 text-sky-400" />
                   <span>Track Order</span>
                 </Link>
               </nav>
             </div>
 
             {/* Support Footer Banner */}
-            <div className="mt-6 rounded-2xl bg-violet-950/20 p-3.5 border border-violet-800/30 text-center">
-              <MessageSquare className="mx-auto h-5 w-5 text-violet-400 mb-1.5" />
-              <h4 className="text-xs font-semibold text-white">Need Installation Support?</h4>
-              <p className="text-[10px] text-violet-400/80 mt-0.5">We are available 24/7. Chat with our specialists.</p>
+            <div className="mt-6 rounded-3xl bg-white/5 p-4 border border-white/10 text-center space-y-1.5">
+              <MessageSquare className="mx-auto h-5 w-5 text-sky-400" />
+              <h4 className="text-xs font-black uppercase text-white tracking-wider">Installation Support</h4>
+              <p className="text-[10px] font-bold text-neutral-400">24/7 Specialist Assistance Available</p>
             </div>
           </motion.div>
         </>

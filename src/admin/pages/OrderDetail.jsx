@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, User, MapPin, Box, CreditCard, CheckCircle2, Ban, Truck } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
+import { restoreStockForCancelledOrder } from '../../utils/stockManager';
 import OrderStatusBadge from '../components/orders/OrderStatusBadge';
 import AdminButton from '../components/common/AdminButton';
 
@@ -44,18 +45,34 @@ export default function OrderDetail() {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
 
-      const res = await fetch(`http://localhost:5000/api/admin/orders/${id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ status: newStatus })
-      });
+      try {
+        await fetch(`http://localhost:5000/api/admin/orders/${id}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ status: newStatus })
+        });
+      } catch (e) {}
 
-      if (res.ok) {
-        await fetchOrderDetail();
+      // Update Supabase directly
+      await supabase
+        .from('orders')
+        .update({ status: newStatus })
+        .eq('id', id);
+
+      // If cancelling order, restore product stock
+      if (newStatus === 'cancelled' && order?.items && order.items.length > 0) {
+        await restoreStockForCancelledOrder(order.items);
       }
+
+      // Update local storage fallback
+      const localSaved = JSON.parse(localStorage.getItem('customer_orders') || '[]');
+      const updatedLocals = localSaved.map(o => o.id === id ? { ...o, status: newStatus } : o);
+      localStorage.setItem('customer_orders', JSON.stringify(updatedLocals));
+
+      await fetchOrderDetail();
     } catch (err) {
       console.error('Error updating order status:', err);
     } finally {
@@ -102,9 +119,18 @@ export default function OrderDetail() {
             
             {/* Customer Details */}
             <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-4">
-              <div className="flex items-center space-x-2.5 text-xs font-bold uppercase tracking-wider text-slate-350 border-b border-slate-800 pb-3">
-                <User className="h-4.5 w-4.5 text-indigo-400" />
-                <span>Customer Profile</span>
+              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div className="flex items-center space-x-2.5 text-xs font-bold uppercase tracking-wider text-slate-350">
+                  <User className="h-4.5 w-4.5 text-indigo-400" />
+                  <span>Customer Profile</span>
+                </div>
+                <span className={`inline-flex items-center text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border ${
+                  order.is_guest || !order.user_id
+                    ? 'bg-amber-500/10 border-amber-500/30 text-amber-400'
+                    : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                }`}>
+                  {order.is_guest || !order.user_id ? '⚡ Guest Checkout Customer' : '👤 Registered Account'}
+                </span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                 <div>

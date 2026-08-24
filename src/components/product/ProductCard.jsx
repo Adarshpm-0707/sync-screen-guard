@@ -35,7 +35,8 @@ export default function ProductCard({ product, onAddToCart, onBuyNow, isAdded })
   const categoryLabel = product.category || 'Glass';
   const ratingValue = product.rating || 4.9;
   const imageSrc = product.images?.[0] || 'https://images.unsplash.com/photo-1611532736597-de2d4265fba3?auto=format&fit=crop&q=80&w=600';
-  const discountAmount = product.original_price && product.price ? product.original_price - product.price : null;
+  const discountAmount = product.original_price && product.price && Number(product.original_price) > Number(product.price) ? Number(product.original_price) - Number(product.price) : null;
+  const discountPercent = product.original_price && product.price && Number(product.original_price) > Number(product.price) ? Math.round(((Number(product.original_price) - Number(product.price)) / Number(product.original_price)) * 100) : 0;
 
   return (
     <motion.div
@@ -51,14 +52,23 @@ export default function ProductCard({ product, onAddToCart, onBuyNow, isAdded })
           alt={product.name}
           className="w-full h-full object-cover mix-blend-multiply transition-transform duration-700 group-hover:scale-105"
         />
+        
         {/* Category Pill Badge */}
         <div className="absolute top-2 left-2 sm:top-3 sm:left-3 px-2 py-0.5 sm:px-3 sm:py-1 bg-sky-600/90 backdrop-blur-md text-sky-50 rounded-xl text-[8px] sm:text-[10px] font-black uppercase tracking-wider shadow-md">
           {categoryLabel}
         </div>
-        {/* Discount Badge */}
-        {discountAmount > 0 && (
-          <div className="absolute bottom-2 right-2 sm:bottom-3 sm:right-3 px-2 py-0.5 sm:px-3 sm:py-1 bg-cyan-400 text-sky-950 rounded-xl text-[8px] sm:text-[10px] font-black uppercase tracking-wider shadow-sm">
-            -₹{discountAmount}
+
+        {/* 🔥 Best Seller Badge Overlay */}
+        {product.is_best_seller && (
+          <div className="absolute top-2 right-2 sm:top-3 sm:right-3 px-2 py-0.5 sm:px-3 sm:py-1 bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 rounded-xl text-[8px] sm:text-[10px] font-black uppercase tracking-wider shadow-lg flex items-center gap-1 animate-pulse">
+            <span>🔥 BEST SELLER</span>
+          </div>
+        )}
+
+        {/* Discount Badge (% OFF) */}
+        {discountPercent > 0 && (
+          <div className="absolute bottom-2 right-2 sm:bottom-3 sm:right-3 px-2 py-0.5 sm:px-3 sm:py-1 bg-emerald-500 text-slate-950 rounded-xl text-[8px] sm:text-[10px] font-black uppercase tracking-wider shadow-sm flex items-center gap-1">
+            <span>{discountPercent}% OFF</span>
           </div>
         )}
       </div>
@@ -89,10 +99,15 @@ export default function ProductCard({ product, onAddToCart, onBuyNow, isAdded })
           <div className="flex items-baseline justify-between">
             <div>
               <p className="text-[8px] sm:text-[9px] font-black text-sky-500 uppercase tracking-widest">Price</p>
-              <div className="flex items-baseline gap-1.5">
+              <div className="flex items-baseline gap-1.5 flex-wrap">
                 <span className="text-sm sm:text-2xl font-black text-sky-900 tracking-tighter">₹{product.price}</span>
                 {product.original_price && (
                   <span className="text-[9px] sm:text-xs text-sky-600/50 line-through font-medium">₹{product.original_price}</span>
+                )}
+                {discountPercent > 0 && (
+                  <span className="text-[9px] sm:text-xs font-black text-emerald-600 bg-emerald-500/10 px-1.5 py-0.5 rounded-md">
+                    {discountPercent}% OFF
+                  </span>
                 )}
               </div>
             </div>

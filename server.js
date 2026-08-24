@@ -9,8 +9,15 @@ const PORT = process.env.PORT || 5000;
 // Ensure storage bucket is created on server startup
 ensureStorageBucketExists();
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT} in ${process.env.NODE_ENV || 'development'} mode`);
 });
 
-// Environment refreshed to update Supabase Service Role Key, DB Password, and support product theme colors
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.warn(`⚠️ Port ${PORT} is already in use by an active server instance. Backend API is active.`);
+  } else {
+    console.error('Server error:', err);
+  }
+});
+

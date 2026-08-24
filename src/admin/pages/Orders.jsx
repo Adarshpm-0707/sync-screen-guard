@@ -13,6 +13,7 @@ export default function Orders() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [paymentFilter, setPaymentFilter] = useState('all');
+  const [customerTypeFilter, setCustomerTypeFilter] = useState('all');
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
@@ -26,7 +27,7 @@ export default function Orders() {
 
   useEffect(() => {
     fetchOrders();
-  }, [currentPage, statusFilter, paymentFilter, searchTerm]);
+  }, [currentPage, statusFilter, paymentFilter, customerTypeFilter, searchTerm]);
 
   const fetchOrders = async () => {
     setLoading(true);
@@ -39,6 +40,7 @@ export default function Orders() {
         limit: itemsPerPage,
         status: statusFilter,
         payment: paymentFilter,
+        customerType: customerTypeFilter,
         search: searchTerm,
       });
 
@@ -66,6 +68,13 @@ export default function Orders() {
         let query = supabase.from('orders').select('*', { count: 'exact' });
         if (statusFilter !== 'all') query = query.eq('status', statusFilter);
         if (paymentFilter !== 'all') query = query.eq('payment_type', paymentFilter);
+        if (customerTypeFilter !== 'all') {
+          if (customerTypeFilter === 'guest') {
+            query = query.or('is_guest.eq.true,user_id.is.null');
+          } else if (customerTypeFilter === 'registered') {
+            query = query.eq('is_guest', false).not('user_id', 'is', null);
+          }
+        }
         
         const { data: dbOrders, count } = await query.order('created_at', { ascending: false });
         let allOrders = dbOrders || [];
@@ -76,6 +85,22 @@ export default function Orders() {
           const existingIds = new Set(allOrders.map(o => o.id));
           const newLocals = localSaved.filter(o => !existingIds.has(o.id));
           allOrders = [...newLocals, ...allOrders];
+        }
+
+        if (customerTypeFilter !== 'all') {
+          if (customerTypeFilter === 'guest') {
+            allOrders = allOrders.filter(o => o.is_guest || !o.user_id);
+          } else if (customerTypeFilter === 'registered') {
+            allOrders = allOrders.filter(o => !o.is_guest && o.user_id);
+          }
+        }
+
+        if (searchTerm) {
+          allOrders = allOrders.filter(o =>
+            (o.customer_name && o.customer_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+            (o.phone && o.phone.includes(searchTerm)) ||
+            (o.id && o.id.toLowerCase().includes(searchTerm.toLowerCase()))
+          );
         }
 
         setOrders(allOrders);
@@ -134,50 +159,68 @@ export default function Orders() {
           setPaymentFilter(payment);
           setCurrentPage(1);
         }}
+        customerTypeFilter={customerTypeFilter}
+        setCustomerTypeFilter={(type) => {
+          setCustomerTypeFilter(type);
+          setCurrentPage(1);
+        }}
       />
 
       {/* Orders Table */}
       <AdminTable headers={headers} isLoading={loading} emptyMessage="No orders match search filters">
-        {orders.map((order) => (
-          <tr 
-            key={order.id} 
-            className="hover:bg-slate-800/20 transition-colors cursor-pointer"
-            onClick={() => handleRowClick(order)}
-          >
-            <td className="px-6 py-4 font-bold text-indigo-400">
-              #{order.id.slice(0, 8).toUpperCase()}
-            </td>
-            <td className="px-6 py-4 text-slate-400">
-              {new Date(order.created_at).toLocaleDateString()}
-            </td>
-            <td className="px-6 py-4 font-semibold text-white">
-              {order.customer_name}
-            </td>
-            <td className="px-6 py-4">
-              {order.phone}
-            </td>
-            <td className="px-6 py-4 uppercase font-bold text-[10px] text-slate-400">
-              {order.payment_type}
-            </td>
-            <td className="px-6 py-4">
-              <OrderStatusBadge status={order.status} />
-            </td>
-            <td className="px-6 py-4 font-extrabold text-white">
-              ₹{order.total}
-            </td>
-            <td className="px-6 py-4">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleRowClick(order);
-                }}
-                className="text-[10px] font-bold uppercase tracking-wider text-primary-500 hover:text-white transition-colors cursor-pointer"
-              >
-                Inspect
-              </button>
-            </td>
-          </tr>
-        ))}
+        {orders.map((order) => {
+          const isGuestOrder = order.is_guest || !order.user_id;
+
+          return (
+            <tr 
+              key={order.id} 
+              className="hover:bg-slate-800/20 transition-colors cursor-pointer"
+              onClick={() => handleRowClick(order)}
+            >
+              <td className="px-4 sm:px-6 py-3.5 sm:py-4 font-bold text-indigo-400 whitespace-nowrap">
+                #{order.id.slice(0, 8).toUpperCase()}
+              </td>
+              <td className="px-4 sm:px-6 py-3.5 sm:py-4 text-slate-400 whitespace-nowrap">
+                {new Date(order.created_at).toLocaleDateString()}
+              </td>
+              <td className="px-4 sm:px-6 py-3.5 sm:py-4 whitespace-nowrap">
+                <div className="flex flex-col text-left">
+                  <span className="font-semibold text-white max-w-[150px] sm:max-w-xs truncate">{order.customer_name}</span>
+                  <span className={`inline-flex items-center text-[9px] font-extrabold uppercase tracking-widest mt-1 px-2 py-0.5 rounded-full border w-fit ${
+                    isGuestOrder
+                      ? 'bg-amber-500/10 border-amber-500/30 text-amber-400'
+                      : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                  }`}>
+                    {isGuestOrder ? '⚡ Guest' : '👤 Account'}
+                  </span>
+                </div>
+              </td>
+              <td className="px-4 sm:px-6 py-3.5 sm:py-4 whitespace-nowrap text-slate-300 font-mono">
+                {order.phone}
+              </td>
+              <td className="px-4 sm:px-6 py-3.5 sm:py-4 uppercase font-bold text-[10px] text-slate-400 whitespace-nowrap">
+                {order.payment_type}
+              </td>
+              <td className="px-4 sm:px-6 py-3.5 sm:py-4 whitespace-nowrap">
+                <OrderStatusBadge status={order.status} />
+              </td>
+              <td className="px-4 sm:px-6 py-3.5 sm:py-4 font-extrabold text-white whitespace-nowrap">
+                ₹{order.total}
+              </td>
+              <td className="px-4 sm:px-6 py-3.5 sm:py-4 whitespace-nowrap">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRowClick(order);
+                  }}
+                  className="text-[10px] font-bold uppercase tracking-wider text-primary-500 hover:text-white transition-colors cursor-pointer"
+                >
+                  Inspect
+                </button>
+              </td>
+            </tr>
+          );
+        })}
       </AdminTable>
 
       {/* Pagination controls */}

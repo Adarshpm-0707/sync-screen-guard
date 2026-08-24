@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import ProductImageUpload from './ProductImageUpload';
 import AdminButton from '../common/AdminButton';
+import { fetchCategories } from '../../../utils/categoryStore';
 
 // Quick-pick preset swatches for common product colors
 const PRESET_COLORS = [
@@ -17,15 +18,27 @@ const PRESET_COLORS = [
 ];
 
 export default function ProductForm({ product, onSubmit, isSaving }) {
+  const [categoriesList, setCategoriesList] = useState([]);
   const [formData, setFormData] = useState({
     name: '',
+    category: 'glass',
     price: '',
     original_price: '',
     description: '',
     images: [],
     stock: 0,
     theme_color: '#3b82f6',
+    is_best_seller: false,
+    show_on_home: true,
   });
+
+  useEffect(() => {
+    async function loadCats() {
+      const list = await fetchCategories();
+      setCategoriesList(list);
+    }
+    loadCats();
+  }, []);
 
   useEffect(() => {
     if (product) {
@@ -37,19 +50,25 @@ export default function ProductForm({ product, onSubmit, isSaving }) {
       };
       setFormData({
         name: product.name || '',
+        category: product.category || 'glass',
         price: product.price || '',
         original_price: product.original_price || '',
         description: product.description || '',
         images: product.images || [],
         stock: product.stock || 0,
         theme_color: normalizeColor(product.theme_color),
+        is_best_seller: Boolean(product.is_best_seller),
+        show_on_home: product.show_on_home !== false,
       });
     }
   }, [product]);
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    const { name, value, type, checked } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value,
+    }));
   };
 
   const handleImagesChange = (newImages) => {
@@ -60,25 +79,86 @@ export default function ProductForm({ product, onSubmit, isSaving }) {
     e.preventDefault();
     onSubmit({
       ...formData,
+      category: formData.category || 'glass',
       price: parseFloat(formData.price),
       original_price: formData.original_price ? parseFloat(formData.original_price) : null,
       stock: parseInt(formData.stock, 10),
+      is_best_seller: Boolean(formData.is_best_seller),
+      show_on_home: Boolean(formData.show_on_home),
     });
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5 text-left text-xs text-slate-350">
-      <div>
-        <label className="block text-[9px] font-extrabold uppercase tracking-widest text-slate-400 mb-2">Product Title *</label>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="sm:col-span-2">
+          <label className="block text-[9px] font-extrabold uppercase tracking-widest text-slate-400 mb-2">Product Title *</label>
+          <input
+            type="text"
+            required
+            name="name"
+            value={formData.name}
+            onChange={handleInputChange}
+            className="w-full rounded-xl border border-slate-800 bg-slate-950/60 p-3 text-white focus:border-primary-500 focus:outline-none transition-colors"
+            placeholder="e.g. Sync EZ Fit Glass Screenguard"
+          />
+        </div>
+
+        <div>
+          <label className="block text-[9px] font-extrabold uppercase tracking-widest text-slate-400 mb-2">Category *</label>
+          <select
+            name="category"
+            value={formData.category}
+            onChange={handleInputChange}
+            className="w-full rounded-xl border border-slate-800 bg-slate-950/60 p-3 text-white focus:border-primary-500 focus:outline-none transition-colors cursor-pointer font-bold"
+          >
+            {categoriesList.map((cat) => (
+              <option key={cat.id} value={cat.id} className="bg-slate-900 text-white">
+                {cat.name} ({cat.id})
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Show on Home Screen Checkbox Option */}
+      <div className="p-3.5 rounded-xl border border-sky-500/30 bg-sky-500/10 flex items-start gap-3">
         <input
-          type="text"
-          required
-          name="name"
-          value={formData.name}
+          type="checkbox"
+          id="show_on_home"
+          name="show_on_home"
+          checked={formData.show_on_home}
           onChange={handleInputChange}
-          className="w-full rounded-xl border border-slate-800 bg-slate-950/60 p-3 text-white focus:border-primary-500 focus:outline-none transition-colors"
-          placeholder="e.g. Sync EZ Fit Glass Screenguard"
+          className="mt-0.5 w-5 h-5 rounded border-sky-500 text-sky-500 focus:ring-sky-500 cursor-pointer accent-sky-500"
         />
+        <label htmlFor="show_on_home" className="cursor-pointer select-none">
+          <span className="block font-black text-sky-300 uppercase tracking-wider text-xs">
+            🏠 Add to Home Screen (Show in Home Catalog)
+          </span>
+          <span className="block text-[10px] text-sky-200/80 font-semibold mt-0.5">
+            Only products marked with "Add to Home Screen" will be displayed in the main Homepage product section.
+          </span>
+        </label>
+      </div>
+
+      {/* Best Seller Checkbox Option */}
+      <div className="p-3.5 rounded-xl border border-amber-500/30 bg-amber-500/10 flex items-start gap-3">
+        <input
+          type="checkbox"
+          id="is_best_seller"
+          name="is_best_seller"
+          checked={formData.is_best_seller}
+          onChange={handleInputChange}
+          className="mt-0.5 w-5 h-5 rounded border-amber-500 text-amber-500 focus:ring-amber-500 cursor-pointer accent-amber-500"
+        />
+        <label htmlFor="is_best_seller" className="cursor-pointer select-none">
+          <span className="block font-black text-amber-300 uppercase tracking-wider text-xs">
+            🔥 Mark as Best Seller Product
+          </span>
+          <span className="block text-[10px] text-amber-200/80 font-semibold mt-0.5">
+            Products marked as Best Seller will display a prominent "BEST SELLER" badge on the Homepage & catalog pages.
+          </span>
+        </label>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

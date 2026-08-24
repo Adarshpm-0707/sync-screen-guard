@@ -85,18 +85,7 @@ export let mockOrderItems = [
   }
 ];
 
-let mockProducts = [
-  {
-    id: 'prod-1',
-    name: 'Sync EZ Fit Glass Screenguard',
-    price: 640.00,
-    original_price: 999.00,
-    images: ['https://images.unsplash.com/photo-1611532736597-de2d4265fba3?auto=format&fit=crop&q=80&w=600'],
-    stock: 120,
-    description: 'Our premium tempered glass screenguard comes with the revolutionary EZ Fit alignment box. No alignment issues, no dust, no bubbles—just perfect, edge-to-edge application in less than 30 seconds.',
-    created_at: new Date().toISOString()
-  }
-];
+let mockProducts = [];
 
 let mockShipments = [
   {
@@ -282,7 +271,7 @@ export async function getDashboardStats(req, res, next) {
 // 2. GET Filtered Orders List
 export async function getOrders(req, res, next) {
   try {
-    const { page = 1, limit = 10, status, payment, search } = req.query;
+    const { page = 1, limit = 10, status, payment, search, customerType } = req.query;
     const offset = (page - 1) * limit;
 
     if (isMockMode) {
@@ -292,6 +281,13 @@ export async function getOrders(req, res, next) {
       }
       if (payment && payment !== 'all') {
         filtered = filtered.filter(o => o.payment_type === payment);
+      }
+      if (customerType && customerType !== 'all') {
+        if (customerType === 'guest') {
+          filtered = filtered.filter(o => o.is_guest || !o.user_id);
+        } else if (customerType === 'registered') {
+          filtered = filtered.filter(o => !o.is_guest && o.user_id);
+        }
       }
       if (search) {
         filtered = filtered.filter(o => o.customer_name.toLowerCase().includes(search.toLowerCase()));
@@ -317,6 +313,13 @@ export async function getOrders(req, res, next) {
     }
     if (payment && payment !== 'all') {
       query = query.eq('payment_type', payment);
+    }
+    if (customerType && customerType !== 'all') {
+      if (customerType === 'guest') {
+        query = query.or('is_guest.eq.true,user_id.is.null');
+      } else if (customerType === 'registered') {
+        query = query.eq('is_guest', false).not('user_id', 'is', null);
+      }
     }
     if (search) {
       query = query.ilike('customer_name', `%${search}%`);
