@@ -14,43 +14,43 @@ export default function ProductGallery({ images = [] }) {
   return (
     <div className="flex flex-col-reverse md:flex-row gap-3 sm:gap-4 w-full">
       {/* Thumbnails list (Horizontal on Mobile, Vertical on Desktop) */}
-      <div className="flex md:flex-col gap-2.5 overflow-x-auto md:overflow-y-auto no-scrollbar shrink-0 py-1 md:py-0 w-full md:w-auto">
+      <div className="flex md:flex-col gap-2.5 overflow-x-auto md:overflow-y-auto no-scrollbar shrink-0 py-1 md:py-0 w-full md:w-20 lg:w-24">
         {displayImages.map((img, idx) => (
           <button
             key={idx}
             onClick={() => setActiveIdx(idx)}
-            className={`relative h-16 w-16 sm:h-20 sm:w-20 overflow-hidden rounded-xl border-2 bg-zinc-50 p-1 transition-all duration-200 cursor-pointer shrink-0 ${
+            className={`relative h-16 w-16 sm:h-20 sm:w-20 overflow-hidden rounded-xl border-2 bg-white p-1 transition-all duration-200 cursor-pointer shrink-0 flex items-center justify-center ${
               activeIdx === idx
                 ? 'border-zinc-900 shadow-sm ring-2 ring-zinc-900/10'
-                : 'border-zinc-200 hover:border-zinc-400 opacity-70 hover:opacity-100'
+                : 'border-zinc-200 hover:border-zinc-400 opacity-75 hover:opacity-100'
             }`}
           >
             <img
               src={img}
               alt={`Thumbnail ${idx + 1}`}
-              className="h-full w-full object-cover rounded-lg"
+              className="h-full w-full object-contain rounded-lg"
             />
           </button>
         ))}
       </div>
 
       {/* Main Image Showcase */}
-      <div className="relative flex-1 aspect-[4/4] sm:aspect-square rounded-2xl sm:rounded-3xl bg-zinc-100 border border-zinc-200/80 overflow-hidden flex items-center justify-center p-3 sm:p-6 group max-h-[380px] sm:max-h-[520px] w-full">
+      <div className="relative flex-1 min-h-[300px] sm:min-h-[420px] md:min-h-[480px] lg:min-h-[520px] aspect-square rounded-2xl sm:rounded-3xl bg-white border border-zinc-200/90 shadow-xs overflow-hidden flex items-center justify-center p-4 sm:p-8 group w-full">
         <AnimatePresence mode="wait">
           <motion.img
             key={activeIdx}
             src={displayImages[activeIdx]}
             alt="Product View"
-            initial={{ opacity: 0, scale: 0.98 }}
+            initial={{ opacity: 0, scale: 0.96 }}
             animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 1.02 }}
+            exit={{ opacity: 0, scale: 1.04 }}
             transition={{ duration: 0.2 }}
-            className="h-full w-full object-cover rounded-xl transition-transform duration-500 group-hover:scale-105"
+            className="h-full w-full max-h-[280px] sm:max-h-[400px] md:max-h-[460px] object-contain drop-shadow-sm transition-transform duration-500 group-hover:scale-105"
           />
         </AnimatePresence>
 
         {/* Feature Pill Overlay */}
-        <div className="absolute top-2.5 left-2.5 sm:top-3 sm:left-3 px-2.5 py-1 bg-white/90 backdrop-blur-xs rounded-full border border-zinc-200/60 shadow-xs flex items-center gap-1">
+        <div className="absolute top-2.5 left-2.5 sm:top-3 sm:left-3 px-2.5 py-1 bg-white/95 backdrop-blur-xs rounded-full border border-zinc-200 shadow-xs flex items-center gap-1 z-10">
           <Sparkles className="h-3 w-3 text-amber-500" />
           <span className="text-[9px] sm:text-[10px] font-bold text-zinc-800 uppercase tracking-wider">
             10s Auto-Align Tray

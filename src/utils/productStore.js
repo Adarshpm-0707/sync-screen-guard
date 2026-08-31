@@ -148,5 +148,10 @@ export async function fetchStoreProducts() {
          Number(p.original_price) !== 5000
   );
 
+  // If no products found at all, fall back to built-in defaults so the page is never empty
+  if (finalProducts.length === 0) {
+    return DEFAULT_PRODUCTS;
+  }
+
   return finalProducts;
 }

@@ -131,11 +131,11 @@ export default function CartDrawer({ isOpen, onClose }) {
                   return (
                     <div key={itemKey} className="pt-4 first:pt-0 flex gap-3.5">
                       {/* Product Thumbnail */}
-                      <div className="h-20 w-20 shrink-0 rounded-xl bg-zinc-100 overflow-hidden border border-zinc-200/60 p-1">
+                      <div className="h-20 w-20 shrink-0 rounded-xl bg-white overflow-hidden border border-zinc-200 p-1.5 flex items-center justify-center">
                         <img 
                           src={mainImg} 
                           alt={item.name} 
-                          className="h-full w-full object-cover rounded-lg"
+                          className="h-full w-full max-h-full max-w-full object-contain rounded-lg"
                         />
                       </div>
 

@@ -182,3 +182,143 @@ h1, h2, h3, h4, h5, h6, .font-display, .font-heading {
   }
 }
 
+
+/* ═══════════════════════════════════════
+   GSAP Product Carousel  (ProductCarousel.jsx)
+═══════════════════════════════════════ */
+.pc-wrapper {
+  width: 100%;
+  background: #0d0d10;
+  padding-bottom: 2rem;
+}
+
+/* Section header */
+.pc-header {
+  text-align: center;
+  padding: 3rem 1rem 0;
+}
+.pc-badge {
+  display: inline-block;
+  background: linear-gradient(135deg, #7c3aed, #4f46e5);
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  padding: 0.25rem 0.85rem;
+  border-radius: 999px;
+  margin-bottom: 0.75rem;
+}
+.pc-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: clamp(1.6rem, 4vw, 2.4rem);
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: -0.03em;
+  margin: 0 0 0.35rem;
+}
+.pc-sub {
+  font-size: 0.8rem;
+  color: rgba(255,255,255,0.4);
+  margin: 0;
+}
+
+/* Gallery container — fixed height, no scroll-pinning */
+.pc-gallery {
+  position: relative;
+  width: 100%;
+  height: 560px;
+  overflow: hidden;
+  background: #0d0d10;
+}
+
+/* Cards list — centred stage */
+.pc-cards {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  position: absolute;
+  width: 14rem;
+  height: 18rem;
+  top: 42%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.pc-cards li {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 14rem;
+  aspect-ratio: 9 / 16;
+  border-radius: 1rem;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  overflow: hidden;
+  cursor: pointer;
+  box-shadow: 0 24px 60px rgba(0,0,0,0.7);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+/* Gradient overlay + name/price */
+.pc-card-info {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 1rem 0.85rem 0.85rem;
+  background: linear-gradient(to top, rgba(0,0,0,0.82) 60%, transparent);
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+.pc-card-name {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pc-card-price {
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #a78bfa;
+}
+
+/* Prev / Next buttons */
+.pc-actions {
+  position: absolute;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.pc-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.55rem 1.1rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.07);
+  backdrop-filter: blur(12px);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, transform 0.15s;
+}
+.pc-btn:hover {
+  background: rgba(255,255,255,0.14);
+  border-color: rgba(255,255,255,0.3);
+  transform: scale(1.04);
+}
+.pc-btn:active {
+  transform: scale(0.97);
+}

@@ -16,37 +16,39 @@ export async function fetchCategories() {
       .select('*')
       .order('created_at', { ascending: true });
 
-    if (!error && data) {
+    if (!error && Array.isArray(data) && data.length > 0) {
       dbCategories = data;
     }
   } catch (e) {
     console.warn('Supabase categories fetch error:', e);
   }
 
-  let localCategories = [];
-  try {
-    localCategories = JSON.parse(localStorage.getItem('admin_categories') || '[]');
-  } catch (e) {
-    localCategories = [];
+  // If Supabase has categories configured, use them
+  if (dbCategories.length > 0) {
+    return dbCategories;
   }
 
-  // Combine default, local, and database categories
-  const map = new Map();
-  
-  // First add default categories
-  DEFAULT_CATEGORIES.forEach(c => map.set(c.id, c));
-  
-  // Add local categories (can overwrite defaults if customized)
-  localCategories.forEach(c => {
-    if (c && c.id) map.set(c.id, c);
-  });
-  
-  // Add db categories
-  dbCategories.forEach(c => {
-    if (c && c.id) map.set(c.id, c);
-  });
+  // Check localStorage for admin managed categories
+  let localCategories = null;
+  try {
+    const stored = localStorage.getItem('admin_categories');
+    if (stored !== null) {
+      localCategories = JSON.parse(stored);
+    }
+  } catch (e) {
+    localCategories = null;
+  }
 
-  return Array.from(map.values());
+  if (localCategories !== null && Array.isArray(localCategories)) {
+    return localCategories;
+  }
+
+  // Initial seed fallback (only saved once so admin can edit/delete freely)
+  try {
+    localStorage.setItem('admin_categories', JSON.stringify(DEFAULT_CATEGORIES));
+  } catch (e) {}
+
+  return DEFAULT_CATEGORIES;
 }
 
 export async function addCategory(categoryData) {
@@ -77,9 +79,10 @@ export async function addCategory(categoryData) {
   // Save to local storage
   let localCategories = [];
   try {
-    localCategories = JSON.parse(localStorage.getItem('admin_categories') || '[]');
+    const stored = localStorage.getItem('admin_categories');
+    localCategories = stored ? JSON.parse(stored) : [...DEFAULT_CATEGORIES];
   } catch (e) {
-    localCategories = [];
+    localCategories = [...DEFAULT_CATEGORIES];
   }
 
   const existingIdx = localCategories.findIndex(c => c.id === cleanId);
@@ -106,9 +109,10 @@ export async function deleteCategory(categoryId) {
   // Remove from localStorage
   let localCategories = [];
   try {
-    localCategories = JSON.parse(localStorage.getItem('admin_categories') || '[]');
+    const stored = localStorage.getItem('admin_categories');
+    localCategories = stored ? JSON.parse(stored) : [...DEFAULT_CATEGORIES];
   } catch (e) {
-    localCategories = [];
+    localCategories = [...DEFAULT_CATEGORIES];
   }
 
   const filtered = localCategories.filter(c => c.id !== categoryId);

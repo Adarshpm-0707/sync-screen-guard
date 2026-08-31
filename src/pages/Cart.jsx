@@ -115,11 +115,11 @@ export default function Cart() {
                   className="p-4 sm:p-5 rounded-2xl bg-white border border-zinc-200 flex gap-4 sm:gap-5 items-center shadow-xs"
                 >
                   {/* Thumbnail */}
-                  <div className="h-20 w-20 sm:h-24 sm:w-24 shrink-0 rounded-xl bg-zinc-100 border border-zinc-200/80 p-1 overflow-hidden">
+                  <div className="h-20 w-20 sm:h-24 sm:w-24 shrink-0 rounded-xl bg-white border border-zinc-200 p-1.5 overflow-hidden flex items-center justify-center">
                     <img
                       src={mainImg}
                       alt={item.name}
-                      className="h-full w-full object-cover rounded-lg"
+                      className="h-full w-full max-h-full max-w-full object-contain rounded-lg"
                     />
                   </div>
 

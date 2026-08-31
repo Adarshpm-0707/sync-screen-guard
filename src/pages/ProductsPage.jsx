@@ -9,6 +9,7 @@ import useCart from '../hooks/useCart';
 import { fetchStoreProducts } from '../utils/productStore';
 import { fetchCategories } from '../utils/categoryStore';
 import ProductCard from '../components/product/ProductCard';
+import ProductCarousel from '../components/product/ProductCarousel';
 
 export default function ProductsPage() {
   const [products, setProducts] = useState([]);
@@ -53,14 +54,7 @@ export default function ProductsPage() {
   const filterTabs = useMemo(() => {
     return [
       { id: 'all', name: 'All Products' },
-      { id: 'bestseller', name: '🔥 Best Sellers' },
-      { id: 'privacy', name: 'Privacy Armor' },
-      { id: 'matte', name: 'Matte Finish' },
-      { id: 'samsung', name: 'Samsung Series' },
-      { id: 'oneplus', name: 'OnePlus Series' },
-      ...categoriesList
-        .filter(c => !['privacy', 'matte', 'samsung', 'oneplus'].includes(c.id))
-        .map(c => ({ id: c.id, name: c.name }))
+      ...categoriesList.map(c => ({ id: c.id, name: c.name }))
     ];
   }, [categoriesList]);
 
@@ -74,10 +68,8 @@ export default function ProductsPage() {
         p.category?.toLowerCase().includes(q)
       );
     }
-    if (categoryFilter === 'bestseller') {
-      result = result.filter(p => p.is_best_seller);
-    } else if (categoryFilter !== 'all') {
-      result = result.filter(p => p.category === categoryFilter);
+    if (categoryFilter !== 'all') {
+      result = result.filter(p => (p.category || '').toLowerCase() === categoryFilter.toLowerCase());
     }
 
     if (sortBy === 'price-low') {
@@ -190,10 +182,13 @@ export default function ProductsPage() {
         </div>
       </div>
 
-      {/* ── 3. Product Grid ── */}
+      {/* ── 3. GSAP Carousel ── */}
+      <ProductCarousel products={products} />
+
+      {/* ── 4. Product Grid ── */}
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8">
         {processedProducts.length > 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5 lg:gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2.5 sm:gap-3.5">
             <AnimatePresence mode="popLayout">
               {processedProducts.map((p) => (
                 <ProductCard

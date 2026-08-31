@@ -9,7 +9,6 @@ import {
   Layers, Lock, MapPin, ChevronDown, ChevronUp, PackageCheck 
 } from 'lucide-react';
 import useCart from '../hooks/useCart';
-import { AVAILABLE_MODELS, DEFAULT_MODEL } from '../constants/models';
 import { fetchStoreProducts } from '../utils/productStore';
 
 export default function ProductDetail({ product: propProduct }) {
@@ -20,7 +19,6 @@ export default function ProductDetail({ product: propProduct }) {
   const [allProducts, setAllProducts] = useState([]);
 
   const [quantity, setQuantity] = useState(1);
-  const [selectedModel, setSelectedModel] = useState(DEFAULT_MODEL);
   const [isAdded, setIsAdded] = useState(false);
   const [pincode, setPincode] = useState('');
   const [pincodeResult, setPincodeResult] = useState(null);
@@ -64,13 +62,13 @@ export default function ProductDetail({ product: propProduct }) {
   }
 
   const handleAddToCart = () => {
-    addToCart(product, quantity, selectedModel);
+    addToCart(product, quantity);
     setIsAdded(true);
     setTimeout(() => setIsAdded(false), 2000);
   };
 
   const handleBuyNow = () => {
-    addToCart(product, quantity, selectedModel);
+    addToCart(product, quantity);
     navigate('/checkout');
   };
 
@@ -177,30 +175,6 @@ export default function ProductDetail({ product: propProduct }) {
               <p className="text-[10px] sm:text-[11px] text-zinc-500 font-medium">Inclusive of all taxes. Free shipping on prepaid orders.</p>
             </div>
 
-            {/* Device Compatibility Model Selector */}
-            <div className="space-y-2">
-              <label className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-zinc-900 flex items-center justify-between">
-                <span>Select Compatible Device</span>
-                <span className="text-[10px] text-emerald-600 font-bold">100% Fit Guaranteed</span>
-              </label>
-              
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 sm:gap-2">
-                {AVAILABLE_MODELS.slice(0, 6).map((model) => (
-                  <button
-                    key={model}
-                    onClick={() => setSelectedModel(model)}
-                    className={`px-2.5 py-2 rounded-xl text-[11px] sm:text-xs font-bold transition-all text-center cursor-pointer truncate ${
-                      selectedModel === model
-                        ? 'bg-zinc-900 text-white shadow-xs border border-zinc-900'
-                        : 'bg-zinc-100 text-zinc-700 border border-zinc-200/80 hover:bg-zinc-200'
-                    }`}
-                  >
-                    {model}
-                  </button>
-                ))}
-              </div>
-            </div>
-
             {/* Quantity Controller & CTA Buttons */}
             <div className="space-y-2.5 sm:space-y-3 pt-1">
               <div className="flex items-center gap-2 sm:gap-3">
@@ -250,7 +224,7 @@ export default function ProductDetail({ product: propProduct }) {
                 className="w-full py-3.5 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold uppercase tracking-widest transition-all shadow-sm active:scale-98 cursor-pointer flex items-center justify-center gap-2"
               >
                 <Zap className="h-4 w-4" />
-                <span>Instant Buy Now</span>
+                <span>Buy Now</span>
               </button>
             </div>
 
@@ -384,7 +358,7 @@ export default function ProductDetail({ product: propProduct }) {
             <h2 className="font-display text-lg sm:text-2xl font-black uppercase tracking-tight text-zinc-900 mb-4 sm:mb-6">
               You May Also Like
             </h2>
-            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-5 lg:gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2.5 sm:gap-3.5">
               {relatedProducts.map((p) => (
                 <ProductCard
                   key={p.id}
