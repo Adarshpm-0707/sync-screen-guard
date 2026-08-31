@@ -1,5 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { RefreshCw } from 'lucide-react';
+import { 
+  RefreshCw, 
+  Trash2, 
+  ShoppingCart, 
+  Eye, 
+  Phone, 
+  Calendar, 
+  User, 
+  CreditCard,
+  AlertCircle
+} from 'lucide-react';
 import OrderFilters from '../components/orders/OrderFilters';
 import AdminTable from '../components/common/AdminTable';
 import OrderStatusBadge from '../components/orders/OrderStatusBadge';
@@ -58,7 +68,7 @@ export default function Orders() {
           setTotalItems(data.totalItems || data.orders?.length || 0);
         }
       } catch (apiErr) {
-        console.warn('API fetchOrders failed, falling back to direct Supabase fetch:', apiErr);
+        console.warn('API fetchOrders fallback:', apiErr);
       }
 
       if (Array.isArray(fetchedOrders) && fetchedOrders.length > 0) {
@@ -123,26 +133,69 @@ export default function Orders() {
     fetchOrders();
   };
 
-  const headers = ['Order ID', 'Date', 'Customer', 'Phone', 'Payment', 'Status', 'Total', 'Action'];
+  const handleDeleteOrder = async (e, order) => {
+    e.stopPropagation();
+    if (!window.confirm(`Permanently delete order #${order.id.slice(0, 8).toUpperCase()}?\nThis action cannot be undone.`)) return;
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      let deleted = false;
+
+      try {
+        const res = await fetch(`http://localhost:5000/api/admin/orders/${order.id}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
+        if (res.ok) deleted = true;
+      } catch (_) {}
+
+      if (!deleted) {
+        await supabase.from('orders').delete().eq('id', order.id);
+      }
+
+      const localOrders = JSON.parse(localStorage.getItem('customer_orders') || '[]');
+      const updated = localOrders.filter(o => o.id !== order.id);
+      localStorage.setItem('customer_orders', JSON.stringify(updated));
+
+      fetchOrders();
+    } catch (err) {
+      console.error('Error deleting order:', err);
+      alert('Failed to delete order. Please try again.');
+    }
+  };
+
+  const headers = ['Order ID', 'Date', 'Customer', 'Contact', 'Payment', 'Status', 'Total', 'Action'];
 
   return (
     <div className="space-y-6 text-left">
-      {/* Title Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      {/* Control Box Header */}
+      <div className="bg-[#0E1322]/90 border border-slate-800/80 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-xl flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="font-display text-2xl font-extrabold text-white">Orders Registry</h1>
-          <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-0.5">Manage customer transactions & deliveries</p>
+          <div className="flex items-center space-x-2.5">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-indigo-600 to-blue-500 shadow-md">
+              <ShoppingCart className="h-5 w-5 text-white" />
+            </div>
+            <h1 className="font-display text-xl sm:text-2xl lg:text-3xl font-black tracking-tight text-white uppercase">
+              Orders Registry
+            </h1>
+          </div>
+          <p className="text-[11px] text-slate-400 font-semibold tracking-wider uppercase mt-1 sm:ml-11">
+            Track customer transactions, fulfillments & delivery statuses ({totalItems} records found)
+          </p>
         </div>
+
         <button
           onClick={fetchOrders}
-          className="flex items-center space-x-2 px-4 py-2 border border-slate-800 hover:bg-slate-800 text-xs font-semibold text-slate-400 hover:text-white rounded-xl transition-all self-start cursor-pointer"
+          disabled={loading}
+          className="flex items-center justify-center space-x-2 px-4 py-2.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-indigo-500/30 text-xs font-bold text-slate-300 hover:text-white rounded-xl transition-all self-start sm:self-center cursor-pointer shadow-sm active:scale-95"
         >
-          <RefreshCw className="h-3.5 w-3.5" />
-          <span>Refresh List</span>
+          <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin text-indigo-400' : ''}`} />
+          <span>Refresh Orders</span>
         </button>
       </div>
 
-      {/* Filter panel */}
+      {/* Filter Component */}
       <OrderFilters
         searchTerm={searchTerm}
         setSearchTerm={(term) => {
@@ -166,62 +219,163 @@ export default function Orders() {
         }}
       />
 
-      {/* Orders Table */}
-      <AdminTable headers={headers} isLoading={loading} emptyMessage="No orders match search filters">
-        {orders.map((order) => {
-          const isGuestOrder = order.is_guest || !order.user_id;
+      {/* Mobile Card View (< sm/md) */}
+      <div className="md:hidden space-y-3">
+        {loading ? (
+          <div className="p-8 text-center bg-[#0E1322]/80 border border-slate-800/80 rounded-2xl">
+            <RefreshCw className="h-6 w-6 animate-spin text-indigo-400 mx-auto mb-2" />
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Loading orders...</p>
+          </div>
+        ) : orders.length === 0 ? (
+          <div className="p-8 text-center bg-[#0E1322]/80 border border-slate-800/80 rounded-2xl text-slate-500 text-xs font-bold uppercase tracking-wider">
+            No orders match search filters
+          </div>
+        ) : (
+          orders.map((order) => {
+            const isGuestOrder = order.is_guest || !order.user_id;
 
-          return (
-            <tr 
-              key={order.id} 
-              className="hover:bg-slate-800/20 transition-colors cursor-pointer"
-              onClick={() => handleRowClick(order)}
-            >
-              <td className="px-4 sm:px-6 py-3.5 sm:py-4 font-bold text-indigo-400 whitespace-nowrap">
-                #{order.id.slice(0, 8).toUpperCase()}
-              </td>
-              <td className="px-4 sm:px-6 py-3.5 sm:py-4 text-slate-400 whitespace-nowrap">
-                {new Date(order.created_at).toLocaleDateString()}
-              </td>
-              <td className="px-4 sm:px-6 py-3.5 sm:py-4 whitespace-nowrap">
-                <div className="flex flex-col text-left">
-                  <span className="font-semibold text-white max-w-[150px] sm:max-w-xs truncate">{order.customer_name}</span>
-                  <span className={`inline-flex items-center text-[9px] font-extrabold uppercase tracking-widest mt-1 px-2 py-0.5 rounded-full border w-fit ${
-                    isGuestOrder
-                      ? 'bg-amber-500/10 border-amber-500/30 text-amber-400'
-                      : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
-                  }`}>
-                    {isGuestOrder ? '⚡ Guest' : '👤 Account'}
+            return (
+              <div
+                key={order.id}
+                onClick={() => handleRowClick(order)}
+                className="bg-[#0E1322]/90 border border-slate-800/80 rounded-2xl p-4 space-y-3 shadow-lg active:scale-[0.99] transition-transform cursor-pointer"
+              >
+                <div className="flex items-center justify-between border-b border-slate-800/80 pb-2.5">
+                  <span className="font-mono text-xs font-black text-indigo-400">
+                    #{order.id.slice(0, 8).toUpperCase()}
                   </span>
+                  <OrderStatusBadge status={order.status} />
                 </div>
-              </td>
-              <td className="px-4 sm:px-6 py-3.5 sm:py-4 whitespace-nowrap text-slate-300 font-mono">
-                {order.phone}
-              </td>
-              <td className="px-4 sm:px-6 py-3.5 sm:py-4 uppercase font-bold text-[10px] text-slate-400 whitespace-nowrap">
-                {order.payment_type}
-              </td>
-              <td className="px-4 sm:px-6 py-3.5 sm:py-4 whitespace-nowrap">
-                <OrderStatusBadge status={order.status} />
-              </td>
-              <td className="px-4 sm:px-6 py-3.5 sm:py-4 font-extrabold text-white whitespace-nowrap">
-                ₹{order.total}
-              </td>
-              <td className="px-4 sm:px-6 py-3.5 sm:py-4 whitespace-nowrap">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleRowClick(order);
-                  }}
-                  className="text-[10px] font-bold uppercase tracking-wider text-primary-500 hover:text-white transition-colors cursor-pointer"
-                >
-                  Inspect
-                </button>
-              </td>
-            </tr>
-          );
-        })}
-      </AdminTable>
+
+                <div className="space-y-1.5 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-white text-sm">{order.customer_name}</span>
+                    <span className="font-black text-white text-sm">₹{Number(order.total || 0).toLocaleString()}</span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-slate-400 text-[11px]">
+                    <span className="flex items-center gap-1 font-mono">
+                      <Phone className="h-3 w-3 text-slate-500" />
+                      {order.phone}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Calendar className="h-3 w-3 text-slate-500" />
+                      {new Date(order.created_at).toLocaleDateString()}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-1">
+                    <span className={`inline-flex items-center text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border ${
+                      isGuestOrder
+                        ? 'bg-amber-500/10 border-amber-500/30 text-amber-400'
+                        : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                    }`}>
+                      {isGuestOrder ? '⚡ Guest' : '👤 Account'}
+                    </span>
+                    <span className="px-2 py-0.5 rounded-md bg-slate-900 border border-slate-800 text-[9px] font-black uppercase text-slate-300">
+                      {order.payment_type}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800/80">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleRowClick(order);
+                    }}
+                    className="px-3 py-1.5 rounded-xl border border-indigo-500/30 bg-indigo-500/10 text-indigo-300 text-xs font-black uppercase tracking-wider"
+                  >
+                    Inspect
+                  </button>
+                  <button
+                    onClick={(e) => handleDeleteOrder(e, order)}
+                    className="p-1.5 rounded-xl border border-rose-500/30 bg-rose-500/10 text-rose-400"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {/* Desktop Table View (>= md) */}
+      <div className="hidden md:block">
+        <AdminTable headers={headers} isLoading={loading} emptyMessage="No orders match search filters">
+          {orders.map((order) => {
+            const isGuestOrder = order.is_guest || !order.user_id;
+
+            return (
+              <tr 
+                key={order.id} 
+                className="hover:bg-slate-800/30 transition-colors cursor-pointer group"
+                onClick={() => handleRowClick(order)}
+              >
+                <td className="px-4 sm:px-5 py-4 font-black font-mono text-indigo-400 whitespace-nowrap">
+                  #{order.id.slice(0, 8).toUpperCase()}
+                </td>
+                <td className="px-4 sm:px-5 py-4 text-slate-400 whitespace-nowrap text-xs">
+                  {new Date(order.created_at).toLocaleDateString('en-IN', {
+                    day: 'numeric',
+                    month: 'short',
+                    year: 'numeric'
+                  })}
+                </td>
+                <td className="px-4 sm:px-5 py-4 whitespace-nowrap">
+                  <div className="flex flex-col text-left">
+                    <span className="font-bold text-white max-w-[160px] truncate text-xs">
+                      {order.customer_name}
+                    </span>
+                    <span className={`inline-flex items-center text-[9px] font-black uppercase tracking-widest mt-1 px-2 py-0.5 rounded-full border w-fit ${
+                      isGuestOrder
+                        ? 'bg-amber-500/10 border-amber-500/30 text-amber-400'
+                        : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                    }`}>
+                      {isGuestOrder ? '⚡ Guest' : '👤 Account'}
+                    </span>
+                  </div>
+                </td>
+                <td className="px-4 sm:px-5 py-4 whitespace-nowrap text-slate-300 font-mono text-xs">
+                  {order.phone}
+                </td>
+                <td className="px-4 sm:px-5 py-4 whitespace-nowrap">
+                  <span className="px-2 py-1 rounded-md bg-slate-900 border border-slate-800 text-[10px] font-black uppercase text-slate-300 tracking-wider">
+                    {order.payment_type}
+                  </span>
+                </td>
+                <td className="px-4 sm:px-5 py-4 whitespace-nowrap">
+                  <OrderStatusBadge status={order.status} />
+                </td>
+                <td className="px-4 sm:px-5 py-4 font-black text-white whitespace-nowrap text-xs">
+                  ₹{Number(order.total || 0).toLocaleString()}
+                </td>
+                <td className="px-4 sm:px-5 py-4 whitespace-nowrap">
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRowClick(order);
+                      }}
+                      className="px-2.5 py-1.5 rounded-xl border border-indigo-500/30 bg-indigo-500/10 hover:bg-indigo-500/25 text-indigo-300 hover:text-white text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer"
+                    >
+                      Inspect
+                    </button>
+                    <button
+                      onClick={(e) => handleDeleteOrder(e, order)}
+                      title="Delete order"
+                      className="p-1.5 rounded-xl border border-rose-500/25 bg-rose-500/10 hover:bg-rose-500/25 hover:border-rose-500/50 text-rose-400 hover:text-rose-300 transition-all cursor-pointer"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            );
+          })}
+        </AdminTable>
+      </div>
 
       {/* Pagination controls */}
       <Pagination

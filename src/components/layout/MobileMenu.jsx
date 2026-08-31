@@ -35,12 +35,13 @@ export default function MobileMenu({ isOpen, onClose, customer, onOpenAuth, onLo
             <div>
               {/* Top Header */}
               <div className="flex items-center justify-between pb-5 border-b border-zinc-800">
-                <Link to="/" onClick={onClose} className="flex items-center space-x-2">
+                <Link to="/" onClick={onClose} title="Sync Screen Guard" aria-label="Sync Screen Guard" className="flex items-center space-x-2">
                   <img
                     src={syncLogo}
-                    alt="Sync Logo"
+                    alt="Sync Screen Guard"
                     className="h-8 w-auto object-contain"
                   />
+                  <span className="sr-only">Sync Screen Guard</span>
                 </Link>
                 <button
                   onClick={onClose}

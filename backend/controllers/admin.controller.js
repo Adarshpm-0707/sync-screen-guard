@@ -713,3 +713,226 @@ export async function updateSettings(req, res, next) {
     next(err);
   }
 }
+
+// 12. GET Customers Aggregated List & Stats
+export async function getCustomers(req, res, next) {
+  try {
+    const { search = '', customerType = 'all', sort = 'recent', page = 1, limit = 10 } = req.query;
+    const pageNum = parseInt(page) || 1;
+    const limitNum = parseInt(limit) || 10;
+    const offset = (pageNum - 1) * limitNum;
+
+    let allOrders = [];
+
+    if (isMockMode) {
+      allOrders = [...mockOrders];
+    } else {
+      const { data: dbOrders, error } = await supabaseAdmin
+        .from('orders')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.warn('Supabase orders fetch for customers failed:', error);
+      }
+      allOrders = dbOrders || [];
+    }
+
+    // Group orders by unique customer identifier (email or phone or user_id)
+    const customerMap = new Map();
+
+    allOrders.forEach(order => {
+      const key = (order.customer_email || order.user_id || order.phone || order.customer_name || 'unknown').toLowerCase().trim();
+      const isGuest = order.is_guest === true || (!order.user_id && order.is_guest !== false);
+
+      if (!customerMap.has(key)) {
+        customerMap.set(key, {
+          id: order.user_id || `cust-${Buffer.from(key).toString('hex').slice(0, 16)}`,
+          user_id: order.user_id || null,
+          name: order.customer_name || 'Customer',
+          email: order.customer_email || '',
+          phone: order.phone || '',
+          is_guest: isGuest,
+          total_orders: 0,
+          total_spent: 0,
+          first_seen: order.created_at,
+          last_active: order.created_at,
+          addresses: [],
+          orders: []
+        });
+      }
+
+      const cust = customerMap.get(key);
+      cust.total_orders += 1;
+      cust.total_spent += parseFloat(order.total || 0);
+
+      // If any order has is_guest === false or valid user_id, consider customer registered
+      if (order.user_id || order.is_guest === false) {
+        cust.is_guest = false;
+        if (order.user_id) cust.user_id = order.user_id;
+      }
+
+      // Track timestamps
+      if (new Date(order.created_at) < new Date(cust.first_seen)) {
+        cust.first_seen = order.created_at;
+      }
+      if (new Date(order.created_at) > new Date(cust.last_active)) {
+        cust.last_active = order.created_at;
+      }
+
+      // Track addresses
+      const addrKey = `${order.address || ''}_${order.city || ''}_${order.pincode || ''}`;
+      if (order.address && !cust.addresses.some(a => a._key === addrKey)) {
+        cust.addresses.push({
+          _key: addrKey,
+          address: order.address,
+          city: order.city || '',
+          state: order.state || '',
+          pincode: order.pincode || ''
+        });
+      }
+
+      // Track order record
+      cust.orders.push({
+        id: order.id,
+        created_at: order.created_at,
+        status: order.status,
+        total: order.total,
+        payment_type: order.payment_type,
+        payment_status: order.payment_status || 'pending',
+        city: order.city,
+        state: order.state,
+      });
+    });
+
+    let customersList = Array.from(customerMap.values()).map(c => ({
+      ...c,
+      primary_address: c.addresses.length > 0 ? `${c.addresses[0].address}, ${c.addresses[0].city} ${c.addresses[0].pincode}` : 'No address provided',
+      total_spent: Math.round(c.total_spent * 100) / 100
+    }));
+
+    // Calculate Summary Stats
+    const totalCustomers = customersList.length;
+    const registeredCount = customersList.filter(c => !c.is_guest).length;
+    const guestCount = customersList.filter(c => c.is_guest).length;
+    const totalCustomerRevenue = customersList.reduce((sum, c) => sum + c.total_spent, 0);
+    const repeatCustomersCount = customersList.filter(c => c.total_orders > 1).length;
+    const avgOrderValue = totalCustomers > 0 ? (totalCustomerRevenue / (allOrders.length || 1)) : 0;
+
+    // Apply Filter: customerType
+    if (customerType === 'registered') {
+      customersList = customersList.filter(c => !c.is_guest);
+    } else if (customerType === 'guest') {
+      customersList = customersList.filter(c => c.is_guest);
+    }
+
+    // Apply Search Filter
+    if (search && search.trim()) {
+      const q = search.trim().toLowerCase();
+      customersList = customersList.filter(c =>
+        c.name.toLowerCase().includes(q) ||
+        c.email.toLowerCase().includes(q) ||
+        c.phone.includes(q) ||
+        c.addresses.some(a => a.city.toLowerCase().includes(q) || a.state.toLowerCase().includes(q) || a.pincode.includes(q))
+      );
+    }
+
+    // Apply Sorting
+    if (sort === 'spent') {
+      customersList.sort((a, b) => b.total_spent - a.total_spent);
+    } else if (sort === 'orders') {
+      customersList.sort((a, b) => b.total_orders - a.total_orders);
+    } else if (sort === 'name') {
+      customersList.sort((a, b) => a.name.localeCompare(b.name));
+    } else {
+      // Default: recent activity
+      customersList.sort((a, b) => new Date(b.last_active) - new Date(a.last_active));
+    }
+
+    const filteredTotal = customersList.length;
+    const paginatedCustomers = customersList.slice(offset, offset + limitNum);
+
+    res.status(200).json({
+      customers: paginatedCustomers,
+      stats: {
+        totalCustomers,
+        registeredCount,
+        guestCount,
+        totalCustomerRevenue: Math.round(totalCustomerRevenue * 100) / 100,
+        repeatCustomersCount,
+        avgOrderValue: Math.round(avgOrderValue * 100) / 100,
+      },
+      totalItems: filteredTotal,
+      totalPages: Math.ceil(filteredTotal / limitNum) || 1,
+      currentPage: pageNum
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// 13. GET Single Customer Details
+export async function getCustomerDetail(req, res, next) {
+  try {
+    const { id } = req.params;
+    let allOrders = [];
+
+    if (isMockMode) {
+      allOrders = [...mockOrders];
+    } else {
+      const { data: dbOrders } = await supabaseAdmin
+        .from('orders')
+        .select('*')
+        .order('created_at', { ascending: false });
+      allOrders = dbOrders || [];
+    }
+
+    // Match either by customer id, user_id, or email
+    const matchingOrders = allOrders.filter(o => {
+      const custId = o.user_id || `cust-${Buffer.from((o.customer_email || o.phone || o.customer_name || '').toLowerCase().trim()).toString('hex').slice(0, 16)}`;
+      return custId === id || o.user_id === id || (o.customer_email && o.customer_email.toLowerCase() === id.toLowerCase());
+    });
+
+    if (matchingOrders.length === 0) {
+      return res.status(404).json({ message: 'Customer not found.' });
+    }
+
+    const primary = matchingOrders[0];
+    const isGuest = !matchingOrders.some(o => o.user_id || o.is_guest === false);
+    const totalSpent = matchingOrders.reduce((sum, o) => sum + parseFloat(o.total || 0), 0);
+
+    const addresses = [];
+    matchingOrders.forEach(o => {
+      const addrKey = `${o.address || ''}_${o.city || ''}_${o.pincode || ''}`;
+      if (o.address && !addresses.some(a => a._key === addrKey)) {
+        addresses.push({
+          _key: addrKey,
+          address: o.address,
+          city: o.city || '',
+          state: o.state || '',
+          pincode: o.pincode || ''
+        });
+      }
+    });
+
+    const customerDetail = {
+      id,
+      user_id: matchingOrders.find(o => o.user_id)?.user_id || null,
+      name: primary.customer_name || 'Customer',
+      email: primary.customer_email || '',
+      phone: primary.phone || '',
+      is_guest: isGuest,
+      total_orders: matchingOrders.length,
+      total_spent: Math.round(totalSpent * 100) / 100,
+      first_seen: matchingOrders[matchingOrders.length - 1]?.created_at || primary.created_at,
+      last_active: primary.created_at,
+      addresses,
+      orders: matchingOrders
+    };
+
+    res.status(200).json(customerDetail);
+  } catch (err) {
+    next(err);
+  }
+}
+

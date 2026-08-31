@@ -5,8 +5,7 @@ import {
   Search, ShieldCheck, Sparkles, ArrowRight 
 } from 'lucide-react';
 import useCart from '../../hooks/useCart';
-import { supabase } from '../../supabaseClient';
-import CustomerAuthModal from './CustomerAuthModal';
+import useCustomerAuth from '../../hooks/useCustomerAuth';
 import MobileMenu from './MobileMenu';
 import CartDrawer from './CartDrawer';
 import SearchModal from './SearchModal';
@@ -14,8 +13,7 @@ import syncLogo from '../../assets/sync logo.PNG';
 
 export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
-  const [customer, setCustomer] = useState(null);
-  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const { customer, isLoggedIn, openAuthModal, logout } = useCustomerAuth();
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
@@ -26,31 +24,6 @@ export default function Navbar() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Check Supabase session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        setCustomer(session.user);
-      } else {
-        const localUser = localStorage.getItem('local_customer_user');
-        if (localUser) {
-          setCustomer(JSON.parse(localUser));
-        }
-      }
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        setCustomer(session.user);
-      } else {
-        const localUser = localStorage.getItem('local_customer_user');
-        if (localUser) {
-          setCustomer(JSON.parse(localUser));
-        } else {
-          setCustomer(null);
-        }
-      }
-    });
-
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20);
     };
@@ -66,14 +39,11 @@ export default function Navbar() {
     return () => {
       window.removeEventListener('scroll', handleScroll);
       document.removeEventListener('mousedown', handleClickOutside);
-      subscription.unsubscribe();
     };
   }, []);
 
   const handleLogout = async () => {
-    localStorage.removeItem('local_customer_user');
-    await supabase.auth.signOut();
-    setCustomer(null);
+    await logout();
   };
 
   const isActive = (path) => location.pathname === path;
@@ -81,6 +51,7 @@ export default function Navbar() {
   const customerEmail = customer?.email || 'Customer';
   const customerInitial = customerEmail ? customerEmail.charAt(0).toUpperCase() : 'C';
   const customerDisplayName = customerEmail.includes('@') ? customerEmail.split('@')[0] : customerEmail;
+
 
   return (
     <>
@@ -110,12 +81,13 @@ export default function Navbar() {
 
             {/* Logo */}
             <div className="flex items-center">
-              <Link to="/" className="flex items-center space-x-2 group">
+              <Link to="/" title="Sync Screen Guard" aria-label="Sync Screen Guard" className="flex items-center space-x-2 group">
                 <img
                   src={syncLogo}
-                  alt="Sync Screen Guard Logo"
+                  alt="Sync Screen Guard"
                   className="h-8 sm:h-9 w-auto object-contain transition-transform duration-200 group-hover:scale-102"
                 />
+                <span className="sr-only">Sync Screen Guard</span>
               </Link>
             </div>
 
@@ -197,7 +169,7 @@ export default function Navbar() {
                 </div>
               ) : (
                 <button
-                  onClick={() => setAuthModalOpen(true)}
+                  onClick={() => openAuthModal({ mode: 'signin' })}
                   className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full text-zinc-300 hover:bg-zinc-900 hover:text-white transition-colors cursor-pointer"
                   aria-label="Account Login"
                   title="Sign In"
@@ -243,16 +215,9 @@ export default function Navbar() {
         isOpen={mobileMenuOpen} 
         onClose={() => setMobileMenuOpen(false)} 
         customer={customer}
-        onOpenAuth={() => setAuthModalOpen(true)}
+        onOpenAuth={() => openAuthModal({ mode: 'signin' })}
         onLogout={handleLogout}
         onOpenCart={() => setCartDrawerOpen(true)}
-      />
-
-      {/* Customer Auth Modal */}
-      <CustomerAuthModal 
-        isOpen={authModalOpen} 
-        onClose={() => setAuthModalOpen(false)} 
-        onAuthSuccess={(user) => setCustomer(user)}
       />
     </>
   );

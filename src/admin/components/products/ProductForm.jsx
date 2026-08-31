@@ -2,19 +2,18 @@ import React, { useState, useEffect } from 'react';
 import ProductImageUpload from './ProductImageUpload';
 import AdminButton from '../common/AdminButton';
 import { fetchCategories } from '../../../utils/categoryStore';
+import { Sparkles, DollarSign, Home, Tag, Image, Palette, Lock } from 'lucide-react';
 
-// Quick-pick preset swatches for common product colors
 const PRESET_COLORS = [
-  { label: 'Sky Blue',    hex: '#3b82f6' },
-  { label: 'Indigo',      hex: '#6366f1' },
-  { label: 'Purple',      hex: '#a855f7' },
-  { label: 'Rose',        hex: '#f43f5e' },
-  { label: 'Orange',      hex: '#f97316' },
-  { label: 'Amber',       hex: '#f59e0b' },
-  { label: 'Emerald',     hex: '#10b981' },
-  { label: 'Teal',        hex: '#14b8a6' },
-  { label: 'Cyan',        hex: '#06b6d4' },
-  { label: 'Slate',       hex: '#64748b' },
+  { label: 'Sky Blue', hex: '#3b82f6' },
+  { label: 'Indigo', hex: '#6366f1' },
+  { label: 'Purple', hex: '#a855f7' },
+  { label: 'Rose', hex: '#f43f5e' },
+  { label: 'Orange', hex: '#f97316' },
+  { label: 'Amber', hex: '#f59e0b' },
+  { label: 'Emerald', hex: '#10b981' },
+  { label: 'Teal', hex: '#14b8a6' },
+  { label: 'Slate', hex: '#64748b' },
 ];
 
 export default function ProductForm({ product, onSubmit, isSaving }) {
@@ -24,6 +23,7 @@ export default function ProductForm({ product, onSubmit, isSaving }) {
     category: 'glass',
     price: '',
     original_price: '',
+    purchasing_price: '',
     description: '',
     images: [],
     stock: 0,
@@ -42,7 +42,6 @@ export default function ProductForm({ product, onSubmit, isSaving }) {
 
   useEffect(() => {
     if (product) {
-      // Normalize old preset names (e.g. "blue") to hex equivalents
       const normalizeColor = (c) => {
         const nameToHex = { blue: '#3b82f6', orange: '#f97316', pink: '#f43f5e', green: '#10b981', purple: '#a855f7' };
         if (c && c.startsWith('#')) return c;
@@ -53,6 +52,7 @@ export default function ProductForm({ product, onSubmit, isSaving }) {
         category: product.category || 'glass',
         price: product.price || '',
         original_price: product.original_price || '',
+        purchasing_price: product.purchasing_price || '',
         description: product.description || '',
         images: product.images || [],
         stock: product.stock || 0,
@@ -82,207 +82,279 @@ export default function ProductForm({ product, onSubmit, isSaving }) {
       category: formData.category || 'glass',
       price: parseFloat(formData.price),
       original_price: formData.original_price ? parseFloat(formData.original_price) : null,
+      purchasing_price: formData.purchasing_price ? parseFloat(formData.purchasing_price) : null,
       stock: parseInt(formData.stock, 10),
       is_best_seller: Boolean(formData.is_best_seller),
       show_on_home: Boolean(formData.show_on_home),
     });
   };
 
+  const costMargin = Number(formData.price || 0) - Number(formData.purchasing_price || 0);
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-5 text-left text-xs text-slate-350">
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="sm:col-span-2">
-          <label className="block text-[9px] font-extrabold uppercase tracking-widest text-slate-400 mb-2">Product Title *</label>
-          <input
-            type="text"
-            required
-            name="name"
-            value={formData.name}
-            onChange={handleInputChange}
-            className="w-full rounded-xl border border-slate-800 bg-slate-950/60 p-3 text-white focus:border-primary-500 focus:outline-none transition-colors"
-            placeholder="e.g. Sync EZ Fit Glass Screenguard"
-          />
+    <form onSubmit={handleSubmit} className="space-y-6 text-left text-xs text-slate-300">
+      {/* 1. Basic Info Section */}
+      <div className="space-y-4">
+        <div className="flex items-center space-x-2 border-b border-slate-800 pb-2">
+          <Tag className="h-4 w-4 text-indigo-400" />
+          <span className="text-xs font-black uppercase tracking-wider text-white">General Information</span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+          <div className="sm:col-span-2">
+            <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">
+              Product Name *
+            </label>
+            <input
+              type="text"
+              required
+              name="name"
+              value={formData.name}
+              onChange={handleInputChange}
+              className="w-full rounded-xl border border-slate-800 bg-[#090D16]/90 p-3 text-white focus:border-indigo-500 focus:outline-none transition-colors font-bold text-xs"
+              placeholder="e.g. Sync Diamond Shield Glass"
+            />
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">
+              Category *
+            </label>
+            <select
+              name="category"
+              value={formData.category}
+              onChange={handleInputChange}
+              className="w-full rounded-xl border border-slate-800 bg-[#090D16]/90 p-3 text-white focus:border-indigo-500 focus:outline-none transition-colors cursor-pointer font-bold capitalize text-xs"
+            >
+              {categoriesList.map((cat) => (
+                <option key={cat.id} value={cat.id} className="bg-[#0E1322] text-white capitalize">
+                  {cat.name} ({cat.id})
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
         <div>
-          <label className="block text-[9px] font-extrabold uppercase tracking-widest text-slate-400 mb-2">Category *</label>
-          <select
-            name="category"
-            value={formData.category}
+          <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">
+            Description
+          </label>
+          <textarea
+            name="description"
+            rows="3"
+            value={formData.description}
             onChange={handleInputChange}
-            className="w-full rounded-xl border border-slate-800 bg-slate-950/60 p-3 text-white focus:border-primary-500 focus:outline-none transition-colors cursor-pointer font-bold"
-          >
-            {categoriesList.map((cat) => (
-              <option key={cat.id} value={cat.id} className="bg-slate-900 text-white">
-                {cat.name} ({cat.id})
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      {/* Show on Home Screen Checkbox Option */}
-      <div className="p-3.5 rounded-xl border border-sky-500/30 bg-sky-500/10 flex items-start gap-3">
-        <input
-          type="checkbox"
-          id="show_on_home"
-          name="show_on_home"
-          checked={formData.show_on_home}
-          onChange={handleInputChange}
-          className="mt-0.5 w-5 h-5 rounded border-sky-500 text-sky-500 focus:ring-sky-500 cursor-pointer accent-sky-500"
-        />
-        <label htmlFor="show_on_home" className="cursor-pointer select-none">
-          <span className="block font-black text-sky-300 uppercase tracking-wider text-xs">
-            🏠 Add to Home Screen (Show in Home Catalog)
-          </span>
-          <span className="block text-[10px] text-sky-200/80 font-semibold mt-0.5">
-            Only products marked with "Add to Home Screen" will be displayed in the main Homepage product section.
-          </span>
-        </label>
-      </div>
-
-      {/* Best Seller Checkbox Option */}
-      <div className="p-3.5 rounded-xl border border-amber-500/30 bg-amber-500/10 flex items-start gap-3">
-        <input
-          type="checkbox"
-          id="is_best_seller"
-          name="is_best_seller"
-          checked={formData.is_best_seller}
-          onChange={handleInputChange}
-          className="mt-0.5 w-5 h-5 rounded border-amber-500 text-amber-500 focus:ring-amber-500 cursor-pointer accent-amber-500"
-        />
-        <label htmlFor="is_best_seller" className="cursor-pointer select-none">
-          <span className="block font-black text-amber-300 uppercase tracking-wider text-xs">
-            🔥 Mark as Best Seller Product
-          </span>
-          <span className="block text-[10px] text-amber-200/80 font-semibold mt-0.5">
-            Products marked as Best Seller will display a prominent "BEST SELLER" badge on the Homepage & catalog pages.
-          </span>
-        </label>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div>
-          <label className="block text-[9px] font-extrabold uppercase tracking-widest text-slate-400 mb-2">Sale Price (₹) *</label>
-          <input
-            type="number"
-            required
-            name="price"
-            value={formData.price}
-            onChange={handleInputChange}
-            className="w-full rounded-xl border border-slate-800 bg-slate-950/60 p-3 text-white focus:border-primary-500 focus:outline-none transition-colors"
-            placeholder="640"
-          />
-        </div>
-
-        <div>
-          <label className="block text-[9px] font-extrabold uppercase tracking-widest text-slate-400 mb-2">Original Price (₹)</label>
-          <input
-            type="number"
-            name="original_price"
-            value={formData.original_price}
-            onChange={handleInputChange}
-            className="w-full rounded-xl border border-slate-800 bg-slate-950/60 p-3 text-white focus:border-primary-500 focus:outline-none transition-colors"
-            placeholder="999"
-          />
-        </div>
-
-        <div>
-          <label className="block text-[9px] font-extrabold uppercase tracking-widest text-slate-400 mb-2">Stock Count *</label>
-          <input
-            type="number"
-            required
-            name="stock"
-            value={formData.stock}
-            onChange={handleInputChange}
-            className="w-full rounded-xl border border-slate-800 bg-slate-950/60 p-3 text-white focus:border-primary-500 focus:outline-none transition-colors"
-            placeholder="120"
+            className="w-full rounded-xl border border-slate-800 bg-[#090D16]/90 p-3 text-white focus:border-indigo-500 focus:outline-none transition-colors resize-none text-xs"
+            placeholder="Key product features, material quality, and installation guide notes..."
           />
         </div>
       </div>
 
-      {/* Theme Color Picker */}
-      <div>
-        <label className="block text-[9px] font-extrabold uppercase tracking-widest text-slate-400 mb-3">
-          Home Page Theme Color
-        </label>
-        <div className="rounded-xl border border-slate-800 bg-slate-950/40 p-4 space-y-3">
-          {/* Color preview + native picker */}
-          <div className="flex items-center gap-4">
+      {/* 2. Pricing & Stock Section */}
+      <div className="space-y-4">
+        <div className="flex items-center space-x-2 border-b border-slate-800 pb-2">
+          <DollarSign className="h-4 w-4 text-emerald-400" />
+          <span className="text-xs font-black uppercase tracking-wider text-white">Pricing & Inventory</span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+          <div>
+            <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">
+              Selling Price (₹) *
+            </label>
+            <input
+              type="number"
+              required
+              name="price"
+              value={formData.price}
+              onChange={handleInputChange}
+              className="w-full rounded-xl border border-slate-800 bg-[#090D16]/90 p-3 text-white font-bold focus:border-indigo-500 focus:outline-none transition-colors text-xs"
+              placeholder="499"
+            />
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">
+              Original / MRP (₹)
+            </label>
+            <input
+              type="number"
+              name="original_price"
+              value={formData.original_price}
+              onChange={handleInputChange}
+              className="w-full rounded-xl border border-slate-800 bg-[#090D16]/90 p-3 text-slate-300 focus:border-indigo-500 focus:outline-none transition-colors text-xs"
+              placeholder="999"
+            />
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">
+              Initial Stock Count *
+            </label>
+            <input
+              type="number"
+              required
+              name="stock"
+              value={formData.stock}
+              onChange={handleInputChange}
+              className="w-full rounded-xl border border-slate-800 bg-[#090D16]/90 p-3 text-white font-bold focus:border-indigo-500 focus:outline-none transition-colors text-xs"
+              placeholder="100"
+            />
+          </div>
+        </div>
+
+        {/* Admin Confidential Cost Price */}
+        <div className="rounded-2xl border border-violet-500/30 bg-violet-500/10 p-4 space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Lock className="h-3.5 w-3.5 text-violet-400" />
+              <span className="text-[10px] font-black uppercase tracking-wider text-violet-300">
+                Cost / Procurement Price (₹)
+              </span>
+            </div>
+            <span className="px-2 py-0.5 rounded-full bg-violet-500/20 text-violet-300 text-[8px] font-black uppercase tracking-widest border border-violet-500/30">
+              Admin Only
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
+            <input
+              type="number"
+              name="purchasing_price"
+              value={formData.purchasing_price}
+              onChange={handleInputChange}
+              className="w-full rounded-xl border border-violet-500/30 bg-[#090D16]/90 p-2.5 text-white focus:border-violet-500 focus:outline-none font-mono text-xs"
+              placeholder="Your unit procurement cost (e.g. 180)"
+              min="0"
+            />
+
+            {Number(formData.purchasing_price) > 0 && Number(formData.price) > 0 && (
+              <div className="text-[11px] font-bold">
+                Profit Margin:{' '}
+                <span className={costMargin >= 0 ? 'text-emerald-400 font-extrabold' : 'text-rose-400 font-extrabold'}>
+                  {costMargin >= 0 ? '+' : ''}₹{costMargin.toLocaleString()} per unit
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* 3. Flags & Homepage Display */}
+      <div className="space-y-3">
+        <div className="flex items-center space-x-2 border-b border-slate-800 pb-2">
+          <Home className="h-4 w-4 text-sky-400" />
+          <span className="text-xs font-black uppercase tracking-wider text-white">Storefront Display Options</span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {/* Show on Home */}
+          <label className="flex items-start gap-3 p-3.5 rounded-xl border border-sky-500/30 bg-sky-500/10 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              name="show_on_home"
+              checked={formData.show_on_home}
+              onChange={handleInputChange}
+              className="mt-0.5 w-4 h-4 rounded border-sky-500 text-sky-500 accent-sky-500 cursor-pointer"
+            />
+            <div>
+              <span className="block font-black text-sky-300 uppercase tracking-wider text-xs">
+                🏠 Display on Homepage
+              </span>
+              <span className="block text-[10px] text-sky-200/70 font-semibold mt-0.5">
+                Shows in the featured homepage catalog section.
+              </span>
+            </div>
+          </label>
+
+          {/* Best Seller */}
+          <label className="flex items-start gap-3 p-3.5 rounded-xl border border-amber-500/30 bg-amber-500/10 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              name="is_best_seller"
+              checked={formData.is_best_seller}
+              onChange={handleInputChange}
+              className="mt-0.5 w-4 h-4 rounded border-amber-500 text-amber-500 accent-amber-500 cursor-pointer"
+            />
+            <div>
+              <span className="block font-black text-amber-300 uppercase tracking-wider text-xs">
+                🔥 Best Seller Badge
+              </span>
+              <span className="block text-[10px] text-amber-200/70 font-semibold mt-0.5">
+                Highlights product with an animated "Best Seller" chip.
+              </span>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      {/* 4. Theme Color Picker */}
+      <div className="space-y-3">
+        <div className="flex items-center space-x-2 border-b border-slate-800 pb-2">
+          <Palette className="h-4 w-4 text-purple-400" />
+          <span className="text-xs font-black uppercase tracking-wider text-white">Homepage Theme Accent</span>
+        </div>
+
+        <div className="bg-[#090D16]/90 border border-slate-800 rounded-2xl p-4 space-y-3">
+          <div className="flex items-center gap-3.5">
             <div
-              className="w-12 h-12 rounded-xl shadow-lg border-2 border-white/10 flex-shrink-0"
+              className="w-10 h-10 rounded-xl shadow-lg border-2 border-white/20 shrink-0"
               style={{ backgroundColor: formData.theme_color }}
             />
-            <div className="flex-1">
-              <p className="text-[10px] font-bold text-slate-300 mb-1">Pick any colour</p>
-              <div className="flex items-center gap-2">
-                <input
-                  type="color"
-                  name="theme_color"
-                  value={formData.theme_color}
-                  onChange={handleInputChange}
-                  className="w-10 h-10 rounded-lg border border-slate-700 cursor-pointer bg-transparent"
-                  title="Open full colour picker"
-                />
-                <input
-                  type="text"
-                  name="theme_color"
-                  value={formData.theme_color}
-                  onChange={handleInputChange}
-                  placeholder="#3b82f6"
-                  maxLength={7}
-                  className="w-28 rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-xs text-white font-mono focus:border-primary-500 focus:outline-none"
-                />
-                <span className="text-[10px] text-slate-500">This colour fills the homepage background</span>
-              </div>
+            <div className="flex items-center gap-2 flex-1">
+              <input
+                type="color"
+                name="theme_color"
+                value={formData.theme_color}
+                onChange={handleInputChange}
+                className="w-8 h-8 rounded-lg border border-slate-700 cursor-pointer bg-transparent"
+              />
+              <input
+                type="text"
+                name="theme_color"
+                value={formData.theme_color}
+                onChange={handleInputChange}
+                placeholder="#3b82f6"
+                maxLength={7}
+                className="w-24 rounded-xl border border-slate-800 bg-slate-900 px-3 py-1.5 text-xs text-white font-mono uppercase focus:border-indigo-500 focus:outline-none"
+              />
             </div>
           </div>
 
-          {/* Quick preset swatches */}
-          <div>
-            <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-2">Quick Presets</p>
-            <div className="flex flex-wrap gap-2">
-              {PRESET_COLORS.map((preset) => (
-                <button
-                  key={preset.hex}
-                  type="button"
-                  title={preset.label}
-                  onClick={() => setFormData((prev) => ({ ...prev, theme_color: preset.hex }))}
-                  className="w-7 h-7 rounded-lg border-2 transition-all hover:scale-110"
-                  style={{
-                    backgroundColor: preset.hex,
-                    borderColor: formData.theme_color === preset.hex ? 'white' : 'transparent',
-                    boxShadow: formData.theme_color === preset.hex ? `0 0 0 2px ${preset.hex}` : 'none',
-                  }}
-                />
-              ))}
-            </div>
+          <div className="flex flex-wrap gap-1.5 pt-1">
+            {PRESET_COLORS.map((preset) => (
+              <button
+                key={preset.hex}
+                type="button"
+                title={preset.label}
+                onClick={() => setFormData((prev) => ({ ...prev, theme_color: preset.hex }))}
+                className="w-6 h-6 rounded-lg border-2 transition-transform hover:scale-110 cursor-pointer"
+                style={{
+                  backgroundColor: preset.hex,
+                  borderColor: formData.theme_color === preset.hex ? 'white' : 'transparent',
+                }}
+              />
+            ))}
           </div>
         </div>
       </div>
 
-      <div>
-        <label className="block text-[9px] font-extrabold uppercase tracking-widest text-slate-400 mb-2">Description</label>
-        <textarea
-          name="description"
-          rows="4"
-          value={formData.description}
-          onChange={handleInputChange}
-          className="w-full rounded-xl border border-slate-800 bg-slate-950/60 p-3 text-white focus:border-primary-500 focus:outline-none transition-colors resize-none"
-          placeholder="Product descriptions..."
-        />
-      </div>
+      {/* 5. Product Images Upload */}
+      <div className="space-y-3">
+        <div className="flex items-center space-x-2 border-b border-slate-800 pb-2">
+          <Image className="h-4 w-4 text-blue-400" />
+          <span className="text-xs font-black uppercase tracking-wider text-white">Product Photography</span>
+        </div>
 
-      <div>
-        <label className="block text-[9px] font-extrabold uppercase tracking-widest text-slate-400 mb-2">Product Images</label>
         <ProductImageUpload 
           images={formData.images} 
           onImagesChange={handleImagesChange} 
         />
       </div>
 
-      <div className="flex justify-end pt-3 border-t border-slate-800">
-        <AdminButton type="submit" isLoading={isSaving}>
+      {/* Form Submission CTA */}
+      <div className="flex justify-end pt-4 border-t border-slate-800">
+        <AdminButton type="submit" isLoading={isSaving} className="px-6 py-3">
           Save Product Configuration
         </AdminButton>
       </div>

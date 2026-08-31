@@ -5,13 +5,16 @@ import {
   ShieldCheck, Truck, Sparkles, Tag, Check, ChevronLeft, Smartphone 
 } from 'lucide-react';
 import useCart from '../hooks/useCart';
+import useCustomerAuth from '../hooks/useCustomerAuth';
 
 export default function Cart() {
   const { cart, updateQuantity, removeFromCart, cartTotal } = useCart();
+  const { isLoggedIn, openAuthModal } = useCustomerAuth();
   const navigate = useNavigate();
   const [couponCode, setCouponCode] = useState('');
   const [discount, setDiscount] = useState(0);
   const [couponMsg, setCouponMsg] = useState('');
+
 
   const FREE_SHIPPING_THRESHOLD = 499;
   const progressPercent = Math.min(100, Math.round((cartTotal / FREE_SHIPPING_THRESHOLD) * 100));
@@ -235,7 +238,13 @@ export default function Cart() {
 
             {/* Checkout Button */}
             <button
-              onClick={() => navigate('/checkout')}
+              onClick={() => {
+                if (isLoggedIn) {
+                  navigate('/checkout');
+                } else {
+                  navigate('/login?redirect=/checkout');
+                }
+              }}
               className="w-full flex items-center justify-center gap-2 py-4 bg-zinc-900 hover:bg-zinc-800 text-white rounded-full text-xs font-bold uppercase tracking-widest transition-all shadow-md active:scale-98 cursor-pointer"
             >
               <span>Proceed to Checkout</span>

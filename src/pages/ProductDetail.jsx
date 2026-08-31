@@ -9,10 +9,14 @@ import {
   Layers, Lock, MapPin, ChevronDown, ChevronUp, PackageCheck 
 } from 'lucide-react';
 import useCart from '../hooks/useCart';
+import useCustomerAuth from '../hooks/useCustomerAuth';
+import useStoreSettings from '../hooks/useStoreSettings';
 import { fetchStoreProducts } from '../utils/productStore';
 
 export default function ProductDetail({ product: propProduct }) {
   const { addToCart } = useCart();
+  const { isLoggedIn, openAuthModal } = useCustomerAuth();
+  const { settings: storeSettings } = useStoreSettings();
   const navigate = useNavigate();
   const location = useLocation();
   const [product, setProduct] = useState(location.state?.product || propProduct || null);
@@ -69,7 +73,11 @@ export default function ProductDetail({ product: propProduct }) {
 
   const handleBuyNow = () => {
     addToCart(product, quantity);
-    navigate('/checkout');
+    if (isLoggedIn) {
+      navigate('/checkout');
+    } else {
+      navigate('/login?redirect=/checkout');
+    }
   };
 
   const handleCheckPincode = (e) => {
@@ -77,9 +85,12 @@ export default function ProductDetail({ product: propProduct }) {
     if (pincode.trim().length === 6) {
       const days = ['Wednesday', 'Thursday', 'Friday', 'Saturday', 'Monday'];
       const randomDay = days[Math.floor(Math.random() * days.length)];
+      const codText = storeSettings?.cod_enabled !== false 
+        ? `COD Available${Number(storeSettings?.cod_fee) > 0 ? ` (+₹${storeSettings.cod_fee})` : ' (Free COD)'}` 
+        : 'Prepaid Only';
       setPincodeResult({
         success: true,
-        message: `Express Delivery by ${randomDay} • COD Available`
+        message: `Express Delivery by ${randomDay} • ${codText}`
       });
     } else {
       setPincodeResult({
@@ -88,6 +99,7 @@ export default function ProductDetail({ product: propProduct }) {
       });
     }
   };
+
 
   const price = Number(product.price) || 640;
   const originalPrice = Number(product.original_price) || Math.round(price * 1.8);

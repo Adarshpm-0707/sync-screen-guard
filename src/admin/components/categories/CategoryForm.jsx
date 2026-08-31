@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import AdminButton from '../common/AdminButton';
+import { Tag, FileText } from 'lucide-react';
 
 export default function CategoryForm({ category, onSubmit, isSaving }) {
   const [formData, setFormData] = useState({
@@ -37,29 +38,32 @@ export default function CategoryForm({ category, onSubmit, isSaving }) {
     .replace(/^-+|-+$/g, '');
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5 text-left text-xs text-slate-350">
+    <form onSubmit={handleSubmit} className="space-y-4 text-left text-xs text-slate-300">
       <div>
-        <label className="block text-[9px] font-extrabold uppercase tracking-widest text-slate-400 mb-2">
-          Category Name *
+        <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1.5">
+          Category Title *
         </label>
-        <input
-          type="text"
-          required
-          name="name"
-          value={formData.name}
-          onChange={handleInputChange}
-          className="w-full rounded-xl border border-slate-800 bg-slate-950/60 p-3 text-white focus:border-primary-500 focus:outline-none transition-colors"
-          placeholder="e.g. UV Tempered Glass, Camera Protector..."
-        />
+        <div className="relative">
+          <input
+            type="text"
+            required
+            name="name"
+            value={formData.name}
+            onChange={handleInputChange}
+            className="w-full rounded-xl border border-slate-800 bg-[#090D16]/90 p-3 text-white font-bold focus:border-indigo-500 focus:outline-none transition-colors text-xs"
+            placeholder="e.g. Matte Privacy Glass, UV Armor..."
+          />
+        </div>
         {previewSlug && (
-          <p className="text-[10px] text-slate-500 font-mono mt-1.5">
-            System ID Slug: <span className="text-primary-400 font-bold">{previewSlug}</span>
-          </p>
+          <div className="mt-2 p-2.5 rounded-xl bg-[#090D16] border border-slate-800 flex items-center justify-between text-[11px]">
+            <span className="text-slate-400 font-semibold">Generated Slug:</span>
+            <span className="font-mono text-indigo-400 font-bold">{previewSlug}</span>
+          </div>
         )}
       </div>
 
       <div>
-        <label className="block text-[9px] font-extrabold uppercase tracking-widest text-slate-400 mb-2">
+        <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1.5">
           Description (Optional)
         </label>
         <textarea
@@ -67,13 +71,13 @@ export default function CategoryForm({ category, onSubmit, isSaving }) {
           rows="3"
           value={formData.description}
           onChange={handleInputChange}
-          className="w-full rounded-xl border border-slate-800 bg-slate-950/60 p-3 text-white focus:border-primary-500 focus:outline-none transition-colors resize-none"
-          placeholder="Brief description of products under this category..."
+          className="w-full rounded-xl border border-slate-800 bg-[#090D16]/90 p-3 text-white focus:border-indigo-500 focus:outline-none transition-colors resize-none text-xs"
+          placeholder="Detailed notes regarding this product category line..."
         />
       </div>
 
       <div className="flex justify-end pt-3 border-t border-slate-800">
-        <AdminButton type="submit" isLoading={isSaving}>
+        <AdminButton type="submit" isLoading={isSaving} className="px-6 py-2.5">
           {category?.id ? 'Update Category' : 'Create Category'}
         </AdminButton>
       </div>

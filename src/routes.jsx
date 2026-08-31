@@ -26,6 +26,7 @@ import AdminSignup from './admin/pages/AdminSignup';
 import Dashboard from './admin/pages/Dashboard';
 import Orders from './admin/pages/Orders';
 import OrderDetail from './admin/pages/OrderDetail';
+import Customers from './admin/pages/Customers';
 import Products from './admin/pages/Products';
 import Inventory from './admin/pages/Inventory';
 import Categories from './admin/pages/Categories';
@@ -76,6 +77,7 @@ export default function AppRoutes() {
           <Route index element={<Dashboard />} />
           <Route path="orders" element={<Orders />} />
           <Route path="orders/:id" element={<OrderDetail />} />
+          <Route path="customers" element={<Customers />} />
           <Route path="products" element={<Products />} />
           <Route path="inventory" element={<Inventory />} />
           <Route path="categories" element={<Categories />} />
@@ -87,3 +89,4 @@ export default function AppRoutes() {
     </Routes>
   );
 }
+

@@ -1,17 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import useCart from '../hooks/useCart';
+import useCustomerAuth from '../hooks/useCustomerAuth';
+import useStoreSettings from '../hooks/useStoreSettings';
 import { supabase } from '../supabaseClient';
 import { decreaseStockForOrder } from '../utils/stockManager';
 import { 
   CreditCard, Truck, CheckCircle, ArrowLeft, 
-  ChevronRight, MapPin, User, ShieldCheck, Lock, Check 
+  ChevronRight, MapPin, User, ShieldCheck, Lock, Check, Sparkles, AlertCircle 
 } from 'lucide-react';
 
 export default function Checkout() {
   const { cart, cartTotal, clearCart } = useCart();
+  const { customer, isLoggedIn, openAuthModal } = useCustomerAuth();
+  const { settings: storeSettings } = useStoreSettings();
   const navigate = useNavigate();
+
 
   const [formData, setFormData] = useState({
     name: '',
@@ -28,6 +33,34 @@ export default function Checkout() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
 
+  // Auto-fill logged in customer data
+  useEffect(() => {
+    if (customer) {
+      setFormData((prev) => ({
+        ...prev,
+        name: prev.name || customer.user_metadata?.full_name || customer.name || (customer.email ? customer.email.split('@')[0] : ''),
+        email: prev.email || customer.email || '',
+      }));
+    }
+
+    try {
+      const existingLocals = JSON.parse(localStorage.getItem('customer_orders') || '[]');
+      if (existingLocals.length > 0) {
+        const latest = existingLocals[0];
+        setFormData((prev) => ({
+          ...prev,
+          name: prev.name || latest.customer_name || '',
+          email: prev.email || latest.customer_email || '',
+          phone: prev.phone || latest.phone || '',
+          address: prev.address || latest.address || '',
+          city: prev.city || latest.city || '',
+          state: prev.state || latest.state || '',
+          pincode: prev.pincode || latest.pincode || '',
+        }));
+      }
+    } catch (e) {}
+  }, [customer]);
+
   if (cart.length === 0) {
     return (
       <div className="min-h-screen py-28 px-4 flex flex-col items-center justify-center bg-[#FAFAFA] text-center">
@@ -43,8 +76,11 @@ export default function Checkout() {
     );
   }
 
-  const codFee = paymentMethod === 'cod' ? 50 : 0;
+  const codRate = storeSettings?.cod_fee !== undefined ? Number(storeSettings.cod_fee) : 50;
+  const codEnabled = storeSettings?.cod_enabled !== undefined ? Boolean(storeSettings.cod_enabled) : true;
+  const codFee = (paymentMethod === 'cod' && codEnabled) ? codRate : 0;
   const orderTotal = cartTotal + codFee;
+
 
   const validateStep1 = () => {
     const newErrors = {};
@@ -96,12 +132,14 @@ export default function Checkout() {
       let localUser = null;
       try { if (localUserStr) localUser = JSON.parse(localUserStr); } catch (e) {}
 
-      const isGuest = session?.user ? false : (localUser?.is_guest !== undefined ? localUser.is_guest : true);
-      const userId = session?.user?.id || (localUser?.id && !localUser.id.startsWith('guest-') ? localUser.id : null);
+      const effectiveUser = customer || session?.user || localUser;
+      const isGuest = !isLoggedIn || !effectiveUser || Boolean(effectiveUser.is_guest);
+      const userId = (!isGuest && effectiveUser?.id && !effectiveUser.id.startsWith('guest-')) ? effectiveUser.id : null;
+      const customerEmail = effectiveUser?.email || formData.email.trim();
 
       const orderPayload = {
         name: formData.name.trim(),
-        email: formData.email.trim(),
+        email: customerEmail,
         phone: formData.phone.trim(),
         address: formData.address.trim(),
         city: formData.city.trim(),
@@ -141,7 +179,7 @@ export default function Checkout() {
               user_id: userId,
               is_guest: isGuest,
               customer_name: formData.name.trim(),
-              customer_email: formData.email.trim() || null,
+              customer_email: customerEmail || null,
               phone: formData.phone.trim(),
               address: formData.address.trim(),
               city: formData.city.trim(),
@@ -182,6 +220,7 @@ export default function Checkout() {
       // 5. Store in local customer tracking storage
       const localOrderObj = {
         id: createdOrderId,
+        user_id: userId,
         customer_name: formData.name.trim(),
         customer_email: formData.email.trim(),
         phone: formData.phone.trim(),
@@ -207,7 +246,13 @@ export default function Checkout() {
 
       clearCart();
       setIsSubmitting(false);
-      navigate('/success', { state: { orderId: createdOrderId, amount: orderTotal } });
+      navigate('/success', { 
+        state: { 
+          orderId: createdOrderId, 
+          amount: orderTotal,
+          order: localOrderObj 
+        } 
+      });
     } catch (err) {
       console.error('Order submission error:', err);
       setIsSubmitting(false);
@@ -244,6 +289,51 @@ export default function Checkout() {
           {/* Left: Accordion Steps (8 Cols) */}
           <div className="lg:col-span-8 space-y-5">
             
+            {/* Customer Auth Account Info Banner */}
+            {isLoggedIn ? (
+              <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center justify-between shadow-xs">
+                <div className="flex items-center gap-2.5 text-xs text-emerald-950 font-medium">
+                  <div className="h-7 w-7 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-xs">
+                    {customer?.email ? customer.email.charAt(0).toUpperCase() : 'C'}
+                  </div>
+                  <div>
+                    <p className="font-bold text-zinc-900 leading-tight">
+                      Logged in as <span className="text-emerald-700">{customer?.email}</span>
+                    </p>
+                    <p className="text-[10px] text-zinc-500 font-medium">Your shipping & tracking details are linked to your Sync account.</p>
+                  </div>
+                </div>
+                <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wider text-emerald-700 bg-white border border-emerald-200 px-2.5 py-1 rounded-full shadow-2xs">
+                  <CheckCircle className="h-3 w-3 text-emerald-600" />
+                  Verified
+                </span>
+              </div>
+            ) : (
+              <div className="p-4 bg-white border border-zinc-200 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+                <div className="flex items-center gap-2.5">
+                  <div className="h-8 w-8 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-500 shrink-0">
+                    <User className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-zinc-900 leading-tight">Already have a Sync Armor account?</p>
+                    <p className="text-[10px] text-zinc-500 font-medium">Sign in to auto-fill address and track your package live.</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => openAuthModal({ 
+                    mode: 'signin', 
+                    redirectTo: '/checkout',
+                    title: 'Sign In to Sync',
+                    subtitle: 'Sign in to auto-fill your shipping address and link your order'
+                  })}
+                  className="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 text-white text-[11px] font-bold uppercase tracking-wider rounded-xl transition-all shadow-xs cursor-pointer shrink-0"
+                >
+                  Sign In Now
+                </button>
+              </div>
+            )}
+
             {/* Step 1: Contact Details */}
             <div className={`rounded-2xl border transition-all overflow-hidden ${
               currentStep === 1 ? 'bg-white border-zinc-900 shadow-md' : 'bg-white border-zinc-200'
@@ -481,21 +571,33 @@ export default function Checkout() {
                           <CreditCard className="h-5 w-5 opacity-70" />
                         </button>
 
-                        <button
-                          type="button"
-                          onClick={() => setPaymentMethod('cod')}
-                          className={`p-4 rounded-xl border text-left transition-all flex items-center justify-between cursor-pointer ${
-                            paymentMethod === 'cod'
-                              ? 'border-zinc-900 bg-zinc-900 text-white shadow-sm'
-                              : 'border-zinc-200 bg-zinc-50 text-zinc-900 hover:bg-zinc-100'
-                          }`}
-                        >
-                          <div>
-                            <span className="text-[10px] font-bold uppercase tracking-wider block opacity-80">Cash on Delivery</span>
-                            <span className="text-xs font-bold">Pay at Doorstep (+₹50 COD fee)</span>
+                        {codEnabled ? (
+                          <button
+                            type="button"
+                            onClick={() => setPaymentMethod('cod')}
+                            className={`p-4 rounded-xl border text-left transition-all flex items-center justify-between cursor-pointer ${
+                              paymentMethod === 'cod'
+                                ? 'border-zinc-900 bg-zinc-900 text-white shadow-sm'
+                                : 'border-zinc-200 bg-zinc-50 text-zinc-900 hover:bg-zinc-100'
+                            }`}
+                          >
+                            <div>
+                              <span className="text-[10px] font-bold uppercase tracking-wider block opacity-80">Cash on Delivery</span>
+                              <span className="text-xs font-bold">
+                                Pay at Doorstep {codRate > 0 ? `(+₹${codRate} COD fee)` : '(Free COD)'}
+                              </span>
+                            </div>
+                            <Truck className="h-5 w-5 opacity-70" />
+                          </button>
+                        ) : (
+                          <div className="p-4 rounded-xl border border-zinc-200 bg-zinc-100 text-zinc-400 text-left flex items-center justify-between opacity-60">
+                            <div>
+                              <span className="text-[10px] font-bold uppercase tracking-wider block">Cash on Delivery</span>
+                              <span className="text-xs font-medium">Temporarily Unavailable</span>
+                            </div>
+                            <Truck className="h-5 w-5 opacity-40" />
                           </div>
-                          <Truck className="h-5 w-5 opacity-70" />
-                        </button>
+                        )}
                       </div>
                     </div>
                   </motion.div>
@@ -534,10 +636,12 @@ export default function Checkout() {
                 <span>Shipping</span>
                 <span className="text-emerald-600 font-bold uppercase text-[10px]">Free</span>
               </div>
-              {paymentMethod === 'cod' && (
+              {paymentMethod === 'cod' && codEnabled && (
                 <div className="flex justify-between">
                   <span>COD Handling Fee</span>
-                  <span className="font-semibold text-zinc-900">₹50</span>
+                  <span className="font-semibold text-zinc-900">
+                    {codRate > 0 ? `₹${codRate}` : <span className="text-emerald-600 font-bold uppercase text-[10px]">Free</span>}
+                  </span>
                 </div>
               )}
               <div className="flex justify-between pt-3 border-t border-zinc-100 font-display text-base font-bold text-zinc-900">

@@ -6,9 +6,11 @@ import {
   ShieldCheck, Truck, Tag, Check, Sparkles 
 } from 'lucide-react';
 import useCart from '../../hooks/useCart';
+import useCustomerAuth from '../../hooks/useCustomerAuth';
 
 export default function CartDrawer({ isOpen, onClose }) {
   const { cart, updateQuantity, removeFromCart, cartTotal } = useCart();
+  const { isLoggedIn, openAuthModal } = useCustomerAuth();
   const navigate = useNavigate();
   const [couponCode, setCouponCode] = useState('');
   const [appliedDiscount, setAppliedDiscount] = useState(0);
@@ -39,8 +41,13 @@ export default function CartDrawer({ isOpen, onClose }) {
 
   const handleCheckout = () => {
     onClose();
-    navigate('/checkout');
+    if (isLoggedIn) {
+      navigate('/checkout');
+    } else {
+      navigate('/login?redirect=/checkout');
+    }
   };
+
 
   return (
     <AnimatePresence>

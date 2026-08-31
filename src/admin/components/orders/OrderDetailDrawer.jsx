@@ -1,5 +1,20 @@
 import React, { useEffect, useState } from 'react';
-import { X, User, Phone, MapPin, CreditCard, Box, Truck, CheckCircle2, Ban } from 'lucide-react';
+import { 
+  X, 
+  User, 
+  Phone, 
+  Mail, 
+  MapPin, 
+  CreditCard, 
+  Box, 
+  Truck, 
+  CheckCircle2, 
+  Ban,
+  Clock,
+  ChevronRight,
+  ExternalLink,
+  PackageCheck
+} from 'lucide-react';
 import { supabase } from '../../../supabaseClient';
 import { restoreStockForCancelledOrder } from '../../../utils/stockManager';
 import OrderStatusBadge from './OrderStatusBadge';
@@ -37,7 +52,7 @@ export default function OrderDetailDrawer({ isOpen, onClose, orderId, initialOrd
         fetched = await res.json();
       }
     } catch (err) {
-      console.warn('API fetchOrderDetail failed, using fallback:', err);
+      console.warn('API fetchOrderDetail fallback:', err);
     }
 
     if (fetched && fetched.id) {
@@ -45,7 +60,6 @@ export default function OrderDetailDrawer({ isOpen, onClose, orderId, initialOrd
     } else if (initialOrder) {
       setOrder(initialOrder);
     } else {
-      // Supabase query fallback
       try {
         const { data: dbOrder } = await supabase
           .from('orders')
@@ -66,7 +80,6 @@ export default function OrderDetailDrawer({ isOpen, onClose, orderId, initialOrd
             ]
           });
         } else {
-          // localStorage fallback
           const localSaved = JSON.parse(localStorage.getItem('customer_orders') || '[]');
           const found = localSaved.find(o => o.id === orderId);
           if (found) {
@@ -91,9 +104,8 @@ export default function OrderDetailDrawer({ isOpen, onClose, orderId, initialOrd
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
 
-      let success = false;
       try {
-        const res = await fetch(`http://localhost:5000/api/admin/orders/${orderId}`, {
+        await fetch(`http://localhost:5000/api/admin/orders/${orderId}`, {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
@@ -101,23 +113,17 @@ export default function OrderDetailDrawer({ isOpen, onClose, orderId, initialOrd
           },
           body: JSON.stringify({ status: newStatus })
         });
-        if (res.ok) success = true;
-      } catch (e) {
-        console.warn('API status update failed, updating via Supabase:', e);
-      }
+      } catch (e) {}
 
-      // Update Supabase directly
       await supabase
         .from('orders')
         .update({ status: newStatus })
         .eq('id', orderId);
 
-      // If cancelling order, automatically restore stock into inventory
       if (newStatus === 'cancelled' && order?.items && order.items.length > 0) {
         await restoreStockForCancelledOrder(order.items);
       }
 
-      // Update localStorage fallback
       const localSaved = JSON.parse(localStorage.getItem('customer_orders') || '[]');
       const updatedLocals = localSaved.map(o => o.id === orderId ? { ...o, status: newStatus } : o);
       localStorage.setItem('customer_orders', JSON.stringify(updatedLocals));
@@ -133,141 +139,190 @@ export default function OrderDetailDrawer({ isOpen, onClose, orderId, initialOrd
 
   if (!isOpen) return null;
 
+  // Milestone timeline calculation
+  const statusSteps = ['pending', 'confirmed', 'shipped', 'delivered'];
+  const currentStepIdx = statusSteps.indexOf(order?.status?.toLowerCase());
+
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
       {/* Backdrop */}
       <div 
-        className="absolute inset-0 bg-slate-950/70 backdrop-blur-sm transition-opacity" 
+        className="absolute inset-0 bg-black/80 backdrop-blur-sm transition-opacity duration-300 animate-fade-in" 
         onClick={onClose}
       />
 
       {/* Drawer Panel */}
-      <div className="relative w-full max-w-lg bg-slate-900 border-l border-slate-800 h-full flex flex-col shadow-2xl z-10 text-left">
+      <div className="relative w-full max-w-lg bg-[#0E1322] border-l border-slate-800/90 h-full flex flex-col shadow-2xl z-10 text-left">
         {/* Drawer Header */}
-        <div className="flex items-center justify-between px-6 py-4.5 border-b border-slate-800 bg-slate-950/20 shrink-0">
+        <div className="flex items-center justify-between px-5 sm:px-6 py-4.5 border-b border-slate-800/90 bg-[#090D16]/60 shrink-0">
           <div>
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider">Order Audit</h3>
-            <p className="text-[9px] text-slate-500 font-extrabold uppercase tracking-widest mt-0.5">ID: #{orderId.slice(0, 8).toUpperCase()}</p>
+            <div className="flex items-center space-x-2">
+              <span className="w-2 h-2 rounded-full bg-indigo-500 shadow-sm shadow-indigo-500/50" />
+              <h3 className="text-sm font-black text-white uppercase tracking-wider">Order Inspection</h3>
+            </div>
+            <p className="text-[10px] font-mono text-indigo-400 font-bold uppercase tracking-wider mt-0.5">
+              ID: #{orderId.slice(0, 8).toUpperCase()}
+            </p>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg border border-slate-800 hover:bg-slate-800 text-slate-400 hover:text-white cursor-pointer"
+            className="p-1.5 rounded-xl border border-slate-800 bg-slate-900/60 hover:bg-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer"
           >
             <X className="h-4.5 w-4.5" />
           </button>
         </div>
 
         {/* Drawer Body */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-5 scrollbar-thin scrollbar-thumb-slate-700/60 scrollbar-track-transparent">
           {loading ? (
             <div className="flex flex-col items-center justify-center h-64 space-y-3">
-              <svg className="animate-spin h-6 w-6 text-primary-500" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              <span className="font-semibold text-slate-500 uppercase tracking-widest text-[9px]">Decrypting transaction...</span>
+              <div className="animate-spin h-8 w-8 rounded-full border-2 border-indigo-500 border-t-transparent"></div>
+              <span className="font-bold text-slate-400 uppercase tracking-widest text-[10px]">Decrypting transaction...</span>
             </div>
           ) : order ? (
             <>
-              {/* Customer Info Card */}
-              <div className="border border-slate-800/80 bg-slate-950/20 rounded-2xl p-4.5 space-y-4">
+              {/* Order Status & Progress Stepper */}
+              <div className="bg-[#090D16]/90 border border-slate-800/80 rounded-2xl p-4 space-y-3 shadow-inner">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2 text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                    Fulfillment Progress
+                  </span>
+                  <OrderStatusBadge status={order.status} />
+                </div>
+
+                {order.status !== 'cancelled' ? (
+                  <div className="grid grid-cols-4 gap-1 pt-1">
+                    {statusSteps.map((step, idx) => {
+                      const isComplete = currentStepIdx >= idx;
+                      const isCurrent = currentStepIdx === idx;
+
+                      return (
+                        <div key={step} className="space-y-1.5 text-center">
+                          <div className={`h-1.5 rounded-full transition-all ${
+                            isComplete ? 'bg-indigo-500' : 'bg-slate-800'
+                          }`} />
+                          <span className={`text-[8px] font-black uppercase tracking-wider block truncate ${
+                            isCurrent ? 'text-indigo-400' : isComplete ? 'text-slate-300' : 'text-slate-600'
+                          }`}>
+                            {step}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs font-bold text-center">
+                    ❌ This order was cancelled
+                  </div>
+                )}
+              </div>
+
+              {/* Customer Info Card */}
+              <div className="border border-slate-800/80 bg-[#090D16]/90 rounded-2xl p-4.5 space-y-3.5 shadow-md">
+                <div className="flex items-center justify-between border-b border-slate-800/80 pb-2.5">
+                  <div className="flex items-center space-x-2 text-[10px] font-black text-slate-300 uppercase tracking-wider">
                     <User className="h-4 w-4 text-indigo-400" />
                     <span>Customer Profile</span>
                   </div>
-                  <span className={`inline-flex items-center text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border ${
+                  <span className={`inline-flex items-center text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border ${
                     order.is_guest || !order.user_id
                       ? 'bg-amber-500/10 border-amber-500/30 text-amber-400'
                       : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
                   }`}>
-                    {order.is_guest || !order.user_id ? '⚡ Guest Checkout Customer' : '👤 Registered Customer'}
+                    {order.is_guest || !order.user_id ? '⚡ Guest' : '👤 Registered'}
                   </span>
                 </div>
-                <div className="space-y-2.5 text-xs">
-                  <div>
-                    <span className="text-slate-500">Name:</span>{' '}
-                    <span className="font-bold text-white">{order.customer_name}</span>
+
+                <div className="space-y-2 text-xs">
+                  <div className="flex justify-between">
+                    <span className="text-slate-500 font-semibold">Name:</span>
+                    <span className="font-bold text-white text-right">{order.customer_name}</span>
                   </div>
-                  <div>
-                    <span className="text-slate-500">Phone:</span>{' '}
-                    <span className="font-bold text-white">{order.phone}</span>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-500 font-semibold">Phone:</span>
+                    <a 
+                      href={`tel:${order.phone}`}
+                      className="font-mono font-bold text-indigo-400 hover:text-indigo-300 transition-colors flex items-center gap-1"
+                    >
+                      <Phone className="h-3 w-3" />
+                      {order.phone}
+                    </a>
                   </div>
-                  <div>
-                    <span className="text-slate-500">Email:</span>{' '}
-                    <span className="font-bold text-white">{order.customer_email || 'None'}</span>
-                  </div>
+                  {order.customer_email && (
+                    <div className="flex justify-between">
+                      <span className="text-slate-500 font-semibold">Email:</span>
+                      <span className="font-bold text-slate-300 text-right truncate max-w-[200px]">{order.customer_email}</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
               {/* Delivery Address Card */}
-              <div className="border border-slate-800/80 bg-slate-950/20 rounded-2xl p-4.5 space-y-4">
-                <div className="flex items-center space-x-2 text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
+              <div className="border border-slate-800/80 bg-[#090D16]/90 rounded-2xl p-4.5 space-y-2.5 shadow-md">
+                <div className="flex items-center space-x-2 text-[10px] font-black text-slate-300 uppercase tracking-wider border-b border-slate-800/80 pb-2">
                   <MapPin className="h-4 w-4 text-indigo-400" />
                   <span>Delivery Address</span>
                 </div>
-                <div className="space-y-2.5 text-xs text-slate-300">
-                  <p className="font-medium">{order.address}</p>
-                  <p className="font-medium">{order.city}, {order.state} - {order.pincode}</p>
+                <div className="text-xs space-y-1 text-slate-300">
+                  <p className="font-medium text-white">{order.address}</p>
+                  <p className="font-semibold text-slate-400">{order.city}, {order.state} - <span className="font-mono text-white font-bold">{order.pincode}</span></p>
                 </div>
               </div>
 
-              {/* Order Items List */}
-              <div className="border border-slate-800/80 bg-slate-950/20 rounded-2xl p-4.5 space-y-4">
-                <div className="flex items-center space-x-2 text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
+              {/* Order Items Manifest */}
+              <div className="border border-slate-800/80 bg-[#090D16]/90 rounded-2xl p-4.5 space-y-3 shadow-md">
+                <div className="flex items-center space-x-2 text-[10px] font-black text-slate-300 uppercase tracking-wider border-b border-slate-800/80 pb-2">
                   <Box className="h-4 w-4 text-indigo-400" />
-                  <span>Items Ordered</span>
+                  <span>Items Manifest</span>
                 </div>
-                <div className="divide-y divide-slate-800/40">
+
+                <div className="divide-y divide-slate-800/60">
                   {order.items?.map((item, idx) => (
                     <div key={idx} className="py-2.5 first:pt-0 last:pb-0 flex justify-between items-center text-xs">
                       <div>
                         <span className="font-bold text-white block">{item.product_name || item.name || 'Sync Guard'}</span>
-                        <span className="text-[10px] text-primary-400 bg-primary-500/10 px-1.5 py-0.5 rounded border border-primary-500/20 inline-block mt-0.5">
-                          Model: {item.selectedModel || item.model || 'iPhone 15 Pro'}
-                        </span>
-                        <span className="text-[10px] text-slate-400 ml-2">(x{item.quantity})</span>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span className="text-[9px] font-bold text-indigo-400 bg-indigo-500/10 px-1.5 py-0.2 rounded border border-indigo-500/20">
+                            {item.selectedModel || item.model || 'Universal Fit'}
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-bold">Qty: {item.quantity}</span>
+                        </div>
                       </div>
-                      <span className="font-extrabold text-white">₹{item.price * item.quantity}</span>
+                      <span className="font-black text-white text-xs">₹{Number(item.price * item.quantity).toLocaleString()}</span>
                     </div>
                   ))}
                 </div>
               </div>
 
-              {/* Invoice / Pricing Details */}
-              <div className="border border-slate-800/80 bg-slate-950/20 rounded-2xl p-4.5 space-y-3">
-                <div className="flex justify-between text-xs">
-                  <span className="text-slate-500">Subtotal:</span>
-                  <span className="font-bold text-white">₹{order.total - (order.cod_fee || 0)}</span>
-                </div>
-                {order.cod_fee > 0 && (
-                  <div className="flex justify-between text-xs">
-                    <span className="text-slate-500">COD Fee:</span>
-                    <span className="font-bold text-white">₹{order.cod_fee}</span>
-                  </div>
-                )}
-                <div className="border-t border-slate-800/60 pt-3 flex justify-between text-sm font-black text-white">
-                  <span>Grand Total:</span>
-                  <span className="text-primary-500">₹{order.total}</span>
-                </div>
-              </div>
-
-              {/* Payment Details */}
-              <div className="border border-slate-800/80 bg-slate-950/20 rounded-2xl p-4.5 space-y-3.5">
-                <div className="flex items-center space-x-2 text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
+              {/* Invoice & Payment Audit */}
+              <div className="border border-slate-800/80 bg-[#090D16]/90 rounded-2xl p-4.5 space-y-2.5 shadow-md">
+                <div className="flex items-center space-x-2 text-[10px] font-black text-slate-300 uppercase tracking-wider border-b border-slate-800/80 pb-2">
                   <CreditCard className="h-4 w-4 text-indigo-400" />
-                  <span>Payment Ledger</span>
+                  <span>Financial Breakdown</span>
                 </div>
+
                 <div className="space-y-2 text-xs">
                   <div className="flex justify-between">
-                    <span className="text-slate-500">Method:</span>
-                    <span className="font-bold text-white uppercase">{order.payment_type}</span>
+                    <span className="text-slate-400">Payment Gateway:</span>
+                    <span className="font-black text-white uppercase">{order.payment_type}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-500">Transaction Status:</span>
-                    <span className={`font-bold uppercase ${
-                      order.payment_status === 'success' ? 'text-emerald-500' : 'text-amber-500'
-                    }`}>{order.payment_status || 'pending'}</span>
+                    <span className="text-slate-400">Subtotal:</span>
+                    <span className="font-bold text-white">₹{Number(order.total - (order.cod_fee || 0)).toLocaleString()}</span>
+                  </div>
+                  {order.cod_fee > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">COD Fee:</span>
+                      <span className="font-bold text-white">₹{Number(order.cod_fee).toLocaleString()}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Shipping:</span>
+                    <span className="font-black text-emerald-400 uppercase text-[10px]">Free</span>
+                  </div>
+                  <div className="border-t border-slate-800/80 pt-2 flex justify-between text-sm font-black text-white">
+                    <span>Grand Total:</span>
+                    <span className="text-indigo-400">₹{Number(order.total).toLocaleString()}</span>
                   </div>
                 </div>
               </div>
@@ -277,15 +332,15 @@ export default function OrderDetailDrawer({ isOpen, onClose, orderId, initialOrd
           )}
         </div>
 
-        {/* Drawer Actions Footer */}
+        {/* Actions Footer */}
         {order && !loading && (
-          <div className="p-6 border-t border-slate-800 bg-slate-950/40 grid grid-cols-2 gap-3.5 shrink-0">
+          <div className="p-4 sm:p-6 border-t border-slate-800/90 bg-[#090D16]/80 flex flex-col sm:flex-row gap-2.5 shrink-0">
             {order.status === 'pending' && (
               <AdminButton
                 variant="success"
                 onClick={() => updateOrderStatus('confirmed')}
                 isLoading={isUpdating}
-                className="w-full"
+                className="flex-1"
               >
                 <CheckCircle2 className="h-4 w-4 mr-2" /> Confirm Order
               </AdminButton>
@@ -295,9 +350,19 @@ export default function OrderDetailDrawer({ isOpen, onClose, orderId, initialOrd
                 variant="primary"
                 onClick={() => updateOrderStatus('shipped')}
                 isLoading={isUpdating}
-                className="w-full"
+                className="flex-1"
               >
-                <Truck className="h-4 w-4 mr-2" /> Mark Shipped
+                <Truck className="h-4 w-4 mr-2" /> Mark as Shipped
+              </AdminButton>
+            )}
+            {order.status === 'shipped' && (
+              <AdminButton
+                variant="success"
+                onClick={() => updateOrderStatus('delivered')}
+                isLoading={isUpdating}
+                className="flex-1"
+              >
+                <PackageCheck className="h-4 w-4 mr-2" /> Mark as Delivered
               </AdminButton>
             )}
             {order.status !== 'delivered' && order.status !== 'cancelled' && (
@@ -305,9 +370,9 @@ export default function OrderDetailDrawer({ isOpen, onClose, orderId, initialOrd
                 variant="danger"
                 onClick={() => updateOrderStatus('cancelled')}
                 isLoading={isUpdating}
-                className="w-full col-span-2"
+                className="flex-1"
               >
-                <Ban className="h-4 w-4 mr-2" /> Cancel Transaction
+                <Ban className="h-4 w-4 mr-2" /> Cancel
               </AdminButton>
             )}
           </div>

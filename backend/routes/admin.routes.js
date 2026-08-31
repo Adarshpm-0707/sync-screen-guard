@@ -5,6 +5,8 @@ import {
   getOrders,
   getOrderDetail,
   updateOrderStatus,
+  getCustomers,
+  getCustomerDetail,
   getProducts,
   createProduct,
   updateProduct,
@@ -29,6 +31,10 @@ router.get('/orders', getOrders);
 router.get('/orders/:id', getOrderDetail);
 router.patch('/orders/:id', updateOrderStatus);
 
+// Customers Management
+router.get('/customers', getCustomers);
+router.get('/customers/:id', getCustomerDetail);
+
 // Product Catalog
 router.get('/products', getProducts);
 router.post('/products', createProduct);
@@ -45,3 +51,4 @@ router.get('/settings', getSettings);
 router.patch('/settings', updateSettings);
 
 export default router;
+

@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../../supabaseClient';
 import { 
   X, Mail, Lock, AlertCircle, CheckCircle, Info, UserCheck, ShoppingBag, User, 
-  Eye, EyeOff, ShieldCheck, Sparkles, Truck, ArrowRight 
+  Eye, EyeOff, ShieldCheck, Sparkles, Truck, ArrowRight, Zap 
 } from 'lucide-react';
 
 const GoogleIcon = ({ className = "w-5 h-5" }) => (
@@ -27,8 +27,18 @@ const GoogleIcon = ({ className = "w-5 h-5" }) => (
   </svg>
 );
 
-export default function CustomerAuthModal({ isOpen = true, onClose, onAuthSuccess, initialMode = 'signin', isPage = false }) {
+export default function CustomerAuthModal({ 
+  isOpen = true, 
+  onClose, 
+  onAuthSuccess, 
+  initialMode = 'signin', 
+  isPage = false,
+  redirectTo = null,
+  customTitle = null,
+  customSubtitle = null
+}) {
   const navigate = useNavigate();
+  const location = useLocation();
   const [authMode, setAuthMode] = useState(initialMode); // 'signin' | 'signup' | 'guest'
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -42,6 +52,21 @@ export default function CustomerAuthModal({ isOpen = true, onClose, onAuthSucces
 
   if (!isOpen && !isPage) return null;
 
+  // Determine target redirect path
+  const searchParams = new URLSearchParams(location.search);
+  const queryRedirect = searchParams.get('redirect');
+  const targetRedirect = redirectTo || location.state?.redirectTo || location.state?.from || queryRedirect || null;
+  const isPurchasingFlow = targetRedirect === '/checkout' || targetRedirect?.includes('checkout');
+
+  const executeRedirect = () => {
+    if (onClose) onClose();
+    if (targetRedirect) {
+      navigate(targetRedirect);
+    } else if (isPage) {
+      navigate('/');
+    }
+  };
+
   const handleGoogleSignIn = async () => {
     setError('');
     setMessage('');
@@ -49,6 +74,9 @@ export default function CustomerAuthModal({ isOpen = true, onClose, onAuthSucces
     setGoogleLoading(true);
 
     try {
+      if (targetRedirect) {
+        sessionStorage.setItem('auth_redirect_target', targetRedirect);
+      }
       const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -83,9 +111,8 @@ export default function CustomerAuthModal({ isOpen = true, onClose, onAuthSucces
     setMessage('Continuing as Guest...');
     if (onAuthSuccess) onAuthSuccess(guestUser);
     setTimeout(() => {
-      if (onClose) onClose();
-      navigate('/checkout');
-    }, 600);
+      executeRedirect();
+    }, 500);
   };
 
   const handleSubmit = async (e) => {
@@ -134,30 +161,27 @@ export default function CustomerAuthModal({ isOpen = true, onClose, onAuthSucces
         if (customerUser) {
           const formattedUser = { ...customerUser, is_guest: false };
           localStorage.setItem('local_customer_user', JSON.stringify(formattedUser));
-          setMessage('Account registered successfully!');
+          setMessage('Account registered! Proceeding...');
           if (onAuthSuccess) onAuthSuccess(formattedUser);
           setTimeout(() => {
-            if (onClose) onClose();
-            navigate('/');
-          }, 1000);
+            executeRedirect();
+          }, 600);
         } else if (authError) {
           const fallbackUser = { id: 'cust-' + Date.now(), email: cleanEmail, is_guest: false };
           localStorage.setItem('local_customer_user', JSON.stringify(fallbackUser));
-          setMessage('Signed in successfully!');
+          setMessage('Signed in! Proceeding...');
           if (onAuthSuccess) onAuthSuccess(fallbackUser);
           setTimeout(() => {
-            if (onClose) onClose();
-            navigate('/');
-          }, 1000);
+            executeRedirect();
+          }, 600);
         } else {
           const fallbackUser = { id: 'cust-' + Date.now(), email: cleanEmail, is_guest: false };
           localStorage.setItem('local_customer_user', JSON.stringify(fallbackUser));
-          setMessage('Signed in successfully!');
+          setMessage('Signed in! Proceeding...');
           if (onAuthSuccess) onAuthSuccess(fallbackUser);
           setTimeout(() => {
-            if (onClose) onClose();
-            navigate('/');
-          }, 1000);
+            executeRedirect();
+          }, 600);
         }
       } else {
         // Sign In mode
@@ -182,12 +206,11 @@ export default function CustomerAuthModal({ isOpen = true, onClose, onAuthSucces
         if (customerUser) {
           const formattedUser = { ...customerUser, is_guest: false };
           localStorage.setItem('local_customer_user', JSON.stringify(formattedUser));
-          setMessage('Logged in successfully!');
+          setMessage('Welcome back! Proceeding...');
           if (onAuthSuccess) onAuthSuccess(formattedUser);
           setTimeout(() => {
-            if (onClose) onClose();
-            navigate('/');
-          }, 1000);
+            executeRedirect();
+          }, 600);
         } else {
           // Check local customer fallback
           const localCustomer = localStorage.getItem('local_customer_user');
@@ -195,12 +218,11 @@ export default function CustomerAuthModal({ isOpen = true, onClose, onAuthSucces
             try {
               const parsed = JSON.parse(localCustomer);
               if (parsed.email === cleanEmail) {
-                setMessage('Logged in successfully!');
+                setMessage('Welcome back! Proceeding...');
                 if (onAuthSuccess) onAuthSuccess(parsed);
                 setTimeout(() => {
-                  if (onClose) onClose();
-                  navigate('/');
-                }, 1000);
+                  executeRedirect();
+                }, 600);
                 return;
               }
             } catch (e) {}
@@ -230,15 +252,29 @@ export default function CustomerAuthModal({ isOpen = true, onClose, onAuthSucces
 
       {/* Header */}
       <div className="text-center mb-6">
+        {isPurchasingFlow && (
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-extrabold uppercase tracking-wider mb-2.5">
+            <Zap className="h-3.5 w-3.5 fill-emerald-600" />
+            <span>Fast Checkout • Complete Purchase</span>
+          </div>
+        )}
         <h2 className="font-display text-2xl font-black text-zinc-900 uppercase tracking-tight">
-          {authMode === 'signup' && 'Create Account'}
-          {authMode === 'signin' && 'Welcome Back'}
-          {authMode === 'guest' && 'Guest Checkout'}
+          {customTitle || (
+            authMode === 'signup' 
+              ? (isPurchasingFlow ? 'Register & Purchase' : 'Create Account')
+              : authMode === 'signin' 
+                ? (isPurchasingFlow ? 'Sign In to Purchase' : 'Welcome Back')
+                : 'Guest Checkout'
+          )}
         </h2>
         <p className="text-xs text-zinc-500 mt-1 font-medium">
-          {authMode === 'signup' && 'Sign up to track orders, save shipping info & unlock member perks'}
-          {authMode === 'signin' && 'Sign in to access your orders and protection plans'}
-          {authMode === 'guest' && 'Buy screen protectors quickly without setting a password'}
+          {customSubtitle || (
+            authMode === 'signup' 
+              ? 'Sign up to track orders, save shipping info & complete your purchase.'
+              : authMode === 'signin' 
+                ? 'Sign in to access your saved details and proceed directly to purchase.'
+                : 'Buy screen protectors quickly without setting a password.'
+          )}
         </p>
       </div>
 
@@ -378,17 +414,18 @@ export default function CustomerAuthModal({ isOpen = true, onClose, onAuthSucces
         <button
           type="submit"
           disabled={loading}
-          className="w-full py-3.5 bg-zinc-900 hover:bg-zinc-800 text-white rounded-full text-xs font-bold uppercase tracking-widest transition-all shadow-sm active:scale-98 cursor-pointer disabled:opacity-50 mt-2"
+          className="w-full py-3.5 bg-zinc-900 hover:bg-zinc-800 text-white rounded-full text-xs font-bold uppercase tracking-widest transition-all shadow-sm active:scale-98 cursor-pointer disabled:opacity-50 mt-2 flex items-center justify-center gap-2"
         >
           {loading ? (
             'Processing...'
           ) : authMode === 'signup' ? (
-            'Create My Account'
+            isPurchasingFlow ? 'Register & Continue to Purchase' : 'Create My Account'
           ) : authMode === 'signin' ? (
-            'Sign In to Sync'
+            isPurchasingFlow ? 'Sign In & Continue to Purchase' : 'Sign In to Sync'
           ) : (
-            'Proceed as Guest'
+            'Proceed to Checkout'
           )}
+          {!loading && isPurchasingFlow && <ArrowRight className="h-4 w-4" />}
         </button>
       </form>
 

@@ -1,9 +1,25 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import CustomerAuthModal from '../components/layout/CustomerAuthModal';
 import { ArrowLeft, ShieldCheck } from 'lucide-react';
+import useCustomerAuth from '../hooks/useCustomerAuth';
 
 export default function Signup() {
+  const { isLoggedIn, loading } = useCustomerAuth();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const redirectTarget = searchParams.get('redirect') || '/';
+
+  useEffect(() => {
+    if (!loading && isLoggedIn) {
+      navigate(redirectTarget, { replace: true });
+    }
+  }, [isLoggedIn, loading, navigate, redirectTarget]);
+
+  if (!loading && isLoggedIn) {
+    return null;
+  }
+
   return (
     <div className="min-h-[85vh] flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-[#FAFAFA]">
       <div className="w-full max-w-md mb-4 flex items-center justify-between">
@@ -21,7 +37,7 @@ export default function Signup() {
       </div>
 
       <div className="w-full max-w-md flex justify-center">
-        <CustomerAuthModal isOpen={true} isPage={true} initialMode="signup" />
+        <CustomerAuthModal isOpen={true} isPage={true} initialMode="signup" redirectTo={redirectTarget} />
       </div>
     </div>
   );

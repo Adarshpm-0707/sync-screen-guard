@@ -25,33 +25,38 @@ export default function AdminModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop */}
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3.5 sm:p-5 overflow-y-auto">
+      {/* Animated Backdrop */}
       <div 
-        className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm transition-opacity" 
+        className="fixed inset-0 bg-black/80 backdrop-blur-md transition-opacity duration-300 animate-fade-in" 
         onClick={onClose}
       />
 
-      {/* Modal Dialog */}
+      {/* Modal Card */}
       <div 
-        className={`relative w-full ${maxWidth} bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden transform transition-all duration-300 z-10`}
+        className={`relative w-full ${maxWidth} my-auto bg-[#0E1322] border border-slate-800/90 rounded-2xl shadow-2xl overflow-hidden transform transition-all duration-300 z-10`}
         role="dialog"
         aria-modal="true"
       >
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4.5 border-b border-slate-800 bg-slate-950/20">
-          <h3 className="font-display text-sm font-bold tracking-wider text-white uppercase">{title}</h3>
+        {/* Modal Header */}
+        <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-slate-800/90 bg-[#090D16]/60">
+          <div className="flex items-center space-x-2.5">
+            <span className="w-2 h-2 rounded-full bg-indigo-500 shadow-sm shadow-indigo-500/50" />
+            <h3 className="font-display text-sm sm:text-base font-extrabold tracking-wide text-white uppercase">
+              {title}
+            </h3>
+          </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg border border-slate-800 hover:bg-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer"
+            className="p-1.5 rounded-xl border border-slate-800 bg-slate-900/60 hover:bg-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer"
             aria-label="Close dialog"
           >
-            <X className="h-4 w-4" />
+            <X className="h-4.5 w-4.5" />
           </button>
         </div>
 
-        {/* Content Body */}
-        <div className="p-6 max-h-[75vh] overflow-y-auto">
+        {/* Modal Content Body */}
+        <div className="p-5 sm:p-6 max-h-[80vh] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-700/60 scrollbar-track-transparent text-left">
           {children}
         </div>
       </div>

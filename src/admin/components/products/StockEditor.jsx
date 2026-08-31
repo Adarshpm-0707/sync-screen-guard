@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Minus, Check } from 'lucide-react';
+import { Plus, Minus, Check, RefreshCw } from 'lucide-react';
 import AdminButton from '../common/AdminButton';
 
 export default function StockEditor({ initialStock = 0, onSave, isSaving }) {
@@ -12,15 +12,17 @@ export default function StockEditor({ initialStock = 0, onSave, isSaving }) {
   const handleIncrement = () => setStock((prev) => prev + 1);
   const handleDecrement = () => setStock((prev) => Math.max(0, prev - 1));
 
+  const hasChanges = stock !== initialStock;
+
   return (
-    <div className="flex items-center space-x-2 bg-slate-950/20 border border-slate-800 rounded-xl p-1.5 self-start">
+    <div className="flex items-center space-x-1 bg-[#090D16]/90 border border-slate-800 rounded-xl p-1 max-w-fit shadow-inner">
       <button
         type="button"
         onClick={handleDecrement}
-        className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-800 hover:bg-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer"
+        className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-800 bg-slate-900/60 hover:bg-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer text-xs"
         disabled={stock <= 0 || isSaving}
       >
-        <Minus className="h-4 w-4" />
+        <Minus className="h-3.5 w-3.5" />
       </button>
 
       <input
@@ -28,26 +30,35 @@ export default function StockEditor({ initialStock = 0, onSave, isSaving }) {
         value={stock}
         onChange={(e) => setStock(Math.max(0, parseInt(e.target.value, 10) || 0))}
         disabled={isSaving}
-        className="w-16 text-center text-xs font-bold text-white bg-transparent focus:outline-none"
+        className="w-12 text-center text-xs font-black text-white bg-transparent focus:outline-none focus:ring-1 focus:ring-indigo-500 rounded"
       />
 
       <button
         type="button"
         onClick={handleIncrement}
-        className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-800 hover:bg-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer"
+        className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-800 bg-slate-900/60 hover:bg-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer text-xs"
         disabled={isSaving}
       >
-        <Plus className="h-4 w-4" />
+        <Plus className="h-3.5 w-3.5" />
       </button>
 
-      <AdminButton
-        variant="success"
+      <button
+        type="button"
         onClick={() => onSave(stock)}
-        isLoading={isSaving}
-        className="h-8 !px-3"
+        disabled={isSaving || !hasChanges}
+        className={`h-7 px-2 rounded-lg flex items-center justify-center transition-all cursor-pointer ${
+          hasChanges 
+            ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm shadow-emerald-600/30 animate-pulse'
+            : 'bg-slate-800/40 text-slate-600 border border-slate-800/60 cursor-not-allowed'
+        }`}
+        title="Save stock value"
       >
-        <Check className="h-4 w-4" />
-      </AdminButton>
+        {isSaving ? (
+          <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+        ) : (
+          <Check className="h-3.5 w-3.5" />
+        )}
+      </button>
     </div>
   );
 }
