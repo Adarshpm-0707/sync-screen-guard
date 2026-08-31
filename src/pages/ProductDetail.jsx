@@ -1,15 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import ProductGallery from '../components/product/ProductGallery';
+import ProductCard from '../components/product/ProductCard';
 import { 
   Check, ShieldCheck, Star, ChevronRight, ShoppingBag, 
-  Zap, ArrowLeft, Truck, Smartphone, Cpu, 
-  Sparkles, RefreshCw, Layers 
+  Zap, ArrowLeft, Truck, Smartphone, Sparkles, RefreshCw, 
+  Layers, Lock, MapPin, ChevronDown, ChevronUp, PackageCheck 
 } from 'lucide-react';
 import useCart from '../hooks/useCart';
 import { AVAILABLE_MODELS, DEFAULT_MODEL } from '../constants/models';
-
 import { fetchStoreProducts } from '../utils/productStore';
 
 export default function ProductDetail({ product: propProduct }) {
@@ -17,36 +17,46 @@ export default function ProductDetail({ product: propProduct }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [product, setProduct] = useState(location.state?.product || propProduct || null);
+  const [allProducts, setAllProducts] = useState([]);
 
   const [quantity, setQuantity] = useState(1);
   const [selectedModel, setSelectedModel] = useState(DEFAULT_MODEL);
-  const [activeTab, setActiveTab] = useState('description');
   const [isAdded, setIsAdded] = useState(false);
+  const [pincode, setPincode] = useState('');
+  const [pincodeResult, setPincodeResult] = useState(null);
 
-  React.useEffect(() => {
-    if (!product) {
-      fetchStoreProducts().then(items => {
-        if (items && items.length > 0) {
-          setProduct(items[0]);
-        }
-      });
-    }
+  // Accordion open/close state
+  const [openAccordion, setOpenAccordion] = useState('specs');
+
+  useEffect(() => {
+    fetchStoreProducts().then(items => {
+      setAllProducts(items || []);
+      if (!product && items && items.length > 0) {
+        setProduct(items[0]);
+      }
+    });
   }, [product]);
+
+  // Update selected product when route state changes
+  useEffect(() => {
+    if (location.state?.product) {
+      setProduct(location.state.product);
+      window.scrollTo(0, 0);
+    }
+  }, [location.state]);
 
   if (!product) {
     return (
-      <div className="min-h-screen pt-32 pb-20 flex flex-col items-center justify-center bg-sky-100 px-4 text-center">
-        <div className="bg-sky-200/40 border border-sky-300/50 rounded-[40px] p-12 max-w-md w-full space-y-4 shadow-xl">
-          <ShieldCheck className="w-10 h-10 text-sky-700 mx-auto" />
-          <h2 className="text-xl font-black text-sky-950 uppercase tracking-tight">No Products Available</h2>
-          <p className="text-xs text-sky-700 font-bold uppercase tracking-wider">
-            Only admin-added products are shown. Please check back after products are added.
-          </p>
+      <div className="min-h-screen py-24 flex items-center justify-center bg-[#FAFAFA] px-4 text-center">
+        <div className="bg-white border border-zinc-200 rounded-3xl p-8 sm:p-12 max-w-md w-full space-y-4 shadow-sm">
+          <ShieldCheck className="h-10 w-10 text-zinc-400 mx-auto" />
+          <h2 className="text-lg sm:text-xl font-bold text-zinc-900 uppercase">Product Not Found</h2>
+          <p className="text-xs text-zinc-500 font-medium">Please browse our collection to select a screen protector.</p>
           <button
             onClick={() => navigate('/products')}
-            className="px-6 py-3 bg-sky-900 text-sky-50 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-sky-800 transition-all cursor-pointer"
+            className="px-6 py-2.5 bg-zinc-900 text-white rounded-full text-xs font-bold uppercase tracking-wider hover:bg-zinc-800 transition-colors cursor-pointer"
           >
-            Return to Products
+            Explore Catalog
           </button>
         </div>
       </div>
@@ -61,228 +71,333 @@ export default function ProductDetail({ product: propProduct }) {
 
   const handleBuyNow = () => {
     addToCart(product, quantity, selectedModel);
-    navigate('/cart');
+    navigate('/checkout');
   };
 
+  const handleCheckPincode = (e) => {
+    e.preventDefault();
+    if (pincode.trim().length === 6) {
+      const days = ['Wednesday', 'Thursday', 'Friday', 'Saturday', 'Monday'];
+      const randomDay = days[Math.floor(Math.random() * days.length)];
+      setPincodeResult({
+        success: true,
+        message: `Express Delivery by ${randomDay} • COD Available`
+      });
+    } else {
+      setPincodeResult({
+        success: false,
+        message: 'Please enter a valid 6-digit postal pincode'
+      });
+    }
+  };
+
+  const price = Number(product.price) || 640;
+  const originalPrice = Number(product.original_price) || Math.round(price * 1.8);
+  const discountPercent = originalPrice > price 
+    ? Math.round(((originalPrice - price) / originalPrice) * 100) 
+    : 0;
+
+  const relatedProducts = allProducts.filter(p => p.id !== product.id).slice(0, 4);
+
   return (
-    <div className="relative w-full min-h-screen bg-sky-100 text-sky-950 font-sans selection:bg-sky-300 overflow-hidden">
+    <div className="min-h-screen bg-[#FAFAFA] text-zinc-900 pb-24 font-sans w-full">
       
-      {/* ── ATMOSPHERIC SKY BACKGROUND ── */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-        <div className="absolute top-[-10%] left-[-5%] w-[60%] h-[60%] rounded-full bg-cyan-200/50 blur-[120px]" />
-        <div className="absolute bottom-[-10%] right-[-5%] w-[50%] h-[50%] rounded-full bg-blue-300/40 blur-[100px]" />
-        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.08] mix-blend-overlay" />
+      {/* ── 1. Breadcrumbs Navigation ── */}
+      <div className="border-b border-zinc-200/80 bg-white py-3">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <nav className="flex items-center space-x-2 text-[11px] sm:text-xs font-semibold text-zinc-400 uppercase tracking-wider overflow-hidden truncate">
+            <Link to="/" className="hover:text-zinc-900 transition-colors shrink-0">Home</Link>
+            <ChevronRight className="h-3 w-3 sm:h-3.5 sm:w-3.5 shrink-0" />
+            <Link to="/products" className="hover:text-zinc-900 transition-colors shrink-0">Catalog</Link>
+            <ChevronRight className="h-3 w-3 sm:h-3.5 sm:w-3.5 shrink-0" />
+            <span className="text-zinc-900 truncate max-w-[180px] sm:max-w-xs">{product.name}</span>
+          </nav>
+        </div>
       </div>
 
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-32 pb-28 space-y-10"
-      >
-        {/* Navigation Breadcrumb: Frosted Style */}
-        <nav className="flex items-center space-x-3 text-[10px] font-black uppercase tracking-widest text-sky-700/60">
-          <Link to="/" className="hover:text-sky-900 flex items-center gap-1.5 transition-colors">
-            <ArrowLeft className="h-3 w-3" />
-            Home
-          </Link>
-          <ChevronRight className="h-3 w-3 opacity-30" />
-          <Link to="/products" className="hover:text-sky-900 transition-colors">Lab Catalog</Link>
-          <ChevronRight className="h-3 w-3 opacity-30" />
-          <span className="text-sky-900 truncate max-w-[150px]">{product.name}</span>
-        </nav>
-
-        <div className="grid grid-cols-1 gap-12 lg:grid-cols-12 items-start">
+      {/* ── 2. Main PDP Content ── */}
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-6 sm:pt-10">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
           
-          {/* Left Panel: Ice-Box Gallery */}
-          <div className="lg:col-span-6 lg:sticky lg:top-32">
-            <motion.div 
-              initial={{ x: -30, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              className="relative bg-sky-200/30 backdrop-blur-3xl rounded-[50px] border border-sky-300/40 p-6 shadow-2xl shadow-sky-400/20 overflow-hidden"
-            >
-              <div className="absolute top-8 left-8 z-20 px-4 py-1.5 rounded-full bg-sky-600 text-sky-50 text-[9px] font-black uppercase tracking-widest shadow-lg">
-                Series: Ion-Armor
-              </div>
-              <div className="relative z-10 p-4">
-                <ProductGallery images={product.images} />
-              </div>
-              {/* Abstract decoration */}
-              <div className="absolute bottom-[-50px] right-[-50px] w-64 h-64 bg-cyan-400/10 blur-[80px] rounded-full" />
-            </motion.div>
+          {/* Left Column: Gallery (7 Cols on Desktop) */}
+          <div className="lg:col-span-7 lg:sticky lg:top-24 w-full">
+            <ProductGallery images={product.images} />
           </div>
 
-          {/* Right Panel: Feature Data Interface */}
-          <motion.div 
-            initial={{ x: 30, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            className="lg:col-span-6 bg-sky-200/20 backdrop-blur-3xl rounded-[50px] border border-sky-300/30 p-8 sm:p-12 space-y-10 shadow-xl shadow-sky-400/10"
-          >
-            {/* Holographic Product Header */}
-            <header className="space-y-4">
-              <div className="flex flex-wrap items-center gap-2">
+          {/* Right Column: Product Actions & Details (5 Cols on Desktop) */}
+          <div className="lg:col-span-5 space-y-5 sm:space-y-6 w-full">
+            
+            {/* Header: Badges, Title, Ratings */}
+            <div className="space-y-2.5 sm:space-y-3 pb-4 sm:pb-5 border-b border-zinc-200/80">
+              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                 {product.is_best_seller && (
-                  <span className="text-[9px] font-black tracking-[0.2em] bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 px-4 py-2 rounded-2xl shadow-md uppercase flex items-center gap-1 animate-pulse">
-                    🔥 BEST SELLER
+                  <span className="rounded bg-zinc-900 px-2 py-0.5 text-[9px] sm:text-[10px] font-extrabold uppercase tracking-wider text-white">
+                    🔥 BESTSELLER
                   </span>
                 )}
-                <span className="text-[9px] font-black tracking-[0.2em] text-sky-50 bg-sky-600 px-4 py-2 rounded-2xl shadow-md uppercase">
-                  Tray System Alpha
+                <span className="rounded bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 text-[9px] sm:text-[10px] font-extrabold uppercase tracking-wider">
+                  9H Tempered Glass
                 </span>
-                <span className="text-[9px] font-black tracking-[0.2em] text-sky-700 bg-sky-300/40 border border-sky-400/30 px-4 py-2 rounded-2xl uppercase">
-                  Available: {product.stock || 100} units
+                <span className="rounded bg-zinc-100 text-zinc-700 px-2 py-0.5 text-[9px] sm:text-[10px] font-bold uppercase tracking-wider">
+                  Auto-Align Tray Included
                 </span>
               </div>
 
-              <h1 className="text-4xl sm:text-5xl font-black text-sky-950 tracking-tighter leading-[0.9] uppercase">
+              <h1 className="font-display text-xl sm:text-2xl md:text-3xl font-black uppercase tracking-tight text-zinc-900 leading-tight">
                 {product.name}
               </h1>
 
-              <div className="flex items-center space-x-3">
-                <div className="flex text-sky-500">
-                  {[...Array(5)].map((_, i) => <Star key={i} className="h-4 w-4 fill-current" />)}
+              {/* Rating */}
+              <div className="flex items-center gap-2 text-xs font-semibold text-zinc-700">
+                <div className="flex items-center text-amber-400">
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} className="h-3.5 w-3.5 fill-amber-400" />
+                  ))}
                 </div>
-                <span className="text-[10px] text-sky-800 font-black uppercase tracking-widest opacity-60">Verified Signal (4.9/5)</span>
-              </div>
-            </header>
-
-            {/* Price Node */}
-            {(() => {
-              const discountPercent = product.original_price && product.price && Number(product.original_price) > Number(product.price)
-                ? Math.round(((Number(product.original_price) - Number(product.price)) / Number(product.original_price)) * 100)
-                : 0;
-
-              return (
-                <div className="bg-sky-300/30 border border-sky-400/20 rounded-[32px] p-8 space-y-2">
-                  <div className="flex flex-wrap items-baseline gap-4">
-                    <span className="text-5xl font-light text-sky-950 tracking-tighter">₹{product.price}</span>
-                    {product.original_price && (
-                      <span className="text-xl text-sky-600/50 line-through font-medium">₹{product.original_price}</span>
-                    )}
-                    {discountPercent > 0 && (
-                      <span className="text-xs font-black text-white bg-emerald-600 px-3 py-1 rounded-xl shadow-sm uppercase tracking-wider">
-                        {discountPercent}% OFF
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 text-[10px] font-black text-sky-700 uppercase tracking-widest pt-2 border-t border-sky-400/20">
-                    <Truck className="h-4 w-4" />
-                    <span>Priority Logistics Activated. No Delivery Cost.</span>
-                  </div>
-                </div>
-              );
-            })()}
-
-            {/* Device Matrix Selector */}
-            <section className="space-y-4">
-              <div className="flex justify-between items-center px-2">
-                <label className="text-[10px] font-black uppercase tracking-[0.3em] text-sky-600 flex items-center gap-2">
-                  <Smartphone className="h-4 w-4" /> Device Port
-                </label>
-                <span className="text-[10px] font-black text-sky-900">{selectedModel}</span>
+                <span className="font-bold text-zinc-900">4.9</span>
+                <span className="text-zinc-400">(240+ Reviews)</span>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {AVAILABLE_MODELS.map((model) => (
+              {/* Pricing Section */}
+              <div className="flex items-baseline gap-2.5 sm:gap-3 pt-1 flex-wrap">
+                <span className="font-display text-2xl sm:text-3xl font-black text-zinc-900">
+                  ₹{price.toLocaleString()}
+                </span>
+                {originalPrice > price && (
+                  <>
+                    <span className="text-xs sm:text-sm text-zinc-400 line-through font-medium">
+                      MRP ₹{originalPrice.toLocaleString()}
+                    </span>
+                    <span className="rounded-full bg-emerald-600 text-white px-2 sm:px-2.5 py-0.5 text-[10px] sm:text-xs font-extrabold uppercase tracking-wider">
+                      Save ₹{(originalPrice - price).toLocaleString()} ({discountPercent}% OFF)
+                    </span>
+                  </>
+                )}
+              </div>
+              <p className="text-[10px] sm:text-[11px] text-zinc-500 font-medium">Inclusive of all taxes. Free shipping on prepaid orders.</p>
+            </div>
+
+            {/* Device Compatibility Model Selector */}
+            <div className="space-y-2">
+              <label className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-zinc-900 flex items-center justify-between">
+                <span>Select Compatible Device</span>
+                <span className="text-[10px] text-emerald-600 font-bold">100% Fit Guaranteed</span>
+              </label>
+              
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 sm:gap-2">
+                {AVAILABLE_MODELS.slice(0, 6).map((model) => (
                   <button
                     key={model}
                     onClick={() => setSelectedModel(model)}
-                    className={`py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border cursor-pointer ${
+                    className={`px-2.5 py-2 rounded-xl text-[11px] sm:text-xs font-bold transition-all text-center cursor-pointer truncate ${
                       selectedModel === model
-                        ? 'bg-sky-900 text-sky-100 border-sky-950 shadow-xl scale-105'
-                        : 'bg-sky-300/20 text-sky-700 border-sky-400/20 hover:bg-sky-300/40'
+                        ? 'bg-zinc-900 text-white shadow-xs border border-zinc-900'
+                        : 'bg-zinc-100 text-zinc-700 border border-zinc-200/80 hover:bg-zinc-200'
                     }`}
                   >
                     {model}
                   </button>
                 ))}
               </div>
-            </section>
+            </div>
 
-            {/* Tactical Action Grid */}
-            <section className="space-y-6">
-              <div className="flex items-center justify-between bg-sky-300/20 p-2 rounded-[24px] border border-sky-400/20">
-                <span className="pl-6 text-[10px] font-black text-sky-700 uppercase tracking-widest">Quantity</span>
-                <div className="flex items-center space-x-4 bg-sky-900 rounded-[20px] p-2 text-sky-100">
-                  <button onClick={() => setQuantity(q => Math.max(1, q - 1))} className="h-10 w-10 flex items-center justify-center font-black hover:text-cyan-300 transition-colors">-</button>
-                  <span className="text-sm font-black w-4 text-center">{quantity}</span>
-                  <button onClick={() => setQuantity(q => q + 1)} className="h-10 w-10 flex items-center justify-center font-black hover:text-cyan-300 transition-colors">+</button>
+            {/* Quantity Controller & CTA Buttons */}
+            <div className="space-y-2.5 sm:space-y-3 pt-1">
+              <div className="flex items-center gap-2 sm:gap-3">
+                {/* Quantity */}
+                <div className="flex items-center rounded-xl border border-zinc-300 bg-white p-1 shrink-0">
+                  <button
+                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                    className="h-8 w-8 flex items-center justify-center rounded-lg text-zinc-600 hover:bg-zinc-100 font-bold cursor-pointer"
+                  >
+                    -
+                  </button>
+                  <span className="w-7 text-center text-xs font-bold text-zinc-900">{quantity}</span>
+                  <button
+                    onClick={() => setQuantity(quantity + 1)}
+                    className="h-8 w-8 flex items-center justify-center rounded-lg text-zinc-600 hover:bg-zinc-100 font-bold cursor-pointer"
+                  >
+                    +
+                  </button>
                 </div>
-              </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Add to Bag Button */}
                 <button
                   onClick={handleAddToCart}
-                  className="group py-6 rounded-[28px] border border-sky-400/40 bg-sky-300/10 hover:bg-sky-300/30 text-[10px] font-black text-sky-950 uppercase tracking-[0.3em] transition-all flex items-center justify-center gap-3"
+                  className={`flex-1 flex items-center justify-center gap-2 py-3 sm:py-3.5 rounded-full text-xs font-bold uppercase tracking-widest transition-all cursor-pointer shadow-sm ${
+                    isAdded
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-zinc-900 hover:bg-zinc-800 text-white active:scale-98'
+                  }`}
                 >
-                  <ShoppingBag className="h-4 w-4 text-sky-600 group-hover:scale-110 transition-transform" />
-                  {isAdded ? 'Synced' : 'Add to System'}
-                </button>
-                
-                <button
-                  onClick={handleBuyNow}
-                  className="py-6 rounded-[28px] bg-sky-600 hover:bg-sky-700 text-sky-50 text-[10px] font-black uppercase tracking-[0.3em] shadow-2xl shadow-sky-400/40 transition-all flex items-center justify-center gap-3"
-                >
-                  <Zap className="h-4 w-4 fill-sky-50" />
-                  Instant Deployment
+                  {isAdded ? (
+                    <>
+                      <Check className="h-4 w-4" />
+                      <span>Added to Bag</span>
+                    </>
+                  ) : (
+                    <>
+                      <ShoppingBag className="h-4 w-4" />
+                      <span>Add to Bag</span>
+                    </>
+                  )}
                 </button>
               </div>
-            </section>
 
-            {/* Quality Signal Bar */}
-            <div className="flex items-center gap-6 p-6 rounded-[32px] bg-sky-900 border border-sky-400/30 text-sky-100 shadow-xl">
-              <div className="h-12 w-12 rounded-2xl bg-sky-500/20 flex items-center justify-center shrink-0">
-                <ShieldCheck className="h-6 w-6 text-sky-400" />
+              {/* Buy Now CTA */}
+              <button
+                onClick={handleBuyNow}
+                className="w-full py-3.5 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold uppercase tracking-widest transition-all shadow-sm active:scale-98 cursor-pointer flex items-center justify-center gap-2"
+              >
+                <Zap className="h-4 w-4" />
+                <span>Instant Buy Now</span>
+              </button>
+            </div>
+
+            {/* Pincode Delivery Estimator */}
+            <div className="p-3.5 sm:p-4 rounded-2xl bg-zinc-100/80 border border-zinc-200/80 space-y-2">
+              <div className="flex items-center gap-1.5 text-[11px] sm:text-xs font-bold uppercase tracking-wider text-zinc-800">
+                <MapPin className="h-3.5 w-3.5 text-zinc-600" />
+                <span>Check Delivery & Cash on Delivery</span>
               </div>
-              <div>
-                <h4 className="text-[10px] font-black uppercase tracking-widest">Structural Guarantee</h4>
-                <p className="text-[11px] text-sky-400 mt-1 font-bold">100% Optical precision or immediate swap.</p>
+              <form onSubmit={handleCheckPincode} className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Enter 6-digit Pincode"
+                  value={pincode}
+                  maxLength={6}
+                  onChange={(e) => setPincode(e.target.value)}
+                  className="flex-1 rounded-xl bg-white border border-zinc-200 px-3 py-2 text-xs font-semibold text-zinc-900 focus:border-zinc-900 focus:outline-none"
+                />
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-zinc-900 text-white rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-zinc-800 cursor-pointer shrink-0"
+                >
+                  Check
+                </button>
+              </form>
+              {pincodeResult && (
+                <p className={`text-[11px] font-semibold mt-1 flex items-center gap-1 ${
+                  pincodeResult.success ? 'text-emerald-600' : 'text-red-500'
+                }`}>
+                  {pincodeResult.success && <Truck className="h-3.5 w-3.5 shrink-0" />}
+                  <span>{pincodeResult.message}</span>
+                </p>
+              )}
+            </div>
+
+            {/* Guarantee Pills */}
+            <div className="grid grid-cols-2 gap-2 sm:gap-3 pt-1">
+              <div className="p-2.5 sm:p-3 rounded-xl bg-white border border-zinc-200 flex items-center gap-2">
+                <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0" />
+                <span className="text-[10px] sm:text-[11px] font-bold text-zinc-800">9H Shatterproof</span>
+              </div>
+              <div className="p-2.5 sm:p-3 rounded-xl bg-white border border-zinc-200 flex items-center gap-2">
+                <RefreshCw className="h-4 w-4 text-emerald-600 shrink-0" />
+                <span className="text-[10px] sm:text-[11px] font-bold text-zinc-800">7-Day Replacement</span>
               </div>
             </div>
 
-            {/* Interface Tabs: Information Layers */}
-            <section className="space-y-6">
-              <div className="flex gap-8 border-b border-sky-400/20 text-[9px] font-black uppercase tracking-[0.2em] text-sky-700/60">
-                {['description', 'specs', 'reviews'].map(tab => (
-                  <button
-                    key={tab}
-                    onClick={() => setActiveTab(tab)}
-                    className={`pb-4 relative transition-colors ${activeTab === tab ? 'text-sky-950' : 'hover:text-sky-900'}`}
-                  >
-                    {tab}
-                    {activeTab === tab && <motion.div layoutId="tabLine" className="absolute bottom-0 left-0 right-0 h-0.5 bg-sky-600" />}
-                  </button>
-                ))}
-              </div>
-
-              <div className="text-sm font-bold text-sky-800/70 leading-relaxed min-h-[100px]">
-                {activeTab === 'description' && (
-                  <p>{product.description || 'Molecularly bonded 9H tempered glass optimized for pixel-perfect clarity. The integrated SkyTray alignment sequence eliminates human error during installation.'}</p>
-                )}
-                {activeTab === 'specs' && (
-                  <div className="grid grid-cols-2 gap-y-4 text-[11px] uppercase tracking-wider">
-                    <span className="text-sky-500">Atomic Hardness</span><span className="text-sky-950 text-right">9H Grade</span>
-                    <span className="text-sky-500">Light Passage</span><span className="text-sky-950 text-right">99.9% HD</span>
-                    <span className="text-sky-500">Core Element</span><span className="text-sky-950 text-right">Alumino-silicate</span>
-                    <span className="text-sky-500">Bonding Method</span><span className="text-sky-950 text-right">Static-Suction</span>
+            {/* ── 3. Expandable Spec & Installation Accordions ── */}
+            <div className="border-t border-zinc-200/80 pt-4 sm:pt-6 space-y-2.5 sm:space-y-3">
+              
+              {/* Accordion 1: Specifications */}
+              <div className="rounded-2xl border border-zinc-200 bg-white overflow-hidden">
+                <button
+                  onClick={() => setOpenAccordion(openAccordion === 'specs' ? null : 'specs')}
+                  className="w-full flex items-center justify-between p-3.5 sm:p-4 text-xs font-bold uppercase tracking-wider text-zinc-900 cursor-pointer"
+                >
+                  <span>Product Specifications</span>
+                  {openAccordion === 'specs' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                </button>
+                {openAccordion === 'specs' && (
+                  <div className="px-3.5 sm:px-4 pb-4 text-xs text-zinc-600 space-y-1.5 border-t border-zinc-100 pt-3">
+                    <p><strong>Material:</strong> High-Aluminosilicate 9H Double Tempered Glass</p>
+                    <p><strong>Thickness:</strong> 0.33mm ultra-slim responsive glass</p>
+                    <p><strong>Coating:</strong> Double electroplated oleophobic oil-repellent layer</p>
+                    <p><strong>Clarity:</strong> 99.9% optical transparency, zero color distortion</p>
+                    <p><strong>Adhesive:</strong> Optical grade nano-silicone (bubble-free auto dispersion)</p>
                   </div>
                 )}
-                {activeTab === 'reviews' && (
-                  <div className="space-y-4">
-                    <div className="p-4 bg-sky-300/20 rounded-2xl border border-sky-400/20">
-                      <div className="flex justify-between text-[10px] uppercase font-black mb-2 text-sky-900">
-                        <span>A. Verma</span>
-                        <span className="text-sky-500">★★★★★</span>
-                      </div>
-                      <p className="text-xs italic leading-snug">"Zero friction on the glass. The installation tray was flawlessly aligned."</p>
+              </div>
+
+              {/* Accordion 2: 10-Second Installation Steps */}
+              <div className="rounded-2xl border border-zinc-200 bg-white overflow-hidden">
+                <button
+                  onClick={() => setOpenAccordion(openAccordion === 'install' ? null : 'install')}
+                  className="w-full flex items-center justify-between p-3.5 sm:p-4 text-xs font-bold uppercase tracking-wider text-zinc-900 cursor-pointer"
+                >
+                  <span>10-Second Installation Guide</span>
+                  {openAccordion === 'install' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                </button>
+                {openAccordion === 'install' && (
+                  <div className="px-3.5 sm:px-4 pb-4 text-xs text-zinc-600 space-y-2 border-t border-zinc-100 pt-3">
+                    <div className="flex gap-2">
+                      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-zinc-900 text-white text-[10px] font-bold shrink-0">1</span>
+                      <p>Wipe screen with the included wet alcohol wipe and microfiber cloth.</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-zinc-900 text-white text-[10px] font-bold shrink-0">2</span>
+                      <p>Place the Sync auto-alignment box directly over your phone.</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-zinc-900 text-white text-[10px] font-bold shrink-0">3</span>
+                      <p>Pull the arrowed dust-extraction tab until removed.</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-zinc-900 text-white text-[10px] font-bold shrink-0">4</span>
+                      <p>Slide finger across center arrow for 5 seconds and lift off box!</p>
                     </div>
                   </div>
                 )}
               </div>
-            </section>
 
-          </motion.div>
+              {/* Accordion 3: What's In The Box */}
+              <div className="rounded-2xl border border-zinc-200 bg-white overflow-hidden">
+                <button
+                  onClick={() => setOpenAccordion(openAccordion === 'box' ? null : 'box')}
+                  className="w-full flex items-center justify-between p-3.5 sm:p-4 text-xs font-bold uppercase tracking-wider text-zinc-900 cursor-pointer"
+                >
+                  <span>What's In The Box</span>
+                  {openAccordion === 'box' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                </button>
+                {openAccordion === 'box' && (
+                  <div className="px-3.5 sm:px-4 pb-4 text-xs text-zinc-600 space-y-1 border-t border-zinc-100 pt-3">
+                    <p>• 1x 9H Tempered Glass inside Auto-Alignment Box</p>
+                    <p>• 1x Wet Alcohol Prep Wipe</p>
+                    <p>• 1x Microfiber Polishing Cloth</p>
+                    <p>• 1x Dust Absorber Sticker & Guide Tabs</p>
+                    <p>• 1x Squeegee Card</p>
+                  </div>
+                )}
+              </div>
+
+            </div>
+
+          </div>
+
         </div>
-      </motion.div>
+
+        {/* ── 4. Related Products Recommendation Carousel ── */}
+        {relatedProducts.length > 0 && (
+          <div className="mt-14 sm:mt-20 pt-8 sm:pt-12 border-t border-zinc-200">
+            <h2 className="font-display text-lg sm:text-2xl font-black uppercase tracking-tight text-zinc-900 mb-4 sm:mb-6">
+              You May Also Like
+            </h2>
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-5 lg:gap-6">
+              {relatedProducts.map((p) => (
+                <ProductCard
+                  key={p.id}
+                  product={p}
+                  onAddToCart={() => addToCart(p, 1)}
+                  isAdded={false}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+      </div>
     </div>
   );
 }

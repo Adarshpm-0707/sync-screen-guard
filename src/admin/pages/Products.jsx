@@ -5,6 +5,7 @@ import StockEditor from '../components/products/StockEditor';
 import ProductForm from '../components/products/ProductForm';
 import AdminModal from '../components/common/AdminModal';
 import { supabase } from '../../supabaseClient';
+import { fetchStoreProducts } from '../../utils/productStore';
 
 export default function Products() {
   const [loading, setLoading] = useState(true);
@@ -20,28 +21,10 @@ export default function Products() {
   const fetchProducts = async () => {
     setLoading(true);
     try {
-      let result = await supabase
-        .from('products')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (result.error) {
-        result = await supabase.from('products').select('*');
-      }
-
-      if (result.error) throw result.error;
-
-      const deletedIds = new Set(JSON.parse(localStorage.getItem('deleted_product_ids') || '[]'));
-      const finalProducts = (result.data || []).filter(
-        p => !deletedIds.has(p.id) &&
-             !p.name?.toLowerCase().includes('emrpemmrpg') &&
-             Number(p.price) !== 200 &&
-             Number(p.original_price) !== 5000
-      );
-      setProducts(finalProducts);
+      const items = await fetchStoreProducts();
+      setProducts(items || []);
     } catch (err) {
       console.error('Error fetching products:', err);
-      alert(`Failed to load products: ${err.message}`);
       setProducts([]);
     } finally {
       setLoading(false);

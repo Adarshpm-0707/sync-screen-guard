@@ -1,694 +1,717 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
-import {
-  Zap,
-  ChevronRight,
-  ShieldCheck,
-  Eye,
-  ArrowUpRight,
-} from "lucide-react";
-import useCart from "../hooks/useCart";
-import { fetchStoreProducts, DEFAULT_PRODUCTS } from "../utils/productStore";
+import React, { useState, useEffect } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  ChevronRight, ChevronLeft, ShieldCheck, Sparkles, 
+  ArrowRight, Star, Truck, RefreshCw, Zap, Check, 
+  Smartphone, Award, Play, Eye, Layers, Lock,
+  ShoppingBag, Shield
+} from 'lucide-react';
+import useCart from '../hooks/useCart';
+import { fetchStoreProducts } from '../utils/productStore';
+import ProductCard from '../components/product/ProductCard';
 
-// Generate frame paths using Vite's import.meta.glob for all frames
-const frameModules = import.meta.glob("../assets/bg/ezgif-frame-*.jpg", {
-  eager: true,
-});
+// Clean, Uncluttered Hero Banners Data
+const HERO_BANNERS = [
+  {
+    id: 1,
+    tag: 'Flagship 9H Tempered Glass',
+    title: 'The 10-Second Auto Align Revolution',
+    subtitle: 'Zero bubbles. Zero dust. Aerospace-grade 9H tempered glass with patented auto-align applicator box.',
+    price: 640,
+    originalPrice: 1299,
+    discount: '50% OFF',
+    ctaText: 'Shop EZ-Fit Glass',
+    link: '/products',
+    image: 'https://images.unsplash.com/photo-1611532736597-de2d4265fba3?auto=format&fit=crop&q=80&w=1600',
+    bgGradient: 'from-zinc-950 via-zinc-900 to-black'
+  },
+  {
+    id: 2,
+    tag: 'Anti-Spy Privacy Armor',
+    title: '28° Narrow-Angle Privacy Defense',
+    subtitle: 'Blocks prying side glances in public while maintaining ultra-vivid front HD OLED clarity and touch response.',
+    price: 740,
+    originalPrice: 1499,
+    discount: '51% OFF',
+    ctaText: 'Shop Privacy Armor',
+    link: '/products?category=privacy',
+    image: 'https://images.unsplash.com/photo-1605236453806-6ff36851218e?auto=format&fit=crop&q=80&w=1600',
+    bgGradient: 'from-slate-950 via-zinc-900 to-black'
+  },
+  {
+    id: 3,
+    tag: 'Pro Gaming & Outdoor',
+    title: 'Silk-Matte Anti-Glare Shield',
+    subtitle: 'Micro-etched matte finish eliminates reflections and fingerprint smudges for ultra-smooth gaming swipes.',
+    price: 680,
+    originalPrice: 1299,
+    discount: '48% OFF',
+    ctaText: 'Shop Matte Shield',
+    link: '/products?category=matte',
+    image: 'https://images.unsplash.com/photo-1592899677977-9c10ca588bbd?auto=format&fit=crop&q=80&w=1600',
+    bgGradient: 'from-neutral-950 via-zinc-900 to-black'
+  },
+  {
+    id: 4,
+    tag: 'Galaxy Series Custom Fit',
+    title: '3D Curved 9H Glass for Galaxy Ultra',
+    subtitle: 'Engineered for ultrasonic fingerprint recognition with seamless 3D curved border coverage.',
+    price: 690,
+    originalPrice: 1399,
+    discount: '51% OFF',
+    ctaText: 'Shop Samsung Glass',
+    link: '/products?category=samsung',
+    image: 'https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?auto=format&fit=crop&q=80&w=1600',
+    bgGradient: 'from-zinc-950 via-slate-900 to-black'
+  }
+];
 
-// Sort frames by filename to ensure correct order
-const FRAMES = Object.keys(frameModules)
-  .sort()
-  .map((key) => frameModules[key].default);
+// Circular / Icon Category Explorer
+const CATEGORIES = [
+  { id: 'all', name: 'All Products', icon: '⚡', query: 'all', image: 'https://images.unsplash.com/photo-1611532736597-de2d4265fba3?auto=format&fit=crop&q=80&w=300' },
+  { id: 'privacy', name: 'Privacy Armor', icon: '🕶️', query: 'privacy', image: 'https://images.unsplash.com/photo-1605236453806-6ff36851218e?auto=format&fit=crop&q=80&w=300' },
+  { id: 'matte', name: 'Matte Anti-Glare', icon: '🎮', query: 'matte', image: 'https://images.unsplash.com/photo-1592899677977-9c10ca588bbd?auto=format&fit=crop&q=80&w=300' },
+]
+const REVIEWS = [
+  {
+    name: 'Aarav Mehta',
+    device: 'iPhone 15 Pro Max',
+    rating: 5,
+    title: 'The alignment box is magic!',
+    comment: 'I usually ruin at least 1 screen protector installing it. The Sync auto-align box did it in 10 seconds with literally ZERO bubbles or lint. Pure magic.',
+    verified: true,
+  },
+  {
+    name: 'Rohan Sharma',
+    device: 'Samsung Galaxy S24 Ultra',
+    rating: 5,
+    title: 'Flawless edge-to-edge curved fit',
+    comment: 'The glass feels smoother than the original phone display. The fingerprint sensor works instantly without any issues. Super happy with the quality!',
+    verified: true,
+  },
+  {
+    name: 'Pooja Nair',
+    device: 'iPhone 14 Pro',
+    rating: 5,
+    title: 'Best Privacy Screen Ever',
+    comment: 'Nobody sitting next to me in the metro or office can see what is on my phone. The 28-degree angle cut works perfectly without making the screen too dim.',
+    verified: true,
+  }
+];
+
+const SLIDE_DURATION_MS = 5000; // 5 Seconds per slide
 
 export default function Home() {
   const navigate = useNavigate();
   const { addToCart } = useCart();
-  const [addedMap, setAddedMap] = useState({});
   const [products, setProducts] = useState([]);
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
+  const [direction, setDirection] = useState(1);
+  const [progress, setProgress] = useState(0);
+  const [addedMap, setAddedMap] = useState({});
+  const [activeTab, setActiveTab] = useState('all');
+
+  // Quick Device Finder state
+  const [selectedBrand, setSelectedBrand] = useState('Apple');
+  const [selectedModel, setSelectedModel] = useState('iPhone 15 Pro Max');
 
   useEffect(() => {
     async function loadCatalog() {
       const storeItems = await fetchStoreProducts();
-      setProducts(storeItems);
+      setProducts(storeItems || []);
     }
     loadCatalog();
 
-    window.addEventListener("products_updated", loadCatalog);
-    window.addEventListener("storage", loadCatalog);
+    window.addEventListener('products_updated', loadCatalog);
+    window.addEventListener('storage', loadCatalog);
     return () => {
-      window.removeEventListener("products_updated", loadCatalog);
-      window.removeEventListener("storage", loadCatalog);
+      window.removeEventListener('products_updated', loadCatalog);
+      window.removeEventListener('storage', loadCatalog);
     };
   }, []);
 
-  // Canvas + scroll refs
-  const canvasRef = useRef(null);
-  const imagesRef = useRef([]);
-  const currentFrameRef = useRef(0);
-  const rafRef = useRef(null);
-  // The tall spacer div that creates scroll distance
-  const spacerRef = useRef(null);
-  const [framesLoaded, setFramesLoaded] = useState(false);
-  const [loadProgress, setLoadProgress] = useState(0);
-  // We track which frame index to show as a state so the progress bar updates
-  const [frameIndex, setFrameIndex] = useState(0);
-  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
-  const scrollProgressRef = useRef(0);
-  const [showMobileEndCard, setShowMobileEndCard] = useState(false);
-
+  // Smooth slide timer with progress bar and pause-on-hover
   useEffect(() => {
-    const onResize = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-  }, []);
+    if (isPaused) return;
 
-  const [showHeroContent, setShowHeroContent] = useState(false);
+    const intervalStep = 50;
+    const timer = setInterval(() => {
+      setProgress((prev) => {
+        if (prev >= 100) {
+          setDirection(1);
+          setCurrentSlide((curr) => (curr + 1) % HERO_BANNERS.length);
+          return 0;
+        }
+        return prev + (intervalStep / SLIDE_DURATION_MS) * 100;
+      });
+    }, intervalStep);
 
-  useEffect(() => {
-    if (framesLoaded) {
-      setShowHeroContent(true);
-    }
-  }, [framesLoaded]);
+    return () => clearInterval(timer);
+  }, [isPaused, currentSlide]);
 
-  const homeProducts = products.filter((p) => p.show_on_home !== false);
-  const currentHero = homeProducts[0] || null;
+  const goToSlide = (index) => {
+    setDirection(index > currentSlide ? 1 : -1);
+    setCurrentSlide(index);
+    setProgress(0);
+  };
+
+  const nextSlide = () => {
+    setDirection(1);
+    setCurrentSlide((prev) => (prev + 1) % HERO_BANNERS.length);
+    setProgress(0);
+  };
+
+  const prevSlide = () => {
+    setDirection(-1);
+    setCurrentSlide((prev) => (prev - 1 + HERO_BANNERS.length) % HERO_BANNERS.length);
+    setProgress(0);
+  };
 
   const handleAddToCart = (prod, e) => {
     if (e) e.stopPropagation();
     addToCart(prod, 1);
     setAddedMap((prev) => ({ ...prev, [prod.id]: true }));
-    setTimeout(
-      () => setAddedMap((prev) => ({ ...prev, [prod.id]: false })),
-      2000,
-    );
+    setTimeout(() => {
+      setAddedMap((prev) => ({ ...prev, [prod.id]: false }));
+    }, 2000);
   };
 
-  // Draw frame — if target isn't loaded yet, find nearest loaded neighbour
-  const drawFrame = useCallback((index) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const imgs = imagesRef.current;
-    if (!imgs.length) return;
+  const filteredProducts = activeTab === 'all' 
+    ? products 
+    : products.filter(p => p.category === activeTab || (activeTab === 'bestseller' && p.is_best_seller));
 
-    // Search outward from index to find a loaded frame
-    let img = null;
-    for (let delta = 0; delta < imgs.length; delta++) {
-      const candidate =
-        imgs[Math.max(0, Math.min(imgs.length - 1, index - delta))];
-      if (candidate && candidate.complete && candidate.naturalWidth) {
-        img = candidate;
-        break;
-      }
-      if (delta > 0) {
-        const fwd = imgs[Math.min(imgs.length - 1, index + delta)];
-        if (fwd && fwd.complete && fwd.naturalWidth) {
-          img = fwd;
-          break;
-        }
-      }
-    }
-    if (!img) return;
+  const deviceModelsByBrand = {
+    Apple: ['iPhone 16 Pro Max', 'iPhone 16 Pro', 'iPhone 16', 'iPhone 15 Pro Max', 'iPhone 15 Pro', 'iPhone 15', 'iPhone 14 Pro Max', 'iPhone 13 / 14'],
+    Samsung: ['Galaxy S25 Ultra', 'Galaxy S24 Ultra', 'Galaxy S24 Plus', 'Galaxy S24', 'Galaxy S23 Ultra', 'Galaxy A55 / A35'],
+    OnePlus: ['OnePlus 12', 'OnePlus 12R', 'OnePlus 11', 'OnePlus Nord 4', 'OnePlus Nord CE 4'],
+    Google: ['Pixel 9 Pro', 'Pixel 9', 'Pixel 8 Pro', 'Pixel 8', 'Pixel 8a', 'Pixel 7 Pro']
+  };
 
-    const ctx = canvas.getContext("2d");
-    const cw = canvas.width;
-    const ch = canvas.height;
-    const iw = img.naturalWidth;
-    const ih = img.naturalHeight;
-    const scale = Math.max(cw / iw, ch / ih);
-    const nw = iw * scale;
-    const nh = ih * scale;
-    const ox = (cw - nw) / 2;
-    const oy = (ch - nh) / 2;
-    ctx.clearRect(0, 0, cw, ch);
-    ctx.drawImage(img, ox, oy, nw, nh);
-  }, []);
+  const handleDeviceFinderSearch = () => {
+    navigate(`/products?search=${encodeURIComponent(selectedModel)}`);
+  };
 
-  // Preload images — first 30 frames are high-priority (shown at top of page).
-  // Remaining frames load in background. Animation starts after max 3 seconds.
-  useEffect(() => {
-    const PRIORITY_FRAMES = 30; // load these first
-    const MAX_WAIT_MS = 3000; // force-start after this time regardless
-    let priorityLoaded = 0;
-    let totalLoaded = 0;
-    let started = false;
+  const currentBanner = HERO_BANNERS[currentSlide];
 
-    const start = () => {
-      if (started) return;
-      started = true;
-      setFramesLoaded(true);
-      drawFrame(0);
-    };
-
-    // Force start after 3 seconds no matter what
-    const forceTimer = setTimeout(start, MAX_WAIT_MS);
-
-    const imgs = FRAMES.map((src, i) => {
-      const img = new Image();
-      img.onload = () => {
-        totalLoaded++;
-        setLoadProgress(Math.round((totalLoaded / FRAMES.length) * 100));
-
-        if (i < PRIORITY_FRAMES) {
-          priorityLoaded++;
-          // Start as soon as all priority frames are ready
-          if (priorityLoaded === PRIORITY_FRAMES) start();
-        }
-        // Also start if everything loaded before any timer
-        if (totalLoaded === FRAMES.length) start();
-      };
-      img.onerror = () => {
-        totalLoaded++;
-      };
-      img.src = src; // set src AFTER onload to avoid race on cached images
-      return img;
-    });
-
-    imagesRef.current = imgs;
-    return () => clearTimeout(forceTimer);
-  }, [drawFrame]);
-
-  // Keep canvas sized to viewport
-  useEffect(() => {
-    const resize = () => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-      drawFrame(currentFrameRef.current);
-    };
-    resize();
-    window.addEventListener("resize", resize);
-    return () => window.removeEventListener("resize", resize);
-  }, [drawFrame]);
-
-  const [scrollProgress, setScrollProgress] = useState(0);
-
-  // Scroll-driven frame update
-  useEffect(() => {
-    if (!framesLoaded) return;
-
-    const onScroll = () => {
-      const spacer = spacerRef.current;
-      if (!spacer) return;
-
-      const rect = spacer.getBoundingClientRect();
-      const scrolled = -rect.top;
-      const maxScroll = spacer.offsetHeight - window.innerHeight;
-      const progress = Math.max(0, Math.min(1, scrolled / maxScroll));
-      scrollProgressRef.current = progress;
-      setScrollProgress(progress);
-
-      // On mobile show the text card when animation is near end
-      if (window.innerWidth < 768) {
-        setShowMobileEndCard(progress >= 0.75);
-      } else {
-        setShowMobileEndCard(false);
-      }
-
-      const idx = Math.min(
-        Math.floor(progress * (FRAMES.length - 1)),
-        FRAMES.length - 1,
-      );
-
-      if (idx !== currentFrameRef.current) {
-        currentFrameRef.current = idx;
-        setFrameIndex(idx);
-        if (rafRef.current) cancelAnimationFrame(rafRef.current);
-        rafRef.current = requestAnimationFrame(() => drawFrame(idx));
-      }
-    };
-
-    window.addEventListener("scroll", onScroll, { passive: true });
-    onScroll();
-    return () => {
-      window.removeEventListener("scroll", onScroll);
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    };
-  }, [framesLoaded, drawFrame]);
-
-  // Smooth Section 1 opacity (0% to 33% scroll)
-  const s1Opacity = scrollProgress <= 0.25 ? 1 : Math.max(0, 1 - (scrollProgress - 0.25) / 0.10);
-
-  // Smooth Section 2 opacity (33% to 66% scroll)
-  let s2Opacity = 0;
-  if (scrollProgress >= 0.25 && scrollProgress <= 0.68) {
-    if (scrollProgress < 0.35) s2Opacity = (scrollProgress - 0.25) / 0.10;
-    else if (scrollProgress > 0.58) s2Opacity = Math.max(0, 1 - (scrollProgress - 0.58) / 0.10);
-    else s2Opacity = 1;
-  }
-
-  // Smooth Section 3 opacity (66% to 100% scroll)
-  const s3Opacity = scrollProgress < 0.60 ? 0 : Math.min(1, (scrollProgress - 0.60) / 0.10);
+  // Smooth slide animations
+  const slideVariants = {
+    enter: (dir) => ({
+      x: dir > 0 ? 60 : -60,
+      opacity: 0
+    }),
+    center: {
+      x: 0,
+      opacity: 1,
+      transition: { duration: 0.5, ease: 'easeOut' }
+    },
+    exit: (dir) => ({
+      x: dir > 0 ? -60 : 60,
+      opacity: 0,
+      transition: { duration: 0.35, ease: 'easeIn' }
+    })
+  };
 
   return (
-    <div className="relative w-full text-sky-950 font-sans selection:bg-sky-300">
-      {/* ══ SCROLL ANIMATION ZONE ══ */}
-      <div
-        ref={spacerRef}
-        style={{ height: isMobile ? "300vh" : "500vh" }}
-        className="relative"
+    <div className="w-full pb-20 overflow-hidden">
+      
+      {/* ── 1. Spacious, Clean Full-Screen Hero Banner ── */}
+      <section 
+        className="relative w-full bg-zinc-950 text-white overflow-hidden min-h-[520px] sm:min-h-[580px] lg:min-h-[640px] xl:h-[78vh] flex items-center group select-none border-b border-zinc-800/60"
+        onMouseEnter={() => setIsPaused(true)}
+        onMouseLeave={() => setIsPaused(false)}
       >
-        {/* Sticky viewport: canvas + overlays pinned to top */}
-        <div
-          className="sticky top-0 left-0 w-full overflow-hidden"
-          style={{ height: "100svh" }}
+        {/* Carousel Slide */}
+        <AnimatePresence mode="wait" custom={direction}>
+          <motion.div
+            key={currentSlide}
+            custom={direction}
+            variants={slideVariants}
+            initial="enter"
+            animate="center"
+            exit="exit"
+            className={`absolute inset-0 bg-gradient-to-r ${currentBanner.bgGradient} flex items-center`}
+          >
+            {/* Clean Background Image with Subtle Fade */}
+            <div className="absolute right-0 top-0 bottom-0 w-full md:w-3/5 lg:w-1/2 opacity-25 md:opacity-85 overflow-hidden pointer-events-none">
+              <img
+                src={currentBanner.image}
+                alt={currentBanner.title}
+                className="w-full h-full object-cover object-center filter contrast-105"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t md:bg-gradient-to-r from-zinc-950 via-zinc-950/70 to-transparent" />
+            </div>
+
+            {/* Slide Text Content (Spacious & Clean) */}
+            <div className="relative z-10 mx-auto max-w-7xl px-6 sm:px-10 lg:px-16 py-14 sm:py-16 w-full">
+              <div className="max-w-xl space-y-5 sm:space-y-6">
+                
+                {/* Clean Category / Series Tag */}
+                <div className="inline-flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                  <span className="text-xs font-bold uppercase tracking-widest text-emerald-400 font-mono">
+                    {currentBanner.tag}
+                  </span>
+                </div>
+
+                {/* Main Headline with generous line-height */}
+                <h1 className="font-display text-3xl sm:text-5xl lg:text-6xl font-black uppercase tracking-tight text-white leading-[1.08]">
+                  {currentBanner.title}
+                </h1>
+
+                {/* Concise Subtitle */}
+                <p className="text-sm sm:text-base text-zinc-300 font-normal leading-relaxed max-w-lg">
+                  {currentBanner.subtitle}
+                </p>
+
+                {/* Price & Discount */}
+                <div className="flex items-baseline gap-3 pt-1">
+                  <span className="font-display text-2xl sm:text-3xl font-black text-white">
+                    ₹{currentBanner.price}
+                  </span>
+                  <span className="text-sm text-zinc-500 line-through">
+                    ₹{currentBanner.originalPrice}
+                  </span>
+                  <span className="rounded-md bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 text-xs font-extrabold uppercase">
+                    {currentBanner.discount}
+                  </span>
+                </div>
+
+                {/* Action CTA */}
+                <div className="pt-2">
+                  <Link
+                    to={currentBanner.link}
+                    className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-8 py-3.5 text-xs font-black uppercase tracking-widest text-zinc-950 hover:bg-zinc-200 transition-all shadow-lg hover:shadow-xl active:scale-98 cursor-pointer"
+                  >
+                    <span>{currentBanner.ctaText}</span>
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </div>
+
+              </div>
+            </div>
+          </motion.div>
+        </AnimatePresence>
+
+        {/* Minimalist Left Arrow */}
+        <button
+          onClick={prevSlide}
+          className="absolute left-4 sm:left-8 top-1/2 -translate-y-1/2 z-30 h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-black/40 text-white backdrop-blur-md border border-white/10 hover:bg-black/80 transition-all flex items-center justify-center cursor-pointer opacity-60 hover:opacity-100 hover:scale-105 active:scale-95"
+          aria-label="Previous Banner"
         >
-          {/* Loading screen */}
-          {!framesLoaded && (
-            <div className="absolute inset-0 bg-neutral-950 flex flex-col items-center justify-center z-50">
-              <div className="w-48 sm:w-64 h-[2px] bg-white/10 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-white rounded-full transition-all duration-150"
-                  style={{ width: `${loadProgress}%` }}
+          <ChevronLeft className="h-5 w-5 sm:h-6 sm:w-6" />
+        </button>
+
+        {/* Minimalist Right Arrow */}
+        <button
+          onClick={nextSlide}
+          className="absolute right-4 sm:right-8 top-1/2 -translate-y-1/2 z-30 h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-black/40 text-white backdrop-blur-md border border-white/10 hover:bg-black/80 transition-all flex items-center justify-center cursor-pointer opacity-60 hover:opacity-100 hover:scale-105 active:scale-95"
+          aria-label="Next Banner"
+        >
+          <ChevronRight className="h-5 w-5 sm:h-6 sm:w-6" />
+        </button>
+
+        {/* Minimalist Bottom Slide Indicator Dots */}
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2.5">
+          {HERO_BANNERS.map((_, idx) => (
+            <button
+              key={idx}
+              onClick={() => goToSlide(idx)}
+              className={`rounded-full transition-all duration-300 cursor-pointer h-2 ${
+                currentSlide === idx 
+                  ? 'w-8 bg-white' 
+                  : 'w-2 bg-white/30 hover:bg-white/60'
+              }`}
+              aria-label={`Go to slide ${idx + 1}`}
+            />
+          ))}
+        </div>
+
+      </section>
+
+      {/* ── Lower Content Sections (Clean Spacing) ── */}
+      <div className="space-y-12 sm:space-y-16 mt-8 sm:mt-14 w-full">
+
+        {/* ── 2. E-Commerce Trust & Guarantee Strip ── */}
+        <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 w-full">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+            
+            <div className="p-4 sm:p-5 rounded-2xl bg-white border border-zinc-200/90 shadow-xs hover:shadow-md transition-shadow flex items-start gap-3">
+              <div className="h-10 w-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                <Truck className="h-5 w-5" />
+              </div>
+              <div>
+                <h4 className="text-xs sm:text-sm font-extrabold uppercase tracking-tight text-zinc-900">Free Express Shipping</h4>
+                <p className="text-[10px] sm:text-xs text-zinc-500 font-medium leading-relaxed mt-0.5">Dispatched in 24 hrs. Pan-India 48-72h delivery.</p>
+              </div>
+            </div>
+
+            <div className="p-4 sm:p-5 rounded-2xl bg-white border border-zinc-200/90 shadow-xs hover:shadow-md transition-shadow flex items-start gap-3">
+              <div className="h-10 w-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                <ShieldCheck className="h-5 w-5" />
+              </div>
+              <div>
+                <h4 className="text-xs sm:text-sm font-extrabold uppercase tracking-tight text-zinc-900">Zero Bubble Guarantee</h4>
+                <p className="text-[10px] sm:text-xs text-zinc-500 font-medium leading-relaxed mt-0.5">100% bubble-free or free replacement.</p>
+              </div>
+            </div>
+
+            <div className="p-4 sm:p-5 rounded-2xl bg-white border border-zinc-200/90 shadow-xs hover:shadow-md transition-shadow flex items-start gap-3">
+              <div className="h-10 w-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                <Zap className="h-5 w-5" />
+              </div>
+              <div>
+                <h4 className="text-xs sm:text-sm font-extrabold uppercase tracking-tight text-zinc-900">EZ Auto-Align Tray</h4>
+                <p className="text-[10px] sm:text-xs text-zinc-500 font-medium leading-relaxed mt-0.5">10-second alignment applicator in every box.</p>
+              </div>
+            </div>
+
+            <div className="p-4 sm:p-5 rounded-2xl bg-white border border-zinc-200/90 shadow-xs hover:shadow-md transition-shadow flex items-start gap-3">
+              <div className="h-10 w-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
+                <RefreshCw className="h-5 w-5" />
+              </div>
+              <div>
+                <h4 className="text-xs sm:text-sm font-extrabold uppercase tracking-tight text-zinc-900">7-Day Easy Returns</h4>
+                <p className="text-[10px] sm:text-xs text-zinc-500 font-medium leading-relaxed mt-0.5">Zero-friction instant replacement support.</p>
+              </div>
+            </div>
+
+          </div>
+        </section>
+
+        {/* ── 3. Quick Device Compatibility Finder ── */}
+        <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 w-full">
+          <div className="rounded-3xl bg-zinc-900 border border-zinc-800 p-6 sm:p-8 text-white">
+            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+              
+              <div className="space-y-1.5 max-w-md">
+                <div className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-emerald-400">
+                  <Smartphone className="h-4 w-4" />
+                  <span>Instant Compatibility Finder</span>
+                </div>
+                <h3 className="font-display text-xl sm:text-2xl font-black uppercase tracking-tight text-white">
+                  Find Guaranteed Fit For Your Device
+                </h3>
+                <p className="text-xs text-zinc-400">Select your smartphone brand and exact model to view compatible screen armor.</p>
+              </div>
+
+              {/* Selectors */}
+              <div className="w-full lg:w-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                <div className="space-y-1 flex-1 sm:flex-initial">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">Brand</label>
+                  <select
+                    value={selectedBrand}
+                    onChange={(e) => {
+                      setSelectedBrand(e.target.value);
+                      setSelectedModel(deviceModelsByBrand[e.target.value][0]);
+                    }}
+                    className="w-full sm:w-44 rounded-xl border border-zinc-700 bg-zinc-800 px-3.5 py-2.5 text-xs font-bold text-white focus:border-white focus:outline-none cursor-pointer"
+                  >
+                    {Object.keys(deviceModelsByBrand).map((brand) => (
+                      <option key={brand} value={brand}>{brand}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-1 flex-1 sm:flex-initial">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">Model</label>
+                  <select
+                    value={selectedModel}
+                    onChange={(e) => setSelectedModel(e.target.value)}
+                    className="w-full sm:w-56 rounded-xl border border-zinc-700 bg-zinc-800 px-3.5 py-2.5 text-xs font-bold text-white focus:border-white focus:outline-none cursor-pointer"
+                  >
+                    {(deviceModelsByBrand[selectedBrand] || []).map((model) => (
+                      <option key={model} value={model}>{model}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="sm:self-end pt-1 sm:pt-0">
+                  <button
+                    onClick={handleDeviceFinderSearch}
+                    className="w-full sm:w-auto px-6 py-2.5 bg-white text-zinc-950 hover:bg-zinc-200 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 shadow-md active:scale-98"
+                  >
+                    <span>Find Glass</span>
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </section>
+
+        {/* ── 4. Signature Circular Category Explorer ── */}
+        <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 w-full">
+          <div className="text-center max-w-2xl mx-auto mb-6 sm:mb-8">
+            <h2 className="font-display text-lg sm:text-2xl md:text-3xl font-extrabold uppercase tracking-tight text-zinc-900">
+              Explore Collections
+            </h2>
+            <p className="text-xs sm:text-sm text-zinc-500 font-medium mt-1">
+              Curated screen protection for every smartphone
+            </p>
+          </div>
+
+          {/* Centralized Category Chips */}
+          <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 md:gap-8 max-w-5xl mx-auto">
+            {CATEGORIES.map((cat) => (
+              <Link
+                key={cat.id}
+                to={cat.query === 'all' ? '/products' : `/products?category=${cat.query}`}
+                className="flex flex-col items-center group w-20 sm:w-24 md:w-28 text-center"
+              >
+                <div className="h-16 w-16 sm:h-20 sm:w-20 md:h-24 md:w-24 rounded-full bg-zinc-100 border-2 border-zinc-200 group-hover:border-zinc-900 p-1 transition-all duration-300 overflow-hidden shadow-xs group-hover:scale-105">
+                  <img
+                    src={cat.image}
+                    alt={cat.name}
+                    className="h-full w-full object-cover rounded-full"
+                  />
+                </div>
+                <span className="mt-2 text-[11px] sm:text-xs font-bold text-zinc-800 group-hover:text-zinc-950 text-center tracking-tight transition-colors line-clamp-2 leading-tight">
+                  {cat.name}
+                </span>
+              </Link>
+            ))}
+          </div>
+
+          <div className="text-center mt-5 sm:mt-6">
+            <Link
+              to="/products"
+              className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-zinc-600 hover:text-zinc-950 transition-colors"
+            >
+              <span>View All Collections</span>
+              <ChevronRight className="h-3.5 w-3.5" />
+            </Link>
+          </div>
+        </section>
+
+        {/* ── 5. Bento Promotional Collection Grid ── */}
+        <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 w-full">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-4 sm:gap-6">
+            
+            {/* Bento Item 1: Large Feature (7 Cols) */}
+            <div 
+              onClick={() => navigate('/products')}
+              className="md:col-span-7 rounded-3xl bg-zinc-900 text-white p-6 sm:p-8 md:p-10 relative overflow-hidden flex flex-col justify-between min-h-[280px] sm:min-h-[340px] group cursor-pointer border border-zinc-800"
+            >
+              <div className="absolute right-[-20px] bottom-[-20px] sm:right-[-40px] sm:bottom-[-40px] w-64 sm:w-80 h-64 sm:h-80 opacity-30 md:opacity-40 group-hover:scale-105 transition-transform duration-700 pointer-events-none">
+                <img
+                  src="https://images.unsplash.com/photo-1611532736597-de2d4265fba3?auto=format&fit=crop&q=80&w=600"
+                  alt="EZ Fit Applicator"
+                  className="w-full h-full object-cover rounded-full"
                 />
               </div>
-              <p className="mt-5 text-white/30 text-[9px] sm:text-[10px] tracking-[0.4em] uppercase font-bold">
-                Loading {loadProgress}%
-              </p>
+              <div className="relative z-10 max-w-md space-y-2.5 sm:space-y-3">
+                <span className="rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-3 py-1 text-[10px] font-bold uppercase tracking-wider inline-block">
+                  Patented Applicator
+                </span>
+                <h3 className="font-display text-xl sm:text-3xl md:text-4xl font-extrabold uppercase tracking-tight text-white leading-tight">
+                  The 10-Second Auto Align Box
+                </h3>
+                <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed">
+                  Foolproof dust-extraction film aligns and applies in a single pull. Guaranteed zero bubbles and micrometer-accurate centering.
+                </p>
+              </div>
+              <div className="relative z-10 pt-4 sm:pt-6">
+                <span className="inline-flex items-center gap-2 rounded-full bg-white text-zinc-950 px-4 sm:px-5 py-2 sm:py-2.5 text-[11px] sm:text-xs font-bold uppercase tracking-wider group-hover:bg-zinc-200 transition-colors">
+                  <span>Explore Applicators</span>
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </span>
+              </div>
+            </div>
+
+            {/* Bento Item 2: Privacy (5 Cols) */}
+            <div 
+              onClick={() => navigate('/products?category=privacy')}
+              className="md:col-span-5 rounded-3xl bg-zinc-100 text-zinc-900 p-6 sm:p-8 relative overflow-hidden flex flex-col justify-between min-h-[260px] sm:min-h-[340px] group cursor-pointer border border-zinc-200"
+            >
+              <div className="relative z-10 space-y-2.5 sm:space-y-3">
+                <span className="rounded-full bg-zinc-900 text-white px-3 py-1 text-[10px] font-bold uppercase tracking-wider inline-block">
+                  Anti-Spy Armor
+                </span>
+                <h3 className="font-display text-xl sm:text-2xl md:text-3xl font-extrabold uppercase tracking-tight text-zinc-900 leading-tight">
+                  28° Narrow Privacy Glass
+                </h3>
+                <p className="text-xs text-zinc-600 leading-relaxed">
+                  Keep sensitive banking, chats, and emails private from curious onlookers on subways, flights, and cafes.
+                </p>
+              </div>
+              <div className="relative z-10 pt-4 sm:pt-6 flex items-center justify-between">
+                <span className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-zinc-900 group-hover:translate-x-1 transition-transform">
+                  <span>Shop Privacy Series</span>
+                  <ChevronRight className="h-4 w-4" />
+                </span>
+                <span className="text-2xl font-bold">🔒</span>
+              </div>
+            </div>
+
+          </div>
+        </section>
+
+        {/* ── 6. Featured Bestsellers Grid ── */}
+        <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 w-full">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-6 sm:mb-8 gap-4">
+            <div>
+              <div className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-amber-600 mb-1">
+                <Star className="h-3.5 w-3.5 fill-amber-500" />
+                <span>Customer Favorites</span>
+              </div>
+              <h2 className="font-display text-xl sm:text-3xl font-black uppercase tracking-tight text-zinc-900">
+                Trending Bestsellers
+              </h2>
+            </div>
+
+            {/* Filter Pills */}
+            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
+              {[
+                { id: 'all', label: 'All' },
+                { id: 'glass', label: 'EZ-Fit Glass' },
+                { id: 'privacy', label: 'Privacy' },
+            
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`px-3.5 sm:px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
+                    activeTab === tab.id
+                      ? 'bg-zinc-900 text-white'
+                      : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Product Grid */}
+          {filteredProducts.length > 0 ? (
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5 lg:gap-6">
+              {filteredProducts.slice(0, 8).map((product) => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  onAddToCart={handleAddToCart}
+                  isAdded={!!addedMap[product.id]}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12 bg-white rounded-2xl border border-zinc-200">
+              <ShieldCheck className="h-8 w-8 text-zinc-400 mx-auto mb-2" />
+              <p className="text-xs font-bold text-zinc-600 uppercase">No products in this category</p>
             </div>
           )}
 
-          {/* Canvas */}
-          <canvas
-            ref={canvasRef}
-            style={{ display: "block", width: "100%", height: "100%" }}
-          />
+          <div className="text-center mt-8 sm:mt-10">
+            <Link
+              to="/products"
+              className="inline-flex items-center gap-2 px-7 sm:px-8 py-3 sm:py-3.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-900 font-bold text-xs uppercase tracking-widest rounded-full transition-colors"
+            >
+              <span>View Complete Catalog ({products.length} Products)</span>
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+          </div>
+        </section>
 
-          {/* Gradient overlays — stronger on mobile bottom for text legibility */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-black/50 pointer-events-none" />
-          <div className="absolute inset-0 bg-gradient-to-r from-black/50 via-transparent to-transparent pointer-events-none hidden sm:block" />
-
-          {/* ── HERO CONTENT (DESKTOP + MOBILE) ── */}
-          <div className="absolute inset-0 flex flex-col justify-between px-5 sm:px-20 pt-20 sm:pt-36 pb-6 sm:pb-20">
-
-            {/* ══ MOBILE HERO OVERLAY (Only visible on Mobile view: flex sm:hidden) ══ */}
-            <div className="flex sm:hidden flex-col justify-between h-full pt-4 pb-2 z-20 pointer-events-none">
-              
-              {/* Dynamic Scroll Text Cards on Mobile */}
-              <div className="relative my-auto space-y-4 pt-6">
-                {/* Mobile Phase 1: Privacy */}
-                <div 
-                  className="transition-all duration-500 space-y-3"
-                  style={{
-                    opacity: s1Opacity,
-                    transform: `translateY(${(1 - s1Opacity) * 20}px)`,
-                    display: s1Opacity > 0.05 ? 'block' : 'none'
-                  }}
-                >
-                  <h1 className="text-[2.25rem] font-black text-white tracking-tighter uppercase leading-[0.92] drop-shadow-2xl">
-                    Your Screen
-                    <br />
-                    <span className="font-thin italic text-sky-200">Your Privacy</span>
-                  </h1>
-                  <p className="text-white/75 text-xs font-semibold max-w-[280px] leading-relaxed drop-shadow-md">
-                    Micro-louver optical technology blocks side glances beyond 28° while maintaining crystal-clear front viewing.
-                  </p>
-                </div>
-
-                {/* Mobile Phase 2: 9H Hardness */}
-                <div 
-                  className="transition-all duration-500 space-y-3"
-                  style={{
-                    opacity: s2Opacity,
-                    transform: `translateY(${(1 - s2Opacity) * 20}px)`,
-                    display: s2Opacity > 0.05 ? 'block' : 'none'
-                  }}
-                >
-                  <h1 className="text-[2.25rem] font-black text-white tracking-tighter uppercase leading-[0.92] drop-shadow-2xl">
-                    9H Hardness.
-                    <br />
-                    <span className="font-thin italic text-cyan-300">Zero Refraction.</span>
-                  </h1>
-                  <p className="text-white/75 text-xs font-semibold max-w-[280px] leading-relaxed drop-shadow-md">
-                    Reinforced molecular ion armor engineered for extreme scratch protection & oleophobic fingerprint resistance.
-                  </p>
-                </div>
-
-                {/* Mobile Phase 3: EZ-Fit Tray */}
-                <div 
-                  className="transition-all duration-500 space-y-3"
-                  style={{
-                    opacity: s3Opacity,
-                    transform: `translateY(${(1 - s3Opacity) * 20}px)`,
-                    display: s3Opacity > 0.05 ? 'block' : 'none'
-                  }}
-                >
-                  <h1 className="text-[2.25rem] font-black text-white tracking-tighter uppercase leading-[0.92] drop-shadow-2xl">
-                    EZ-Fit Tray.
-                    <br />
-                    <span className="font-thin italic text-white/60">10s Sequence.</span>
-                  </h1>
-                  <p className="text-white/75 text-xs font-semibold max-w-[280px] leading-relaxed drop-shadow-md">
-                    Auto-alignment tray guarantees flawless placement with zero dust, zero bubbles in under 10 seconds.
-                  </p>
-                </div>
-              </div>
-
-              {/* Mobile Quick Action Dock at Bottom */}
-              <div className="w-full space-y-3 pointer-events-auto">
-                {/* Specs HUD bar on mobile */}
-                <div className="grid grid-cols-3 gap-2 px-3 py-2 bg-black/60 backdrop-blur-2xl rounded-2xl border border-white/10 text-center">
-                  <div>
-                    <p className="text-[7px] font-black text-white/40 uppercase tracking-widest">Resilience</p>
-                    <p className="text-[11px] font-black text-white">9H ION</p>
-                  </div>
-                  <div>
-                    <p className="text-[7px] font-black text-white/40 uppercase tracking-widest">Clarity</p>
-                    <p className="text-[11px] font-black text-cyan-300">99.9% HD</p>
-                  </div>
-                  <div>
-                    <p className="text-[7px] font-black text-white/40 uppercase tracking-widest">Sequence</p>
-                    <p className="text-[11px] font-black text-white">10 SEC</p>
-                  </div>
-                </div>
-
-                {/* CTA Action Buttons */}
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => navigate(currentHero ? "/checkout" : "/products")}
-                    className="flex-1 py-3.5 bg-white text-neutral-950 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-2xl active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-                  >
-                    <span>{currentHero ? `Get Device ₹${currentHero.price}` : 'Explore Catalog'}</span>
-                    <ChevronRight className="w-3.5 h-3.5" />
-                  </button>
-                  {currentHero && (
-                    <button
-                      onClick={(e) => handleAddToCart(currentHero, e)}
-                      className="px-4 py-3.5 bg-white/10 backdrop-blur-2xl border border-white/20 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest active:scale-95 transition-all cursor-pointer"
-                    >
-                      {addedMap[currentHero.id] ? "✓ Added" : "Add"}
-                    </button>
-                  )}
-                </div>
-              </div>
+        {/* ── 7. "Why Choose Sync" Technical Feature Bar ── */}
+        <section className="bg-zinc-900 text-white py-12 sm:py-16 w-full">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div className="text-center max-w-2xl mx-auto mb-8 sm:mb-12 space-y-1.5 sm:space-y-2">
+              <span className="text-xs font-bold uppercase tracking-widest text-emerald-400">The Sync Standard</span>
+              <h2 className="font-display text-xl sm:text-3xl md:text-4xl font-black uppercase tracking-tight text-white">
+                Engineered For Impact Resistance
+              </h2>
+              <p className="text-xs sm:text-sm text-zinc-400">
+                Every protector undergoes double ion-exchange tempering to withstand drops, keys, and daily hazards.
+              </p>
             </div>
 
-            {/* ══ DESKTOP HERO CONTENT (Hidden on Mobile: hidden sm:flex) ══ */}
-            <div className="hidden sm:flex flex-col items-start justify-center relative min-h-[340px] mt-8 sm:mt-14">
-              
-              {/* Section 1: Privacy & Shield (0% to 32% scroll) */}
-              <div 
-                className="transition-all duration-700 space-y-5 max-w-xl"
-                style={{
-                  opacity: showHeroContent ? s1Opacity : 0,
-                  transform: `translateY(${(1 - s1Opacity) * 25}px)`,
-                  pointerEvents: s1Opacity > 0.4 ? 'auto' : 'none',
-                  display: s1Opacity > 0.01 ? 'block' : 'none'
-                }}
-              >
-               
-                <h1 className="text-[2.5rem] sm:text-[5rem] lg:text-[6rem] font-black text-white tracking-tighter uppercase leading-[0.9] drop-shadow-2xl">
-                  Your Screen
-                  <br />
-                  <span className="font-thin italic text-white/50">Your Privacy</span>
-                </h1>
-                <p className="text-white/70 text-sm font-medium max-w-sm leading-relaxed">
-                  Premium privacy screen protector engineered to protect your display while keeping your view confidential.
-                </p>
-              </div>
-
-              {/* Section 2: Molecular Armor (33% to 65% scroll) */}
-              <div 
-                className="transition-all duration-700 space-y-5 max-w-xl"
-                style={{
-                  opacity: s2Opacity,
-                  transform: `translateY(${(1 - s2Opacity) * 25}px)`,
-                  pointerEvents: s2Opacity > 0.4 ? 'auto' : 'none',
-                  display: s2Opacity > 0.01 ? 'block' : 'none'
-                }}
-              >
-              
-                <h1 className="text-[2.5rem] sm:text-[5rem] lg:text-[6rem] font-black text-white tracking-tighter uppercase leading-[0.9] drop-shadow-2xl">
-                  9H Hardness.
-                  <br />
-                  <span className="font-thin italic text-sky-300">Zero Refraction.</span>
-                </h1>
-                <p className="text-white/70 text-sm font-medium max-w-sm leading-relaxed">
-                  Reinforced ion armor with 99.9% optical transparency and ultra-smooth oleophobic finish.
-                </p>
-              </div>
-
-              {/* Section 3: Instant EZ-Fit & Purchase CTA (66% to 100% scroll) */}
-              <div 
-                className="transition-all duration-700 space-y-5 max-w-xl"
-                style={{
-                  opacity: s3Opacity,
-                  transform: `translateY(${(1 - s3Opacity) * 25}px)`,
-                  pointerEvents: s3Opacity > 0.4 ? 'auto' : 'none',
-                  display: s3Opacity > 0.01 ? 'block' : 'none'
-                }}
-              >
-           
-                <h1 className="text-[2.5rem] sm:text-[5rem] lg:text-[6rem] font-black text-white tracking-tighter uppercase leading-[0.9] drop-shadow-2xl">
-                  EZ-Fit Tray.
-                  <br />
-                  <span className="font-thin italic text-white/50">10s Sequence.</span>
-                </h1>
-                <p className="text-white/70 text-sm font-medium max-w-sm leading-relaxed">
-                  Revolutionary auto-alignment tray. Zero dust, zero bubbles in under 10 seconds flat.
-                </p>
-                {currentHero && (
-                  <div className="flex flex-wrap items-center gap-3 pt-2">
-                    <button
-                      onClick={() => navigate("/checkout")}
-                      className="px-6 sm:px-10 py-3 sm:py-4 bg-white text-neutral-950 rounded-2xl font-black text-[10px] sm:text-[11px] uppercase tracking-[0.2em] hover:bg-white/90 transition-all shadow-2xl flex items-center gap-2 cursor-pointer"
-                    >
-                      Get Device ₹{currentHero.price}
-                      <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                    </button>
-                    <button
-                      onClick={(e) => handleAddToCart(currentHero, e)}
-                      className="px-5 sm:px-8 py-3 sm:py-4 bg-white/10 backdrop-blur-2xl border border-white/25 text-white rounded-2xl font-black text-[10px] sm:text-[11px] uppercase tracking-[0.15em] hover:bg-white/20 transition-all cursor-pointer"
-                    >
-                      {addedMap[currentHero.id] ? "✓ Synced" : "Add to Cart"}
-                    </button>
-                  </div>
-                )}
-              </div>
-
-            </div>
-
-            {/* Bottom HUD — hidden on mobile, shown on desktop */}
-            <div className="hidden sm:flex justify-between items-end">
-              <div className="flex gap-10">
-                {[
-                  { label: "Resilience", value: "9H ION" },
-                  { label: "Clarity", value: "99.9% ULTRA" },
-                  { label: "Shield", value: "360° GUARD" },
-                ].map((stat) => (
-                  <div key={stat.label}>
-                    <p className="text-[8px] font-black text-white/30 uppercase tracking-widest">{stat.label}</p>
-                    <p className="text-sm font-bold text-white mt-0.5">{stat.value}</p>
-                  </div>
-                ))}
-              </div>
-              <div className="flex flex-col items-end gap-3">
-                <div className="w-32 h-[1px] bg-white/15 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-white/60 rounded-full transition-none"
-                    style={{ width: `${framesLoaded ? (frameIndex / (FRAMES.length - 1)) * 100 : 0}%` }}
-                  />
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+              <div className="p-5 sm:p-6 rounded-2xl bg-zinc-800/60 border border-zinc-700/60 space-y-2.5">
+                <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-zinc-700 flex items-center justify-center text-emerald-400">
+                  <Zap className="h-4.5 w-4.5 sm:h-5 sm:w-5" />
                 </div>
-                <motion.p
-                  animate={{ opacity: [0.3, 0.7, 0.3] }}
-                  transition={{ duration: 2, repeat: Infinity }}
-                  className="text-[8px] font-black text-white/40 uppercase tracking-[0.4em]"
-                >
-                  ↓ Scroll to explore
-                </motion.p>
+                <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-white">10-Second Auto Alignment</h3>
+                <p className="text-xs text-zinc-400 leading-relaxed">
+                  Custom alignment tray ensures foolproof centering and bubble-free installation every time.
+                </p>
+              </div>
+
+              <div className="p-5 sm:p-6 rounded-2xl bg-zinc-800/60 border border-zinc-700/60 space-y-2.5">
+                <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-zinc-700 flex items-center justify-center text-emerald-400">
+                  <ShieldCheck className="h-4.5 w-4.5 sm:h-5 sm:w-5" />
+                </div>
+                <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-white">9H Diamond Hardness</h3>
+                <p className="text-xs text-zinc-400 leading-relaxed">
+                  Aluminosilicate glass reinforced to resist knife scratches, coins, and high-impact falls.
+                </p>
+              </div>
+
+              <div className="p-5 sm:p-6 rounded-2xl bg-zinc-800/60 border border-zinc-700/60 space-y-2.5">
+                <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-zinc-700 flex items-center justify-center text-emerald-400">
+                  <Sparkles className="h-4.5 w-4.5 sm:h-5 sm:w-5" />
+                </div>
+                <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-white">Oleophobic Nano-Coat</h3>
+                <p className="text-xs text-zinc-400 leading-relaxed">
+                  Electroplated hydrophobic surface repels finger grease, makeup, and smudge residues seamlessly.
+                </p>
+              </div>
+
+              <div className="p-5 sm:p-6 rounded-2xl bg-zinc-800/60 border border-zinc-700/60 space-y-2.5">
+                <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-zinc-700 flex items-center justify-center text-emerald-400">
+                  <RefreshCw className="h-4.5 w-4.5 sm:h-5 sm:w-5" />
+                </div>
+                <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-white">7-Day Replacement</h3>
+                <p className="text-xs text-zinc-400 leading-relaxed">
+                  If you face any alignment or transit issue, we replace your screen guard with zero friction.
+                </p>
               </div>
             </div>
           </div>
-        </div>
-      </div>
+        </section>
 
-      {/* ── BELOW-FOLD CONTENT ── */}
-      <div className="relative bg-[#E0F2FE] z-10">
-        {/* Feature tiles */}
-        <section className="px-4 sm:px-6 py-16 sm:py-32 max-w-7xl mx-auto w-full">
-          <motion.div
-            initial={{ opacity: 0, y: 40 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.8 }}
-            className="text-center mb-20"
-          >
-            <p className="text-sky-500 font-black text-[10px] uppercase tracking-[0.5em] mb-4">
-              Why Sync
-            </p>
-            <h2 className="text-5xl sm:text-7xl font-black text-sky-950 tracking-tighter uppercase leading-none">
-              Core
-              <br />
-              Technology.
+        {/* ── 8. Customer Reviews ── */}
+        <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 w-full">
+          <div className="text-center max-w-xl mx-auto mb-8 sm:mb-10 space-y-1">
+            <span className="text-xs font-bold uppercase tracking-wider text-amber-600">Real Customer Feedback</span>
+            <h2 className="font-display text-xl sm:text-3xl font-black uppercase tracking-tight text-zinc-900">
+              Loved By 10,000+ Device Owners
             </h2>
-          </motion.div>
+          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
-            {[
-              {
-                icon: ShieldCheck,
-                t: "Molecular Armor",
-                d: "Hardened ions provide extreme impact resistance.",
-              },
-              {
-                icon: Eye,
-                t: "Zero Refraction",
-                d: "Pixel-perfect clarity through high-index glass.",
-              },
-              {
-                icon: Zap,
-                t: "EZ-Sync Tray",
-                d: "Patented box for 10-second auto-alignment.",
-              },
-            ].map((f, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.15, duration: 0.7 }}
-                whileHover={{ y: -10 }}
-                className="p-10 bg-white/30 backdrop-blur-2xl border border-white/60 rounded-[48px] space-y-6 shadow-sm hover:shadow-xl hover:shadow-sky-400/10 transition-all"
-              >
-                <div className="w-16 h-16 flex items-center justify-center bg-sky-100 rounded-3xl">
-                  <f.icon className="w-8 h-8 text-sky-600" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+            {REVIEWS.map((rev, idx) => (
+              <div key={idx} className="p-5 sm:p-6 rounded-2xl bg-white border border-zinc-200/80 shadow-xs space-y-3 flex flex-col justify-between">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-1 text-amber-400">
+                    {[...Array(rev.rating)].map((_, i) => (
+                      <Star key={i} className="h-3.5 w-3.5 fill-amber-400" />
+                    ))}
+                  </div>
+                  <h4 className="text-xs sm:text-sm font-bold text-zinc-900">"{rev.title}"</h4>
+                  <p className="text-xs text-zinc-600 leading-relaxed">
+                    {rev.comment}
+                  </p>
                 </div>
-                <h3 className="text-2xl font-black text-sky-950 uppercase tracking-tighter leading-none">
-                  {f.t}
-                </h3>
-                <p className="text-sky-800/70 font-medium leading-relaxed">
-                  {f.d}
-                </p>
-              </motion.div>
+
+                <div className="pt-3 border-t border-zinc-100 flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-bold text-zinc-900">{rev.name}</p>
+                    <p className="text-[10px] text-zinc-500">{rev.device}</p>
+                  </div>
+                  <span className="inline-flex items-center gap-1 text-[9px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
+                    <Check className="h-2.5 w-2.5" /> Verified Buyer
+                  </span>
+                </div>
+              </div>
             ))}
           </div>
         </section>
 
-        {/* Product showcase */}
-        <section className="px-4 sm:px-6 pb-20 sm:pb-40 max-w-7xl mx-auto w-full">
-          <div className="flex flex-col md:flex-row justify-between items-end mb-24 gap-10">
-            <div className="space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-[1px] bg-sky-400" />
-                <span className="text-sky-500 font-black text-[10px] uppercase tracking-[0.5em]">
-                  The Catalog
-                </span>
-              </div>
-              <h2 className="text-6xl font-black text-sky-950 tracking-tighter uppercase leading-none">
-                Core_Series
-              </h2>
-            </div>
-            <button className="flex items-center gap-4 text-[11px] font-black uppercase tracking-widest text-sky-600 group">
-              View All Systems{" "}
-              <ArrowUpRight className="w-4 h-4 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
-            </button>
-          </div>
-
-          {homeProducts.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-12">
-              {homeProducts.map((p, i) => {
-                const discountPercent = p.original_price && p.price && Number(p.original_price) > Number(p.price) 
-                  ? Math.round(((Number(p.original_price) - Number(p.price)) / Number(p.original_price)) * 100) 
-                  : 0;
-
-                return (
-                  <motion.div
-                    key={p.id}
-                    initial={{ opacity: 0, y: 40 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: i * 0.1, duration: 0.6 }}
-                    whileHover={{ y: -10 }}
-                    className="group relative bg-white/40 backdrop-blur-3xl border border-white/50 rounded-[32px] sm:rounded-[60px] p-4 sm:p-8 transition-all hover:shadow-2xl flex flex-col justify-between"
-                  >
-                    <div>
-                      <div className="aspect-[4/5] bg-sky-100/50 rounded-[28px] sm:rounded-[48px] overflow-hidden mb-4 sm:mb-10 relative">
-                        <img
-                          src={p.images[0] || 'https://images.unsplash.com/photo-1611532736597-de2d4265fba3?auto=format&fit=crop&q=80&w=600'}
-                          className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110 mix-blend-multiply"
-                          alt={p.name}
-                        />
-
-                        {/* 🔥 Best Seller Badge */}
-                        {p.is_best_seller && (
-                          <div className="absolute top-3 left-3 px-3 py-1 bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 rounded-xl text-[8px] sm:text-[10px] font-black uppercase tracking-widest shadow-lg flex items-center gap-1 animate-pulse z-10">
-                            <span>🔥 BEST SELLER</span>
-                          </div>
-                        )}
-
-                        <div className="absolute bottom-3 sm:bottom-6 left-3 sm:left-6 right-3 sm:right-6 p-2 sm:p-4 bg-white/70 backdrop-blur-md rounded-2xl sm:rounded-3xl flex justify-between items-center border border-white">
-                          <span className="text-[8px] sm:text-[10px] font-black text-sky-900 uppercase tracking-widest">
-                            {p.category}
-                          </span>
-                          <div className="flex items-baseline gap-1.5">
-                            <span className="text-xs sm:text-base font-black text-sky-950">
-                              ₹{p.price}
-                            </span>
-                            {p.original_price && Number(p.original_price) > Number(p.price) && (
-                              <span className="text-[9px] sm:text-xs text-sky-700/60 line-through font-bold">
-                                ₹{p.original_price}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="space-y-3 sm:space-y-4 px-1 sm:px-2">
-                        <h3 className="text-base sm:text-2xl font-black text-sky-950 uppercase tracking-tighter leading-tight line-clamp-2">
-                          {p.name}
-                        </h3>
-                        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-                          {p.is_best_seller && (
-                            <div className="px-2.5 sm:px-3.5 py-1 bg-amber-400 text-slate-950 rounded-xl text-[8px] font-black uppercase tracking-wider shadow-sm">
-                              🔥 Best Seller
-                            </div>
-                          )}
-                          {discountPercent > 0 && (
-                            <div className="px-2.5 sm:px-3.5 py-1 bg-emerald-500 text-white rounded-xl text-[8px] font-black uppercase tracking-wider shadow-sm">
-                              {discountPercent}% OFF
-                            </div>
-                          )}
-                          <div className="px-2 sm:px-3 py-1 bg-sky-900 text-sky-50 rounded-xl text-[8px] font-black uppercase tracking-widest">
-                            9H ION
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="pt-4 px-1 sm:px-2">
-                      <button
-                        onClick={() => navigate("/product", { state: { product: p } })}
-                        className="w-full py-3 sm:py-5 rounded-2xl sm:rounded-[28px] bg-sky-900 text-white font-black text-[9px] sm:text-[10px] uppercase tracking-widest hover:bg-sky-800 transition-all shadow-md active:scale-98 cursor-pointer"
-                      >
-                        View Details
-                      </button>
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="bg-sky-200/40 border border-sky-300/50 rounded-[40px] p-12 text-center max-w-xl mx-auto space-y-4">
-              <div className="w-12 h-12 rounded-2xl bg-sky-300/40 text-sky-700 flex items-center justify-center mx-auto">
-                <ShieldCheck className="w-6 h-6" />
-              </div>
-              <h3 className="text-xl font-black text-sky-950 uppercase tracking-tight">No Products Added Yet</h3>
-              <p className="text-xs text-sky-700 font-bold uppercase tracking-wider">
-                Only products added by the Admin are shown. Admin can add products in the Admin Panel.
-              </p>
-              <button
-                onClick={() => navigate('/admin/products')}
-                className="px-6 py-3 bg-sky-900 text-sky-50 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-sky-800 transition-all inline-flex items-center gap-2 cursor-pointer"
-              >
-                Go to Admin Products
-              </button>
-            </div>
-          )}
-        </section>
-
       </div>
+
     </div>
   );
 }
-

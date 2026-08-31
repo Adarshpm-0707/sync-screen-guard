@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import { 
   Search, CheckCircle, Package, Clock, ShieldCheck, 
-  ArrowLeft, Cpu, Activity, Compass, ChevronRight 
+  ArrowLeft, ChevronRight, Truck, MapPin, AlertCircle, XCircle 
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../supabaseClient';
@@ -34,21 +34,22 @@ export default function OrderTracking() {
         buildTrackingView(localSaved[0]);
       }
     } catch (e) {
-      console.error('Error fetching terminal signals:', e);
+      console.error('Error fetching customer orders:', e);
     }
   };
 
   const buildTrackingView = (orderObj) => {
     const statusMap = {
-      pending: { label: 'Signal Received', progress: 1 },
-      confirmed: { label: 'Validated', progress: 2 },
-      processing: { label: 'Molecular Bonding', progress: 3 },
-      shipped: { label: 'In Transit', progress: 4 },
-      delivered: { label: 'Arrival Confirmed', progress: 5 },
+      pending: { label: 'Order Placed', progress: 1 },
+      confirmed: { label: 'Order Confirmed', progress: 2 },
+      processing: { label: 'Packed & Quality Checked', progress: 3 },
+      shipped: { label: 'In Transit / Dispatched', progress: 4 },
+      delivered: { label: 'Delivered', progress: 5 },
+      cancelled: { label: 'Order Cancelled', progress: 0 },
     };
 
     const statusInfo = statusMap[orderObj.status] || { label: orderObj.status, progress: 2 };
-    const dateStr = new Date(orderObj.created_at).toLocaleDateString('en-IN', {
+    const dateStr = new Date(orderObj.created_at || Date.now()).toLocaleDateString('en-IN', {
       day: 'numeric', month: 'short', year: 'numeric'
     });
 
@@ -57,239 +58,253 @@ export default function OrderTracking() {
       statusLabel: statusInfo.label,
       progress: statusInfo.progress,
       milestones: [
-        { label: 'Signal Initialization', desc: 'Order parameters locked into system.', date: dateStr, completed: statusInfo.progress >= 1 },
-        { label: 'Lab Validation', desc: 'Inventory verified and assigned to terminal.', date: 'Sync OK', completed: statusInfo.progress >= 2 },
-        { label: 'Quality Calibration', desc: 'EZ-Fit tray and glass ion check complete.', date: 'Sync OK', completed: statusInfo.progress >= 3 },
-        { label: 'Dispatch Stream', desc: 'Unit transferred to logistics courier.', date: 'Active', completed: statusInfo.progress >= 4 },
-        { label: 'Destination Arrival', desc: 'Secure hand-off at terminal address.', date: 'Pending', completed: statusInfo.progress >= 5 },
+        { label: 'Order Placed', desc: 'Received & logged in Sync warehouse system', date: dateStr, completed: statusInfo.progress >= 1 },
+        { label: 'Order Confirmed', desc: 'Inventory allocated and packed with applicator tray', date: dateStr, completed: statusInfo.progress >= 2 },
+        { label: 'Quality Calibration', desc: '9H Glass & oleophobic coating inspected', date: 'Sync OK', completed: statusInfo.progress >= 3 },
+        { label: 'Dispatched with Courier', desc: 'Handed over to express courier partner', date: 'In Transit', completed: statusInfo.progress >= 4 },
+        { label: 'Delivered at Doorstep', desc: 'Safe delivery at destination address', date: 'Pending', completed: statusInfo.progress >= 5 },
       ]
     });
   };
 
   const handleTrack = async (targetId) => {
     const idToQuery = targetId || orderId;
-    if (!idToQuery.trim()) return setError('Enter valid Signal ID');
+    if (!idToQuery.trim()) return setError('Please enter a valid Order ID');
 
     setLoading(true);
     setError('');
     
-    // Simulating system scan
-    setTimeout(() => {
+    setTimeout(async () => {
+      // 1. Check local storage
       const localSaved = JSON.parse(localStorage.getItem('customer_orders') || '[]');
-      const found = localSaved.find(o => o.id === idToQuery.trim());
-      if (found) buildTrackingView(found);
-      else setError('No signal found with this ID');
+      let found = localSaved.find(o => o.id === idToQuery.trim());
+
+      // 2. If not found locally, check Supabase
+      if (!found) {
+        try {
+          const { data, error } = await supabase
+            .from('orders')
+            .select('*, order_items(*)')
+            .eq('id', idToQuery.trim())
+            .single();
+          if (!error && data) {
+            found = data;
+          }
+        } catch (e) {}
+      }
+
+      if (found) {
+        buildTrackingView(found);
+      } else {
+        setError('No order found with ID: ' + idToQuery);
+      }
       setLoading(false);
-    }, 800)
+    }, 400);
   };
 
   const handleCancelOrder = async () => {
     if (!trackingData) return;
-    if (!window.confirm('Are you sure you want to cancel this order? Item stock will be automatically added back to inventory.')) {
+    if (!window.confirm('Are you sure you want to cancel this order? Items will be restored to inventory.')) {
       return;
     }
 
     const targetId = trackingData.id;
     try {
-      // 1. Restore stock for items in cancelled order
       if (trackingData.items && trackingData.items.length > 0) {
         await restoreStockForCancelledOrder(trackingData.items);
       }
 
-      // 2. Update status in Supabase
+      // Update Supabase if connected
       try {
         await supabase
           .from('orders')
           .update({ status: 'cancelled' })
           .eq('id', targetId);
-      } catch (e) {
-        console.warn('Supabase order cancel status update warning:', e);
-      }
+      } catch (e) {}
 
-      // 3. Update status in localStorage
+      // Update local storage
       const localSaved = JSON.parse(localStorage.getItem('customer_orders') || '[]');
       const updated = localSaved.map(o => o.id === targetId ? { ...o, status: 'cancelled' } : o);
       localStorage.setItem('customer_orders', JSON.stringify(updated));
 
-      // 4. Update UI tracking state
-      const updatedOrder = updated.find(o => o.id === targetId) || { ...trackingData, status: 'cancelled' };
-      buildTrackingView(updatedOrder);
-      setCustomerOrders(updated);
-      alert('Order cancelled successfully. Purchased stock has been added back to inventory.');
+      buildTrackingView({ ...trackingData, status: 'cancelled' });
+      alert('Order cancelled successfully.');
     } catch (err) {
-      console.error('Error cancelling order:', err);
-      alert('Failed to cancel order: ' + err.message);
+      console.error('Cancellation error:', err);
     }
   };
 
   return (
-    <div className="relative w-full min-h-screen bg-sky-100 text-sky-950 font-sans selection:bg-sky-300 overflow-hidden">
+    <div className="min-h-screen bg-[#FAFAFA] text-zinc-900 pb-24 font-sans">
       
-      {/* ── ATMOSPHERIC SKY BACKGROUND ── */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-        <div className="absolute top-[-10%] left-[-5%] w-[60%] h-[60%] rounded-full bg-cyan-200/50 blur-[120px]" />
-        <div className="absolute bottom-[-10%] right-[-5%] w-[50%] h-[50%] rounded-full bg-blue-300/40 blur-[100px]" />
-        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.08] mix-blend-overlay" />
+      {/* Header */}
+      <div className="bg-white border-b border-zinc-200 py-8 sm:py-12">
+        <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+          <nav className="flex items-center space-x-2 text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2">
+            <Link to="/" className="hover:text-zinc-900">Home</Link>
+            <span>/</span>
+            <span className="text-zinc-900">Order Tracking</span>
+          </nav>
+          <h1 className="font-display text-2xl sm:text-4xl font-black uppercase tracking-tight text-zinc-900">
+            Track Your Order
+          </h1>
+          <p className="text-xs sm:text-sm text-zinc-500 font-medium mt-1">
+            Real-time status updates and shipping telemetry for your screen protectors.
+          </p>
+        </div>
       </div>
 
-      <div className="relative z-10 mx-auto max-w-4xl px-4 sm:px-6 pt-32 pb-20 space-y-12">
+      <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 pt-8 space-y-8">
         
-        {/* Header Section */}
-        <header className="text-center space-y-4">
-          <motion.div 
-            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-sky-600 text-sky-50 text-[10px] font-black uppercase tracking-[0.3em] shadow-lg"
+        {/* Search Box */}
+        <div className="rounded-3xl bg-white border border-zinc-200 p-6 sm:p-8 shadow-xs">
+          <label className="text-xs font-bold uppercase tracking-wider text-zinc-800 block mb-2">
+            Enter Order ID
+          </label>
+          <form 
+            onSubmit={(e) => { e.preventDefault(); handleTrack(); }}
+            className="flex flex-col sm:flex-row gap-3"
           >
-            <Activity className="h-3 w-3" />
-            <span>Terminal Status Monitor</span>
-          </motion.div>
-          <h1 className="text-4xl sm:text-5xl font-black text-sky-900 tracking-tighter uppercase leading-none">
-            Track <span className="text-cyan-600 italic">Orders</span>
-          </h1>
-        </header>
-
-        {/* Previous Signals Carousel */}
-        {customerOrders.length > 0 && (
-          <motion.section 
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-            className="bg-sky-200/40 backdrop-blur-3xl border border-sky-300/40 rounded-[40px] p-8 space-y-6 shadow-xl shadow-sky-400/10"
-          >
-            <div className="flex justify-between items-center">
-              <span className="text-[10px] font-black text-sky-700 uppercase tracking-widest">Active Signal Logs ({customerOrders.length})</span>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {customerOrders.map((ord) => (
-                <button
-                  key={ord.id}
-                  onClick={() => buildTrackingView(ord)}
-                  className={`p-5 rounded-[24px] border text-left transition-all ${
-                    trackingData?.id === ord.id
-                      ? 'bg-sky-900 text-sky-100 border-sky-950 shadow-xl'
-                      : 'bg-sky-300/20 border-sky-300/40 text-sky-900 hover:bg-sky-300/40'
-                  }`}
-                >
-                  <div className="flex justify-between items-center mb-4">
-                    <span className="text-[10px] font-black uppercase font-mono tracking-tighter">#{ord.id.slice(0, 8)}</span>
-                    <span className="text-[9px] font-black uppercase bg-sky-500/20 px-2 py-1 rounded-lg">{ord.status}</span>
-                  </div>
-                  <div className="flex justify-between items-end">
-                    <p className="text-lg font-light tracking-tighter">₹{ord.total}</p>
-                    <ChevronRight className="h-4 w-4 opacity-30" />
-                  </div>
-                </button>
-              ))}
-            </div>
-          </motion.section>
-        )}
-
-        {/* Tactical Search Interface */}
-        <section className="bg-sky-200/50 backdrop-blur-3xl border border-sky-400/40 rounded-[32px] p-4 sm:p-5 shadow-2xl shadow-sky-400/20">
-          <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
-              <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-4 w-4 text-sky-600" />
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
               <input
-                type="text" value={orderId} onChange={(e) => setOrderId(e.target.value)}
-                placeholder="Enter Signal ID (e.g. SKY-XXXXXX)"
-                className="w-full rounded-2xl bg-sky-300/20 border border-sky-400/30 py-4 pl-12 pr-4 text-sm font-bold text-sky-950 focus:bg-sky-300/40 focus:outline-none transition-all placeholder:text-sky-400"
+                type="text"
+                placeholder="e.g. SYNC-A1B2C3D4 or 36-char Order UUID"
+                value={orderId}
+                onChange={(e) => setOrderId(e.target.value)}
+                className="w-full bg-zinc-50 border border-zinc-200 rounded-xl pl-10 pr-4 py-3 text-xs font-bold text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-900 focus:outline-none"
               />
             </div>
             <button
-              onClick={() => handleTrack()}
+              type="submit"
               disabled={loading}
-              className="px-10 py-4 bg-sky-900 text-sky-50 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-lg hover:bg-sky-800 transition-all disabled:opacity-50"
+              className="px-8 py-3 bg-zinc-900 hover:bg-zinc-800 text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer shrink-0 disabled:opacity-50"
             >
-              {loading ? 'Scanning...' : 'Sync Status'}
+              {loading ? 'Searching...' : 'Track Status'}
             </button>
-          </div>
-          {error && <p className="text-[10px] text-red-500 font-black uppercase mt-3 tracking-tighter ml-2">{error}</p>}
-        </section>
+          </form>
+          {error && (
+            <p className="text-xs font-semibold text-red-500 mt-2 flex items-center gap-1">
+              <AlertCircle className="h-3.5 w-3.5" /> {error}
+            </p>
+          )}
 
-        {/* Tracking Conduit Visualization */}
-        <AnimatePresence mode="wait">
-          {trackingData && (
-            <motion.div 
-              key={trackingData.id}
-              initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-sky-900 rounded-[50px] border border-sky-500/30 p-8 sm:p-12 space-y-12 shadow-2xl shadow-sky-900/40"
-            >
-              {/* Header Info */}
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 border-b border-sky-500/20 pb-8">
-                <div className="space-y-1">
-                  <span className="text-[9px] text-sky-400 font-black uppercase tracking-[0.3em]">Protocol Reference</span>
-                  <h3 className="text-xl font-bold text-sky-100 tracking-tight">{trackingData.id}</h3>
-                </div>
-                <div className="flex items-center gap-4">
-                  <div className="text-right">
-                    <p className="text-[9px] text-sky-400 font-black uppercase">Current Node</p>
-                    <p className="text-sm font-bold text-sky-100">{trackingData.statusLabel}</p>
-                  </div>
-                  <div className="h-12 w-12 rounded-2xl bg-sky-500/20 flex items-center justify-center">
-                    <Compass className="h-6 w-6 text-sky-400 animate-spin-slow" />
-                  </div>
-                </div>
-              </div>
-
-              {/* Progress Conduit */}
-              <div className="relative border-l-2 border-sky-800 ml-4 space-y-10">
-                {trackingData.milestones.map((milestone, idx) => (
-                  <div key={idx} className="relative pl-10 group">
-                    {/* Glowing Node */}
-                    <div
-                      className={`absolute -left-[11px] top-1 flex h-5 w-5 items-center justify-center rounded-full border-2 transition-all duration-700 ${
-                        milestone.completed
-                          ? 'border-cyan-400 bg-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.5)]'
-                          : 'border-sky-800 bg-sky-950'
-                      }`}
-                    >
-                      {milestone.completed && <CheckCircle className="h-3 w-3 text-sky-950" />}
-                    </div>
-
-                    <div className="space-y-1">
-                      <h4 className={`text-[11px] font-black uppercase tracking-[0.2em] transition-colors ${milestone.completed ? 'text-sky-100' : 'text-sky-700'}`}>
-                        {milestone.label}
-                      </h4>
-                      <p className="text-sm font-medium text-sky-400 leading-snug max-w-sm">
-                        {milestone.desc}
-                      </p>
-                      <span className="block text-[9px] font-black text-sky-500 uppercase tracking-widest mt-2">
-                        {milestone.completed ? milestone.date : '---'}
-                      </span>
-                    </div>
-                  </div>
+          {/* Quick lookup from previous orders */}
+          {customerOrders.length > 0 && (
+            <div className="mt-5 pt-4 border-t border-zinc-100">
+              <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider block mb-2">
+                Recent Orders in this browser:
+              </span>
+              <div className="flex flex-wrap gap-2">
+                {customerOrders.slice(0, 4).map((o) => (
+                  <button
+                    key={o.id}
+                    onClick={() => { setOrderId(o.id); handleTrack(o.id); }}
+                    className="px-3 py-1.5 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-xs font-semibold text-zinc-800 transition-colors cursor-pointer"
+                  >
+                    #{o.id.substring(0, 12)}... ({o.status})
+                  </button>
                 ))}
               </div>
+            </div>
+          )}
+        </div>
 
-              {/* Summary Node */}
-              <div className="bg-sky-950/50 rounded-[32px] p-8 border border-sky-500/10 flex flex-wrap justify-between items-center gap-6">
-                 <div className="flex items-center gap-4">
-                    <div className="p-3 bg-sky-500/10 rounded-xl">
-                       <ShieldCheck className="w-5 h-5 text-sky-400" />
-                    </div>
-                    <div>
-                       <p className="text-[10px] font-black text-sky-500 uppercase">Integrity Status</p>
-                       <p className="text-xs font-bold text-sky-100">Sync-Check Passed</p>
-                    </div>
-                 </div>
-                 <div className="text-right">
-                    <p className="text-[10px] font-black text-sky-500 uppercase">Unit Total</p>
-                    <p className="text-xl font-light text-sky-100 tracking-tighter">₹{trackingData.total}</p>
-                 </div>
+        {/* Tracking Details View */}
+        {trackingData && (
+          <div className="rounded-3xl bg-white border border-zinc-200 p-6 sm:p-10 shadow-xs space-y-8">
+            
+            {/* Status Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-zinc-200">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-xs font-semibold text-zinc-400">Order ID:</span>
+                  <span className="font-mono text-xs font-bold text-zinc-900 select-all">{trackingData.id}</span>
+                </div>
+                <h2 className="font-display text-xl sm:text-2xl font-black uppercase tracking-tight text-zinc-900">
+                  Status: {trackingData.statusLabel}
+                </h2>
               </div>
 
-              {/* Cancel Order Option for Active Customer Orders */}
-              {trackingData.status !== 'delivered' && trackingData.status !== 'cancelled' && (
-                <div className="pt-4 border-t border-sky-500/20 flex justify-end">
+              <div className="flex items-center gap-3">
+                {trackingData.status !== 'cancelled' && trackingData.status !== 'delivered' && (
                   <button
                     onClick={handleCancelOrder}
-                    className="px-6 py-3 rounded-2xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 text-xs font-black uppercase tracking-widest transition-all cursor-pointer shadow-lg"
+                    className="px-4 py-2 rounded-xl text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 transition-colors cursor-pointer"
                   >
-                    🚫 Cancel Order & Restore Stock
+                    Cancel Order
                   </button>
+                )}
+              </div>
+            </div>
+
+            {/* Milestones Progress Timeline */}
+            {trackingData.status !== 'cancelled' && (
+              <div className="py-4">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-6">
+                  Shipment Milestones
+                </h3>
+                <div className="space-y-6 relative before:absolute before:left-4 before:top-2 before:bottom-2 before:w-0.5 before:bg-zinc-200">
+                  {trackingData.milestones?.map((step, idx) => (
+                    <div key={idx} className="relative flex items-start gap-4">
+                      <div className={`h-8 w-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 z-10 ${
+                        step.completed
+                          ? 'bg-zinc-900 text-white ring-4 ring-white shadow-xs'
+                          : 'bg-zinc-100 text-zinc-400 border border-zinc-300 ring-4 ring-white'
+                      }`}>
+                        {step.completed ? <CheckCircle className="h-4 w-4" /> : idx + 1}
+                      </div>
+                      <div className="flex-1 min-w-0 pt-0.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <h4 className={`text-xs font-bold uppercase tracking-wider ${
+                            step.completed ? 'text-zinc-900' : 'text-zinc-400'
+                          }`}>
+                            {step.label}
+                          </h4>
+                          <span className="text-[10px] text-zinc-400 font-semibold">{step.date}</span>
+                        </div>
+                        <p className="text-xs text-zinc-500 mt-0.5">{step.desc}</p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
+              </div>
+            )}
+
+            {/* Order Items & Shipping Address Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-zinc-200">
+              
+              {/* Shipping Address */}
+              <div className="p-5 rounded-2xl bg-zinc-50 border border-zinc-200/80 space-y-2">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-900 flex items-center gap-1.5">
+                  <MapPin className="h-3.5 w-3.5 text-zinc-600" />
+                  <span>Delivery Destination</span>
+                </h4>
+                <p className="text-xs text-zinc-700 font-medium">
+                  <strong>{trackingData.customer_name}</strong><br />
+                  {trackingData.address}<br />
+                  {trackingData.city}, {trackingData.state} - {trackingData.pincode}<br />
+                  Phone: {trackingData.phone}
+                </p>
+              </div>
+
+              {/* Summary */}
+              <div className="p-5 rounded-2xl bg-zinc-50 border border-zinc-200/80 space-y-2">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-900 flex items-center gap-1.5">
+                  <Package className="h-3.5 w-3.5 text-zinc-600" />
+                  <span>Payment & Total</span>
+                </h4>
+                <div className="text-xs text-zinc-700 space-y-1">
+                  <p><strong>Payment Mode:</strong> {trackingData.payment_type?.toUpperCase() || 'PREPAID'}</p>
+                  <p><strong>Total Paid:</strong> ₹{trackingData.total?.toLocaleString()}</p>
+                  <p className="text-emerald-600 font-semibold">● 7-Day Free Replacement Guarantee Applies</p>
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+        )}
 
       </div>
     </div>

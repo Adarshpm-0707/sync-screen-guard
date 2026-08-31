@@ -1,40 +1,21 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  ShoppingCart, Star, ShieldCheck, Sparkles, ArrowRight, 
-  Search, Check, Zap, Truck, ArrowUpDown, Layers,
-  Compass, Cpu
+  Search, ArrowUpDown, ShieldCheck, Sparkles, 
+  ChevronRight, Filter, Smartphone, X 
 } from 'lucide-react';
 import useCart from '../hooks/useCart';
-import { fetchStoreProducts, DEFAULT_PRODUCTS } from '../utils/productStore';
+import { fetchStoreProducts } from '../utils/productStore';
+import { fetchCategories } from '../utils/categoryStore';
 import ProductCard from '../components/product/ProductCard';
-
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.1 },
-  },
-};
-
-const cardVariants = {
-  hidden: { opacity: 0, y: 30, scale: 0.95 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    scale: 1,
-    transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] },
-  },
-};
-
-
 
 export default function ProductsPage() {
   const [products, setProducts] = useState([]);
   const [categoriesList, setCategoriesList] = useState([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
+  const [categoryFilter, setCategoryFilter] = useState(searchParams.get('category') || 'all');
   const [sortBy, setSortBy] = useState('featured');
   const [addedMap, setAddedMap] = useState({});
   const { addToCart } = useCart();
@@ -61,24 +42,49 @@ export default function ProductsPage() {
     };
   }, []);
 
+  // Update query from URL parameters if changed
+  useEffect(() => {
+    const cat = searchParams.get('category');
+    if (cat) setCategoryFilter(cat);
+    const q = searchParams.get('search');
+    if (q) setSearchQuery(q);
+  }, [searchParams]);
+
   const filterTabs = useMemo(() => {
     return [
       { id: 'all', name: 'All Products' },
       { id: 'bestseller', name: '🔥 Best Sellers' },
-      ...categoriesList.map(c => ({ id: c.id, name: c.name }))
+      { id: 'privacy', name: 'Privacy Armor' },
+      { id: 'matte', name: 'Matte Finish' },
+      { id: 'samsung', name: 'Samsung Series' },
+      { id: 'oneplus', name: 'OnePlus Series' },
+      ...categoriesList
+        .filter(c => !['privacy', 'matte', 'samsung', 'oneplus'].includes(c.id))
+        .map(c => ({ id: c.id, name: c.name }))
     ];
   }, [categoriesList]);
 
   const processedProducts = useMemo(() => {
     let result = [...products];
-    if (searchQuery) result = result.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()));
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(p => 
+        p.name?.toLowerCase().includes(q) ||
+        p.description?.toLowerCase().includes(q) ||
+        p.category?.toLowerCase().includes(q)
+      );
+    }
     if (categoryFilter === 'bestseller') {
       result = result.filter(p => p.is_best_seller);
     } else if (categoryFilter !== 'all') {
       result = result.filter(p => p.category === categoryFilter);
     }
-    if (sortBy === 'price-low') result.sort((a, b) => a.price - b.price);
-    if (sortBy === 'price-high') result.sort((a, b) => b.price - a.price);
+
+    if (sortBy === 'price-low') {
+      result.sort((a, b) => Number(a.price) - Number(b.price));
+    } else if (sortBy === 'price-high') {
+      result.sort((a, b) => Number(b.price) - Number(a.price));
+    }
     return result;
   }, [products, searchQuery, categoryFilter, sortBy]);
 
@@ -90,93 +96,104 @@ export default function ProductsPage() {
   };
 
   return (
-    <div className="relative w-full min-h-screen bg-sky-100 text-sky-950 font-sans selection:bg-sky-300">
+    <div className="min-h-screen bg-[#FAFAFA] text-zinc-900 pb-24 w-full">
       
-      {/* ── ATMOSPHERIC SKY BACKGROUND ── */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-        <div className="absolute top-[-20%] left-[-10%] w-[70%] h-[70%] rounded-full bg-cyan-200/50 blur-[120px]" />
-        <div className="absolute bottom-[-10%] right-[-5%] w-[50%] h-[50%] rounded-full bg-blue-300/40 blur-[100px]" />
-        <div className="absolute top-[20%] right-[10%] w-[30%] h-[30%] rounded-full bg-sky-400/20 blur-[80px]" />
-        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.08] contrast-125" />
+      {/* ── 1. Page Header ── */}
+      <div className="bg-white border-b border-zinc-200/80 py-6 sm:py-10">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          {/* Breadcrumbs */}
+          <nav className="flex items-center space-x-2 text-[11px] sm:text-xs font-semibold text-zinc-400 mb-2 uppercase tracking-wider">
+            <button onClick={() => navigate('/')} className="hover:text-zinc-900 transition-colors">Home</button>
+            <ChevronRight className="h-3.5 w-3.5" />
+            <span className="text-zinc-900">All Products</span>
+          </nav>
+
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 sm:gap-4">
+            <div>
+              <h1 className="font-display text-2xl sm:text-4xl font-black uppercase tracking-tight text-zinc-900">
+                Screen Protection Catalog
+              </h1>
+              <p className="text-xs sm:text-sm text-zinc-500 font-medium mt-1">
+                Precision-cut 9H tempered glass, anti-spy privacy armor, and silk matte protectors.
+              </p>
+            </div>
+            <span className="text-xs font-bold text-zinc-600 uppercase tracking-wider bg-zinc-100 px-3 py-1 rounded-full self-start sm:self-auto shrink-0">
+              {processedProducts.length} {processedProducts.length === 1 ? 'Product' : 'Products'}
+            </span>
+          </div>
+        </div>
       </div>
 
-      <motion.div 
-        initial="hidden" animate="visible" variants={containerVariants}
-        className="relative z-10 max-w-7xl mx-auto px-6 pt-32 pb-32 space-y-16"
-      >
-        
-        {/* Header: Cyber Minimalist */}
-        <header className="space-y-6 text-center lg:text-left">
-          <motion.div variants={cardVariants} className="inline-flex items-center gap-3 px-4 py-1.5 rounded-2xl bg-sky-200/60 border border-sky-300 shadow-sm">
-            <Cpu className="w-4 h-4 text-sky-600" />
-            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-sky-700">Digital Armor Interface</span>
-          </motion.div>
-          
-          <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8">
-            <motion.div variants={cardVariants} className="space-y-2">
-              <h1 className="text-5xl sm:text-7xl font-black tracking-tighter uppercase leading-none text-sky-900">
-                The <span className="text-cyan-600 italic">Lab</span> Catalog
-              </h1>
-              <p className="text-lg font-bold text-sky-700 max-w-xl">
-                Browse molecularly strengthened ions and blue-spectrum visual defense systems.
-              </p>
-            </motion.div>
+      {/* ── 2. Filter & Search Toolbar ── */}
+      <div className="sticky top-14 sm:top-16 z-30 bg-white/95 backdrop-blur-md border-b border-zinc-200/80 shadow-xs py-2.5 sm:py-3">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2.5 sm:gap-3">
+            
+            {/* Category Filter Pills */}
+            <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto w-full md:w-auto no-scrollbar pb-1 md:pb-0 -mx-4 px-4 sm:mx-0 sm:px-0">
+              {filterTabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => {
+                    setCategoryFilter(tab.id);
+                    setSearchParams({ category: tab.id });
+                  }}
+                  className={`px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-full text-[11px] sm:text-xs font-bold uppercase tracking-wider transition-colors whitespace-nowrap cursor-pointer shrink-0 ${
+                    categoryFilter === tab.id
+                      ? 'bg-zinc-900 text-white shadow-xs'
+                      : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+                  }`}
+                >
+                  {tab.name}
+                </button>
+              ))}
+            </div>
 
-            {/* Quick Stats in Header */}
-            <motion.div variants={cardVariants} className="hidden lg:flex gap-10">
-              <div>
-                <p className="text-3xl font-black text-sky-900">100%</p>
-                <p className="text-[10px] font-black uppercase text-sky-500 tracking-widest">Alignment</p>
+            {/* Right: Search & Sort */}
+            <div className="flex items-center gap-2 w-full md:w-auto">
+              {/* Search Bar */}
+              <div className="relative flex-1 md:w-60">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-400" />
+                <input
+                  type="text"
+                  placeholder="Filter by device / model..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full bg-zinc-50 border border-zinc-200 rounded-xl pl-9 pr-8 py-2 text-xs font-semibold text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-900 focus:outline-none"
+                />
+                {searchQuery && (
+                  <button 
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 p-0.5"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
               </div>
-              <div>
-                <p className="text-3xl font-black text-sky-900">0.03mm</p>
-                <p className="text-[10px] font-black uppercase text-sky-500 tracking-widest">Precision</p>
+
+              {/* Sort Dropdown */}
+              <div className="flex items-center gap-1.5 shrink-0">
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="bg-zinc-50 border border-zinc-200 rounded-xl px-2.5 sm:px-3 py-2 text-[11px] sm:text-xs font-bold text-zinc-800 uppercase tracking-wider focus:border-zinc-900 focus:outline-none cursor-pointer"
+                >
+                  <option value="featured">Featured</option>
+                  <option value="price-low">Price: Low to High</option>
+                  <option value="price-high">Price: High to Low</option>
+                </select>
               </div>
-            </motion.div>
-          </div>
-        </header>
 
-        {/* Toolbar: Floating Glass Interface */}
-        <motion.div variants={cardVariants} className="p-4 rounded-[32px] bg-sky-200/40 backdrop-blur-3xl border border-sky-300/50 shadow-2xl shadow-sky-400/20 flex flex-col xl:flex-row items-center gap-6">
-          <div className="relative w-full xl:w-96">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-sky-600" />
-            <input 
-              type="text" placeholder="Scan Catalog..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-sky-300/20 border border-sky-400/30 rounded-2xl pl-12 pr-4 py-3 text-sm font-bold text-sky-900 placeholder-sky-500/60 focus:outline-none focus:ring-2 ring-sky-400/20"
-            />
-          </div>
+            </div>
 
-          <div className="flex items-center gap-3 overflow-x-auto w-full no-scrollbar pb-2 xl:pb-0">
-            {filterTabs.map((tab) => (
-              <button 
-                key={tab.id} onClick={() => setCategoryFilter(tab.id)}
-                className={`px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
-                  categoryFilter === tab.id 
-                    ? (tab.id === 'bestseller' ? 'bg-amber-500 text-slate-950 shadow-lg shadow-amber-500/40' : 'bg-sky-600 text-sky-50 shadow-lg shadow-sky-400/40') 
-                    : 'bg-sky-300/20 text-sky-600 border border-sky-400/20 hover:bg-sky-300/40'
-                }`}
-              >
-                {tab.name}
-              </button>
-            ))}
           </div>
+        </div>
+      </div>
 
-          <div className="flex items-center gap-3 w-full xl:w-auto ml-auto">
-            <ArrowUpDown className="w-4 h-4 text-sky-600" />
-            <select 
-              value={sortBy} onChange={(e) => setSortBy(e.target.value)}
-              className="bg-sky-300/20 border border-sky-400/30 rounded-2xl px-4 py-3 text-[10px] font-black uppercase tracking-widest text-sky-800 focus:outline-none"
-            >
-              <option value="featured">Featured</option>
-              <option value="price-low">Price Low</option>
-              <option value="price-high">Price High</option>
-            </select>
-          </div>
-        </motion.div>
-
-        {/* Product Grid - 2 columns on mobile, 3/4 columns on laptop */}
+      {/* ── 3. Product Grid ── */}
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8">
         {processedProducts.length > 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6 lg:gap-8 items-stretch">
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5 lg:gap-6">
             <AnimatePresence mode="popLayout">
               {processedProducts.map((p) => (
                 <ProductCard
@@ -189,55 +206,30 @@ export default function ProductsPage() {
             </AnimatePresence>
           </div>
         ) : (
-          <div className="bg-sky-200/40 border border-sky-300/50 rounded-[40px] p-16 text-center max-w-xl mx-auto space-y-4 my-12">
-            <div className="w-14 h-14 rounded-3xl bg-sky-300/40 text-sky-700 flex items-center justify-center mx-auto">
-              <ShieldCheck className="w-8 h-8" />
+          <div className="bg-white border border-zinc-200 rounded-3xl p-8 sm:p-12 text-center max-w-lg mx-auto space-y-3 sm:space-y-4 my-8 shadow-xs">
+            <div className="h-12 w-12 rounded-2xl bg-zinc-100 text-zinc-500 flex items-center justify-center mx-auto">
+              <ShieldCheck className="h-6 w-6" />
             </div>
-            <h3 className="text-2xl font-black text-sky-950 uppercase tracking-tight">No Products Added Yet</h3>
-            <p className="text-xs text-sky-700 font-bold uppercase tracking-wider leading-relaxed">
-              Only admin-added products are shown in the catalog. Log in to the Admin Panel to add new products.
+            <h3 className="font-display text-base sm:text-lg font-bold text-zinc-900 uppercase">
+              No matching products found
+            </h3>
+            <p className="text-xs text-zinc-500 leading-relaxed">
+              We couldn't find any screen protectors matching your current filter. Try resetting your search.
             </p>
             <button
-              onClick={() => navigate('/admin/products')}
-              className="px-8 py-4 bg-sky-900 text-sky-50 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-sky-800 transition-all inline-flex items-center gap-2 cursor-pointer shadow-lg"
+              onClick={() => {
+                setSearchQuery('');
+                setCategoryFilter('all');
+                setSearchParams({});
+              }}
+              className="px-6 py-2.5 bg-zinc-900 text-white rounded-full text-xs font-bold uppercase tracking-wider hover:bg-zinc-800 transition-colors cursor-pointer"
             >
-              Add Product in Admin Panel
+              Reset Filters
             </button>
           </div>
         )}
+      </div>
 
-        {/* Trust Interface: Horizontal Glass Bar */}
-        <section className="p-8 sm:p-12 rounded-[50px] bg-sky-900 border border-sky-500/30 grid grid-cols-1 md:grid-cols-3 gap-10">
-          <div className="flex items-center gap-6">
-            <div className="h-14 w-14 rounded-3xl bg-sky-500/20 border border-sky-400/30 flex items-center justify-center">
-              <Truck className="w-6 h-6 text-sky-400" />
-            </div>
-            <div>
-              <p className="text-xs font-black text-sky-100 uppercase tracking-[0.2em] mb-1">Global Hub</p>
-              <p className="text-xs font-bold text-sky-400">Next-day aerial delivery</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-6">
-            <div className="h-14 w-14 rounded-3xl bg-sky-500/20 border border-sky-400/30 flex items-center justify-center">
-              <ShieldCheck className="w-6 h-6 text-sky-400" />
-            </div>
-            <div>
-              <p className="text-xs font-black text-sky-100 uppercase tracking-[0.2em] mb-1">Ion-Barrier</p>
-              <p className="text-xs font-bold text-sky-400">30-day structural guarantee</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-6">
-            <div className="h-14 w-14 rounded-3xl bg-sky-500/20 border border-sky-400/30 flex items-center justify-center">
-              <Zap className="w-6 h-6 text-sky-400" />
-            </div>
-            <div>
-              <p className="text-xs font-black text-sky-100 uppercase tracking-[0.2em] mb-1">EZ-Install</p>
-              <p className="text-xs font-bold text-sky-400">10s auto-align sequence</p>
-            </div>
-          </div>
-        </section>
-
-      </motion.div>
     </div>
   );
 }

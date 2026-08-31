@@ -1,43 +1,61 @@
 import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Sparkles } from 'lucide-react';
 
 export default function ProductGallery({ images = [] }) {
   const [activeIdx, setActiveIdx] = useState(0);
 
-  // Fallback images if none provided
-  const displayImages = images.length > 0 ? images : [
+  const displayImages = images && images.length > 0 ? images : [
     'https://images.unsplash.com/photo-1611532736597-de2d4265fba3?auto=format&fit=crop&q=80&w=600',
     'https://images.unsplash.com/photo-1581090464711-c30ec09b2e2d?auto=format&fit=crop&q=80&w=600',
     'https://images.unsplash.com/photo-1605236453806-6ff36851218e?auto=format&fit=crop&q=80&w=600'
   ];
 
   return (
-    <div className="flex flex-col space-y-5">
-      {/* Main Display Image - Floating 3D Card */}
-      <div className="relative aspect-square overflow-hidden rounded-[2.5rem] border border-white/60 bg-white/50 backdrop-blur-2xl shadow-[0_20px_50px_rgba(0,0,0,0.12)] flex items-center justify-center p-8 group">
-        <div className="absolute inset-0 bg-gradient-to-tr from-primary-600/10 via-transparent to-indigo-600/10 pointer-events-none" />
-        
-        <img
-          src={displayImages[activeIdx]}
-          alt="Product showcase"
-          className="max-h-full max-w-full object-contain transition-all duration-500 group-hover:scale-108 drop-shadow-2xl"
-        />
-      </div>
-
-      {/* Thumbnail Nav Indicators */}
-      <div className="flex space-x-3.5">
+    <div className="flex flex-col-reverse md:flex-row gap-3 sm:gap-4 w-full">
+      {/* Thumbnails list (Horizontal on Mobile, Vertical on Desktop) */}
+      <div className="flex md:flex-col gap-2.5 overflow-x-auto md:overflow-y-auto no-scrollbar shrink-0 py-1 md:py-0 w-full md:w-auto">
         {displayImages.map((img, idx) => (
           <button
             key={idx}
             onClick={() => setActiveIdx(idx)}
-            className={`relative h-20 w-20 overflow-hidden rounded-2xl border-2 bg-white/60 backdrop-blur-xl p-1.5 transition-all duration-300 ${
+            className={`relative h-16 w-16 sm:h-20 sm:w-20 overflow-hidden rounded-xl border-2 bg-zinc-50 p-1 transition-all duration-200 cursor-pointer shrink-0 ${
               activeIdx === idx
-                ? 'border-primary-600 shadow-xl shadow-primary-500/20 scale-105 ring-4 ring-primary-500/20'
-                : 'border-black/10 hover:border-black/30 hover:scale-98'
+                ? 'border-zinc-900 shadow-sm ring-2 ring-zinc-900/10'
+                : 'border-zinc-200 hover:border-zinc-400 opacity-70 hover:opacity-100'
             }`}
           >
-            <img src={img} alt={`Thumbnail ${idx + 1}`} className="h-full w-full object-contain rounded-xl" />
+            <img
+              src={img}
+              alt={`Thumbnail ${idx + 1}`}
+              className="h-full w-full object-cover rounded-lg"
+            />
           </button>
         ))}
+      </div>
+
+      {/* Main Image Showcase */}
+      <div className="relative flex-1 aspect-[4/4] sm:aspect-square rounded-2xl sm:rounded-3xl bg-zinc-100 border border-zinc-200/80 overflow-hidden flex items-center justify-center p-3 sm:p-6 group max-h-[380px] sm:max-h-[520px] w-full">
+        <AnimatePresence mode="wait">
+          <motion.img
+            key={activeIdx}
+            src={displayImages[activeIdx]}
+            alt="Product View"
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 1.02 }}
+            transition={{ duration: 0.2 }}
+            className="h-full w-full object-cover rounded-xl transition-transform duration-500 group-hover:scale-105"
+          />
+        </AnimatePresence>
+
+        {/* Feature Pill Overlay */}
+        <div className="absolute top-2.5 left-2.5 sm:top-3 sm:left-3 px-2.5 py-1 bg-white/90 backdrop-blur-xs rounded-full border border-zinc-200/60 shadow-xs flex items-center gap-1">
+          <Sparkles className="h-3 w-3 text-amber-500" />
+          <span className="text-[9px] sm:text-[10px] font-bold text-zinc-800 uppercase tracking-wider">
+            10s Auto-Align Tray
+          </span>
+        </div>
       </div>
     </div>
   );

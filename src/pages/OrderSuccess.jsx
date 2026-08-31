@@ -1,7 +1,7 @@
 import React from 'react';
 import { useLocation, Link, Navigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Check, ShieldCheck, ArrowRight, ShoppingBag } from 'lucide-react';
+import { Check, ShieldCheck, ArrowRight, ShoppingBag, Truck, Package } from 'lucide-react';
 
 export default function OrderSuccess() {
   const location = useLocation();
@@ -12,74 +12,69 @@ export default function OrderSuccess() {
   }
 
   return (
-    <div className="min-h-screen pt-28 pb-20 flex items-center justify-center px-4">
-      <div className="max-w-md w-full text-center space-y-8 glass-panel rounded-3xl p-8 shadow-2xl relative overflow-hidden">
+    <div className="min-h-screen py-24 flex items-center justify-center bg-[#FAFAFA] px-4 font-sans text-zinc-900">
+      <div className="max-w-lg w-full text-center space-y-8 bg-white border border-zinc-200 rounded-3xl p-8 sm:p-10 shadow-sm relative overflow-hidden">
         
-        {/* Animated green/purple ambient light */}
-        <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-48 h-48 bg-primary-500/10 blur-3xl pointer-events-none rounded-full" />
-
-        {/* Success Checkmark Circle Animation */}
-        <div className="relative flex justify-center">
+        {/* Success Icon */}
+        <div className="flex justify-center">
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
-            transition={{ type: 'spring', stiffness: 260, damping: 20, delay: 0.1 }}
-            className="flex h-20 w-20 items-center justify-center rounded-full bg-primary-500/10 border-2 border-primary-500 text-primary-500 shadow-[0_0_20px_rgba(139,92,246,0.15)]"
+            transition={{ type: 'spring', stiffness: 260, damping: 20 }}
+            className="flex h-20 w-20 items-center justify-center rounded-full bg-emerald-50 border-2 border-emerald-500 text-emerald-600 shadow-sm"
           >
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: 0.3 }}
-            >
-              <Check className="h-10 w-10 stroke-[3]" />
-            </motion.div>
+            <Check className="h-10 w-10 stroke-[3]" />
           </motion.div>
         </div>
 
-        {/* Success Title */}
-        <div className="space-y-3">
-          <h1 className="font-display text-2xl font-black text-white sm:text-3xl">Order Confirmed!</h1>
-          <p className="text-xs text-slate-400 leading-relaxed">Thank you for your purchase. Your premium screen guard is being prepped for dispatch.</p>
+        {/* Title */}
+        <div className="space-y-2">
+          <h1 className="font-display text-2xl sm:text-3xl font-black uppercase tracking-tight text-zinc-900">
+            Order Confirmed!
+          </h1>
+          <p className="text-xs sm:text-sm text-zinc-500 font-medium max-w-sm mx-auto">
+            Thank you for choosing Sync Screen Guard. Your premium 9H armor glass is packed with an auto-alignment box and prepped for express dispatch.
+          </p>
         </div>
 
-        {/* Order details card */}
-        <div className="rounded-2xl border border-dark-border/40 bg-dark-bg/40 p-4.5 text-xs space-y-3 text-left">
+        {/* Order Details Card */}
+        <div className="rounded-2xl bg-zinc-50 border border-zinc-200/80 p-5 text-xs space-y-3 text-left">
           <div className="flex justify-between">
-            <span className="text-slate-400 font-semibold">Order ID:</span>
-            <span className="font-bold text-white tracking-wider select-all">{state.orderId}</span>
+            <span className="text-zinc-500 font-medium">Order ID:</span>
+            <span className="font-mono font-bold text-zinc-900 select-all">{state.orderId}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-slate-400 font-semibold">Total Paid:</span>
-            <span className="font-bold text-white">₹{state.amount}</span>
+            <span className="text-zinc-500 font-medium">Total Amount:</span>
+            <span className="font-bold text-zinc-900">₹{state.amount?.toLocaleString()}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-slate-400 font-semibold">Estimated Delivery:</span>
-            <span className="font-bold text-emerald-500">2-4 Business Days</span>
+            <span className="text-zinc-500 font-medium">Estimated Delivery:</span>
+            <span className="font-bold text-emerald-600">2-4 Business Days (Express)</span>
           </div>
         </div>
 
-        {/* CTA Actions */}
+        {/* Actions */}
         <div className="flex flex-col gap-3">
           <Link
             to={`/tracking?orderId=${state.orderId}`}
-            className="w-full flex items-center justify-center space-x-2 rounded-xl bg-gradient-to-r from-primary-600 to-indigo-600 py-3.5 text-xs font-bold text-white shadow-lg shadow-primary-500/10 hover:shadow-primary-500/25 transition-all duration-300 hover:-translate-y-0.5"
+            className="w-full flex items-center justify-center gap-2 rounded-full bg-zinc-900 hover:bg-zinc-800 py-3.5 text-xs font-bold text-white uppercase tracking-widest transition-all shadow-sm"
           >
-            <span>Track Your Order</span>
-            <ArrowRight className="h-4 w-4" />
+            <Truck className="h-4 w-4" />
+            <span>Track Order Status</span>
           </Link>
           <Link
             to="/"
-            className="w-full flex items-center justify-center space-x-2 rounded-xl border border-dark-border/60 bg-dark-card/30 py-3.5 text-xs font-bold text-slate-300 hover:bg-dark-card hover:border-slate-500 transition-all duration-300"
+            className="w-full flex items-center justify-center gap-2 rounded-full border border-zinc-200 bg-white hover:bg-zinc-50 py-3.5 text-xs font-bold text-zinc-800 uppercase tracking-widest transition-colors"
           >
-            <ShoppingBag className="h-4 w-4 text-primary-500" />
+            <ShoppingBag className="h-4 w-4" />
             <span>Continue Shopping</span>
           </Link>
         </div>
         
-        {/* Support helper */}
-        <div className="flex items-center justify-center space-x-2 text-[10px] text-slate-500 font-semibold">
-          <ShieldCheck className="h-4 w-4 text-primary-500" />
-          <span>Sync Armor alignment guard warranty applies.</span>
+        {/* Guarantee footer */}
+        <div className="flex items-center justify-center gap-2 text-[11px] text-zinc-500 font-medium pt-2 border-t border-zinc-100">
+          <ShieldCheck className="h-4 w-4 text-emerald-600" />
+          <span>7-Day Free Replacement Guarantee Applies</span>
         </div>
 
       </div>

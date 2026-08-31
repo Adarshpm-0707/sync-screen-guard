@@ -1,10 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { ShoppingCart, User, LogOut, Package, Menu, ChevronDown } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { 
+  ShoppingBag, User, LogOut, Package, Menu, ChevronDown, 
+  Search, ShieldCheck, Sparkles, ArrowRight 
+} from 'lucide-react';
 import useCart from '../../hooks/useCart';
 import { supabase } from '../../supabaseClient';
 import CustomerAuthModal from './CustomerAuthModal';
 import MobileMenu from './MobileMenu';
+import CartDrawer from './CartDrawer';
+import SearchModal from './SearchModal';
 import syncLogo from '../../assets/sync logo.PNG';
 
 export default function Navbar() {
@@ -13,12 +18,15 @@ export default function Navbar() {
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
+  const [searchModalOpen, setSearchModalOpen] = useState(false);
   const profileRef = useRef(null);
   const { cartCount } = useCart();
   const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
-    // Check Supabase session first
+    // Check Supabase session
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         setCustomer(session.user);
@@ -44,7 +52,7 @@ export default function Navbar() {
     });
 
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 10);
+      setIsScrolled(window.scrollY > 20);
     };
 
     const handleClickOutside = (event) => {
@@ -76,173 +84,171 @@ export default function Navbar() {
 
   return (
     <>
-      <nav
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ease-in-out px-2.5 sm:px-6 lg:px-8 ${
-          isScrolled ? 'pt-1.5 sm:pt-2' : 'pt-2.5 sm:pt-4'
+   
+
+      {/* ── 2. Sticky Main Header ── */}
+      <header
+        className={`sticky top-0 left-0 right-0 z-40 transition-all duration-300 ${
+          isScrolled 
+            ? 'bg-white/95 backdrop-blur-md shadow-xs py-3 border-b border-zinc-200/80' 
+            : 'bg-white py-4 border-b border-zinc-100'
         }`}
       >
-        <div
-          className={`mx-auto max-w-7xl transition-all duration-500 rounded-2xl sm:rounded-[2rem] border bg-black shadow-2xl ${
-            isScrolled
-              ? 'py-2 px-3 sm:px-4 border-violet-500/30 shadow-violet-950/40'
-              : 'border-violet-900/30 py-2.5 sm:py-3 px-3 sm:px-4'
-          }`}
-          style={{ background: '#000000' }}
-        >
-          <div className="flex items-center justify-between gap-1.5 sm:gap-2">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between gap-4">
             
-            {/* --- Left Side: Mobile Menu Button (md:hidden) --- */}
-            <div className="flex items-center md:hidden shrink-0">
+            {/* Left: Mobile Menu Trigger (md:hidden) */}
+            <div className="flex items-center md:hidden">
               <button
                 onClick={() => setMobileMenuOpen(true)}
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-violet-500/20 bg-violet-950/30 text-violet-300 hover:text-violet-100 hover:bg-violet-900/40 transition-all cursor-pointer"
-                aria-label="Open Mobile Menu"
+                className="flex h-9 w-9 items-center justify-center rounded-lg text-zinc-700 hover:bg-zinc-100 transition-colors cursor-pointer"
+                aria-label="Open navigation menu"
               >
-                <Menu className="h-4.5 w-4.5" />
+                <Menu className="h-5 w-5" />
               </button>
             </div>
 
-            {/* --- Logo Section: Centralized on Mobile, Left-aligned on Desktop --- */}
-            <div className="flex items-center justify-center md:justify-start flex-1 md:flex-initial overflow-hidden">
-              <Link to="/" className="flex items-center space-x-2 outline-none">
+            {/* Logo */}
+            <div className="flex items-center">
+              <Link to="/" className="flex items-center space-x-2 group">
                 <img
                   src={syncLogo}
-                  alt="Sync Screenguard Logo"
-                  className="h-7 sm:h-9 sm:h-10 w-auto object-contain max-h-8 sm:max-h-11 transition-transform duration-300 group-hover:scale-105"
+                  alt="Sync Screen Guard Logo"
+                  className="h-8 sm:h-9 w-auto object-contain transition-transform duration-200 group-hover:scale-102"
                 />
               </Link>
             </div>
 
-            {/* --- Desktop Navigation (Center) --- */}
-            <div className="hidden md:flex items-center space-x-2">
+            {/* Desktop Navigation Links */}
+            <nav className="hidden md:flex items-center space-x-1 lg:space-x-2">
               {[
                 { path: '/', label: 'HOME' },
-                { path: '/products', label: 'PRODUCTS' },
+                { path: '/products', label: 'ALL PRODUCTS' },
               ].map((link) => (
                 <Link
                   key={link.path}
                   to={link.path}
-                  className={`relative px-5 py-2 text-xs font-black tracking-widest uppercase transition-all duration-300 rounded-full ${
+                  className={`px-3.5 py-2 text-xs font-bold tracking-wider transition-colors rounded-full ${
                     isActive(link.path)
-                      ? 'text-violet-200 bg-violet-900/40 border border-violet-500/50 shadow-lg shadow-violet-900/30'
-                      : 'text-violet-300/70 hover:text-violet-200 hover:bg-violet-950/50'
+                      ? 'text-zinc-900 bg-zinc-100 font-extrabold'
+                      : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-50'
                   }`}
                 >
                   {link.label}
                 </Link>
               ))}
-            </div>
+            </nav>
 
-            {/* --- Right Side Actions --- */}
-            <div className="flex items-center space-x-1.5 sm:space-x-3 shrink-0">
-              {/* Cart Button */}
-              <Link
-                to="/cart"
-                className="relative flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full border border-violet-500/20 bg-violet-950/30 transition-all duration-300 hover:bg-violet-900/40 hover:border-violet-500/50 group"
-                aria-label="Shopping Cart"
+            {/* Right Utilities: Search, Account, Bag */}
+            <div className="flex items-center space-x-1 sm:space-x-2">
+              {/* Live Search Trigger */}
+              <button
+                onClick={() => setSearchModalOpen(true)}
+                className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900 transition-colors cursor-pointer"
+                aria-label="Search Catalog"
+                title="Search"
               >
-                <ShoppingCart className="h-4.5 w-4.5 sm:h-5 sm:w-5 text-violet-300 group-hover:text-violet-100 transition-colors" />
-                {cartCount > 0 && (
-                  <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-violet-600 text-[9px] font-black text-white ring-2 ring-black">
-                    {cartCount}
-                  </span>
-                )}
-              </Link>
+                <Search className="h-4.5 w-4.5" />
+              </button>
 
-              {/* Divider */}
-              <div className="h-5 sm:h-6 w-[1px] bg-violet-800/40 mx-0.5 hidden sm:block" />
-
-              {/* Auth Logic: Profile Pill & Dropdown when logged in */}
+              {/* User Account / Sign In */}
               {customer ? (
                 <div className="relative" ref={profileRef}>
                   <button
                     onClick={() => setProfileMenuOpen(!profileMenuOpen)}
-                    className="flex items-center space-x-1.5 sm:space-x-2 py-1 px-1 sm:pr-3 rounded-full border border-violet-500/40 bg-violet-950/40 hover:bg-violet-900/60 hover:border-violet-400 transition-all duration-300 cursor-pointer shadow-sm"
-                    title={customerEmail}
+                    className="flex items-center space-x-2 p-1.5 sm:px-3 sm:py-1.5 rounded-full border border-zinc-200 bg-zinc-50 hover:bg-zinc-100 transition-colors cursor-pointer"
                   >
-                    {/* Avatar Circle */}
-                    <div className="flex h-7.5 w-7.5 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-gradient-to-tr from-violet-600 to-indigo-600 text-white font-extrabold text-xs shadow-md shadow-violet-900/50 shrink-0">
+                    <div className="flex h-7 w-7 items-center justify-center rounded-full bg-zinc-900 text-white font-bold text-xs">
                       {customerInitial}
                     </div>
-                    {/* Username / Email snippet */}
-                    <div className="hidden sm:flex flex-col text-left pr-0.5">
-                      <span className="text-[11px] font-bold text-violet-100 max-w-[100px] truncate leading-tight">
-                        {customerDisplayName}
-                      </span>
-                      <span className="text-[9px] font-semibold text-emerald-400 leading-none">
-                        Active Account
-                      </span>
-                    </div>
-                    <ChevronDown className={`h-3.5 w-3.5 text-violet-400 transition-transform duration-200 hidden sm:block ${profileMenuOpen ? 'rotate-180' : ''}`} />
+                    <span className="hidden sm:block text-xs font-bold text-zinc-900 max-w-[100px] truncate">
+                      {customerDisplayName}
+                    </span>
+                    <ChevronDown className={`h-3.5 w-3.5 text-zinc-500 transition-transform ${profileMenuOpen ? 'rotate-180' : ''}`} />
                   </button>
 
-                  {/* Profile Dropdown Menu */}
+                  {/* Profile Dropdown */}
                   {profileMenuOpen && (
-                    <div className="absolute right-0 mt-3 w-64 max-w-[calc(100vw-1.5rem)] rounded-2xl bg-slate-950 border border-violet-900/60 p-3 shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-200">
-                      {/* Customer Details Header */}
-                      <div className="px-3 py-2.5 rounded-xl bg-violet-950/40 border border-violet-800/30 mb-2">
-                        <div className="flex items-center space-x-2.5">
-                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-tr from-violet-600 to-indigo-600 text-white font-extrabold text-xs shrink-0 shadow-sm">
-                            {customerInitial}
-                          </div>
-                          <div className="overflow-hidden">
-                            <p className="text-xs font-bold text-white truncate">{customerEmail}</p>
-                            <p className="text-[9px] font-semibold text-emerald-400">● Customer Store Account</p>
-                          </div>
-                        </div>
+                    <div className="absolute right-0 mt-2 w-56 rounded-2xl bg-white border border-zinc-100 p-2 shadow-xl z-50 animate-in fade-in zoom-in-95">
+                      <div className="px-3 py-2 border-b border-zinc-100 mb-1">
+                        <p className="text-xs font-bold text-zinc-900 truncate">{customerEmail}</p>
+                        <span className="text-[10px] text-emerald-600 font-semibold">Active Customer</span>
                       </div>
-
-                      {/* Dropdown Options */}
-                      <div className="space-y-1">
-                        <Link
-                          to="/tracking"
-                          onClick={() => setProfileMenuOpen(false)}
-                          className="flex items-center space-x-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-violet-200 hover:bg-violet-900/40 hover:text-white transition-colors"
-                        >
-                          <Package className="h-4 w-4 text-violet-400" />
-                          <span>My Orders & Tracking</span>
-                        </Link>
-
-                        <button
-                          onClick={() => {
-                            setProfileMenuOpen(false);
-                            handleLogout();
-                          }}
-                          className="w-full flex items-center space-x-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-rose-400 hover:bg-rose-950/40 hover:text-rose-300 transition-colors text-left cursor-pointer"
-                        >
-                          <LogOut className="h-4 w-4 text-rose-400" />
-                          <span>Sign Out</span>
-                        </button>
-                      </div>
+                      <Link
+                        to="/tracking"
+                        onClick={() => setProfileMenuOpen(false)}
+                        className="flex items-center space-x-2 px-3 py-2 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 hover:text-zinc-900 rounded-xl transition-colors"
+                      >
+                        <Package className="h-4 w-4 text-zinc-500" />
+                        <span>My Orders & Tracking</span>
+                      </Link>
+                      <button
+                        onClick={() => {
+                          setProfileMenuOpen(false);
+                          handleLogout();
+                        }}
+                        className="w-full flex items-center space-x-2 px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer text-left"
+                      >
+                        <LogOut className="h-4 w-4" />
+                        <span>Sign Out</span>
+                      </button>
                     </div>
                   )}
                 </div>
               ) : (
                 <button
                   onClick={() => setAuthModalOpen(true)}
-                  className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-violet-600 hover:bg-violet-500 border border-violet-500/50 text-white shadow-md shadow-violet-900/50 transition-all cursor-pointer"
+                  className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900 transition-colors cursor-pointer"
+                  aria-label="Account Login"
                   title="Sign In"
-                  aria-label="Sign In"
                 >
-                  <User className="h-4.5 w-4.5 sm:h-5 sm:w-5 text-white" />
+                  <User className="h-4.5 w-4.5" />
                 </button>
               )}
 
+              {/* Shopping Bag Drawer Trigger */}
+              <button
+                onClick={() => setCartDrawerOpen(true)}
+                className="relative flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-zinc-900 hover:bg-zinc-800 text-white transition-all cursor-pointer shadow-sm group"
+                aria-label="View Shopping Bag"
+                title="Shopping Bag"
+              >
+                <ShoppingBag className="h-4.5 w-4.5 transition-transform group-hover:scale-110" />
+                {cartCount > 0 && (
+                  <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500 text-[10px] font-black text-white ring-2 ring-white">
+                    {cartCount}
+                  </span>
+                )}
+              </button>
             </div>
+
           </div>
         </div>
-      </nav>
+      </header>
 
-      {/* Mobile Drawer Menu */}
+      {/* Slide-over Cart Drawer */}
+      <CartDrawer 
+        isOpen={cartDrawerOpen} 
+        onClose={() => setCartDrawerOpen(false)} 
+      />
+
+      {/* Live Search Modal */}
+      <SearchModal 
+        isOpen={searchModalOpen} 
+        onClose={() => setSearchModalOpen(false)} 
+      />
+
+      {/* Mobile Nav Drawer */}
       <MobileMenu 
         isOpen={mobileMenuOpen} 
         onClose={() => setMobileMenuOpen(false)} 
         customer={customer}
         onOpenAuth={() => setAuthModalOpen(true)}
         onLogout={handleLogout}
+        onOpenCart={() => setCartDrawerOpen(true)}
       />
 
-      {/* Auth Modal */}
+      {/* Customer Auth Modal */}
       <CustomerAuthModal 
         isOpen={authModalOpen} 
         onClose={() => setAuthModalOpen(false)} 

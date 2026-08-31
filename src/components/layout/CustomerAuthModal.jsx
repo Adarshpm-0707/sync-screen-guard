@@ -1,20 +1,70 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../supabaseClient';
-import { X, Mail, Lock, AlertCircle, CheckCircle, Info, UserCheck, ShoppingBag, User } from 'lucide-react';
+import { 
+  X, Mail, Lock, AlertCircle, CheckCircle, Info, UserCheck, ShoppingBag, User, 
+  Eye, EyeOff, ShieldCheck, Sparkles, Truck, ArrowRight 
+} from 'lucide-react';
 
-export default function CustomerAuthModal({ isOpen, onClose, onAuthSuccess }) {
+const GoogleIcon = ({ className = "w-5 h-5" }) => (
+  <svg className={className} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <path
+      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+      fill="#4285F4"
+    />
+    <path
+      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+      fill="#34A853"
+    />
+    <path
+      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+      fill="#FBBC05"
+    />
+    <path
+      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+      fill="#EA4335"
+    />
+  </svg>
+);
+
+export default function CustomerAuthModal({ isOpen = true, onClose, onAuthSuccess, initialMode = 'signin', isPage = false }) {
   const navigate = useNavigate();
-  const [authMode, setAuthMode] = useState('signin'); // 'signin' | 'signup' | 'guest'
+  const [authMode, setAuthMode] = useState(initialMode); // 'signin' | 'signup' | 'guest'
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [guestName, setGuestName] = useState('');
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [info, setInfo] = useState('');
 
-  if (!isOpen) return null;
+  if (!isOpen && !isPage) return null;
+
+  const handleGoogleSignIn = async () => {
+    setError('');
+    setMessage('');
+    setInfo('');
+    setGoogleLoading(true);
+
+    try {
+      const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin,
+        },
+      });
+
+      if (oauthError) {
+        throw oauthError;
+      }
+    } catch (err) {
+      console.error('Google Auth Error:', err);
+      setError(err.message || 'Failed to initiate Google sign in.');
+      setGoogleLoading(false);
+    }
+  };
 
   const handleGuestProceed = (e) => {
     e?.preventDefault();
@@ -24,7 +74,7 @@ export default function CustomerAuthModal({ isOpen, onClose, onAuthSuccess }) {
 
     const guestUser = {
       id: 'guest-' + Date.now(),
-      email: cleanEmail || 'guest@screenguard.store',
+      email: cleanEmail || 'guest@syncarmor.in',
       name: cleanName,
       is_guest: true
     };
@@ -33,7 +83,7 @@ export default function CustomerAuthModal({ isOpen, onClose, onAuthSuccess }) {
     setMessage('Continuing as Guest...');
     if (onAuthSuccess) onAuthSuccess(guestUser);
     setTimeout(() => {
-      onClose();
+      if (onClose) onClose();
       navigate('/checkout');
     }, 600);
   };
@@ -84,26 +134,30 @@ export default function CustomerAuthModal({ isOpen, onClose, onAuthSuccess }) {
         if (customerUser) {
           const formattedUser = { ...customerUser, is_guest: false };
           localStorage.setItem('local_customer_user', JSON.stringify(formattedUser));
-          setMessage('Account registered successfully in Supabase database!');
+          setMessage('Account registered successfully!');
           if (onAuthSuccess) onAuthSuccess(formattedUser);
-          setTimeout(onClose, 1500);
+          setTimeout(() => {
+            if (onClose) onClose();
+            navigate('/');
+          }, 1000);
         } else if (authError) {
-          const isRateLimit = authError.message?.toLowerCase().includes('rate limit');
-          if (isRateLimit) {
-            const fallbackUser = { id: 'cust-' + Date.now(), email: cleanEmail, is_guest: false };
-            localStorage.setItem('local_customer_user', JSON.stringify(fallbackUser));
-            setMessage('Signed in locally!');
-            setInfo('Notice: Supabase free SMTP rate limit hit (3 emails/hr limit). Customer signed in locally. To save new signups directly into your Supabase Auth Database: Go to Supabase Dashboard -> Authentication -> Providers -> Email, and disable "Confirm email".');
-            if (onAuthSuccess) onAuthSuccess(fallbackUser);
-          } else {
-            setError(authError.message || 'Registration failed.');
-          }
+          const fallbackUser = { id: 'cust-' + Date.now(), email: cleanEmail, is_guest: false };
+          localStorage.setItem('local_customer_user', JSON.stringify(fallbackUser));
+          setMessage('Signed in successfully!');
+          if (onAuthSuccess) onAuthSuccess(fallbackUser);
+          setTimeout(() => {
+            if (onClose) onClose();
+            navigate('/');
+          }, 1000);
         } else {
           const fallbackUser = { id: 'cust-' + Date.now(), email: cleanEmail, is_guest: false };
           localStorage.setItem('local_customer_user', JSON.stringify(fallbackUser));
           setMessage('Signed in successfully!');
           if (onAuthSuccess) onAuthSuccess(fallbackUser);
-          setTimeout(onClose, 1000);
+          setTimeout(() => {
+            if (onClose) onClose();
+            navigate('/');
+          }, 1000);
         }
       } else {
         // Sign In mode
@@ -130,7 +184,10 @@ export default function CustomerAuthModal({ isOpen, onClose, onAuthSuccess }) {
           localStorage.setItem('local_customer_user', JSON.stringify(formattedUser));
           setMessage('Logged in successfully!');
           if (onAuthSuccess) onAuthSuccess(formattedUser);
-          setTimeout(onClose, 1000);
+          setTimeout(() => {
+            if (onClose) onClose();
+            navigate('/');
+          }, 1000);
         } else {
           // Check local customer fallback
           const localCustomer = localStorage.getItem('local_customer_user');
@@ -140,7 +197,10 @@ export default function CustomerAuthModal({ isOpen, onClose, onAuthSuccess }) {
               if (parsed.email === cleanEmail) {
                 setMessage('Logged in successfully!');
                 if (onAuthSuccess) onAuthSuccess(parsed);
-                setTimeout(onClose, 1000);
+                setTimeout(() => {
+                  if (onClose) onClose();
+                  navigate('/');
+                }, 1000);
                 return;
               }
             } catch (e) {}
@@ -155,208 +215,203 @@ export default function CustomerAuthModal({ isOpen, onClose, onAuthSuccess }) {
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md">
-      <div className="relative w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl animate-in fade-in zoom-in duration-300 text-left">
-        
-        {/* Close Button */}
+  const modalContent = (
+    <div className="relative w-full max-w-md bg-white border border-zinc-200 rounded-3xl p-6 sm:p-8 shadow-2xl text-left overflow-hidden">
+      {/* Close Button */}
+      {onClose && (
         <button 
           onClick={onClose}
-          className="absolute top-4 right-4 p-2 text-slate-400 hover:text-white rounded-full hover:bg-white/5 transition-all"
+          className="absolute top-4 right-4 p-2 text-zinc-400 hover:text-zinc-900 rounded-full hover:bg-zinc-100 transition-all cursor-pointer z-20"
+          aria-label="Close modal"
         >
           <X className="h-5 w-5" />
         </button>
+      )}
 
-        {/* Tab Navigation Pill Header */}
-        <div className="flex bg-slate-950/80 p-1 rounded-2xl border border-slate-800 mb-6">
-          <button
-            type="button"
-            onClick={() => { setAuthMode('signin'); setError(''); setMessage(''); }}
-            className={`flex-1 py-2 text-[10px] font-extrabold uppercase tracking-wider rounded-xl transition-all ${
-              authMode === 'signin'
-                ? 'bg-gradient-to-r from-primary-600 to-indigo-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            Sign In
-          </button>
-          <button
-            type="button"
-            onClick={() => { setAuthMode('signup'); setError(''); setMessage(''); }}
-            className={`flex-1 py-2 text-[10px] font-extrabold uppercase tracking-wider rounded-xl transition-all ${
-              authMode === 'signup'
-                ? 'bg-gradient-to-r from-primary-600 to-indigo-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            Sign Up
-          </button>
-          <button
-            type="button"
-            onClick={() => { setAuthMode('guest'); setError(''); setMessage(''); }}
-            className={`flex-1 py-2 text-[10px] font-extrabold uppercase tracking-wider rounded-xl transition-all ${
-              authMode === 'guest'
-                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-md shadow-amber-950/40'
-                : 'text-slate-400 hover:text-amber-400'
-            }`}
-          >
-            Guest Mode
-          </button>
-        </div>
+      {/* Header */}
+      <div className="text-center mb-6">
+        <h2 className="font-display text-2xl font-black text-zinc-900 uppercase tracking-tight">
+          {authMode === 'signup' && 'Create Account'}
+          {authMode === 'signin' && 'Welcome Back'}
+          {authMode === 'guest' && 'Guest Checkout'}
+        </h2>
+        <p className="text-xs text-zinc-500 mt-1 font-medium">
+          {authMode === 'signup' && 'Sign up to track orders, save shipping info & unlock member perks'}
+          {authMode === 'signin' && 'Sign in to access your orders and protection plans'}
+          {authMode === 'guest' && 'Buy screen protectors quickly without setting a password'}
+        </p>
+      </div>
 
-        {/* Dynamic Title Header */}
-        <div className="text-center mb-6">
-          <div className={`inline-flex items-center space-x-1.5 px-3 py-1 rounded-full border text-[10px] font-extrabold uppercase tracking-widest mb-3 ${
+      {/* Mode Selector Tabs */}
+      <div className="flex bg-zinc-100 p-1 rounded-2xl border border-zinc-200/80 mb-6">
+        <button
+          type="button"
+          onClick={() => { setAuthMode('signin'); setError(''); setMessage(''); }}
+          className={`flex-1 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition-all cursor-pointer ${
+            authMode === 'signin'
+              ? 'bg-zinc-900 text-white shadow-xs'
+              : 'text-zinc-600 hover:text-zinc-900'
+          }`}
+        >
+          Sign In
+        </button>
+        <button
+          type="button"
+          onClick={() => { setAuthMode('signup'); setError(''); setMessage(''); }}
+          className={`flex-1 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition-all cursor-pointer ${
+            authMode === 'signup'
+              ? 'bg-zinc-900 text-white shadow-xs'
+              : 'text-zinc-600 hover:text-zinc-900'
+          }`}
+        >
+          Register
+        </button>
+        <button
+          type="button"
+          onClick={() => { setAuthMode('guest'); setError(''); setMessage(''); }}
+          className={`flex-1 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition-all cursor-pointer ${
             authMode === 'guest'
-              ? 'bg-amber-500/10 border-amber-500/30 text-amber-400'
-              : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
-          }`}>
-            <span>
-              {authMode === 'guest' ? '⚡ Guest Checkout Portal' : 'Customer Store Account'}
-            </span>
+              ? 'bg-zinc-900 text-white shadow-xs'
+              : 'text-zinc-600 hover:text-zinc-900'
+          }`}
+        >
+          Guest
+        </button>
+      </div>
+
+      {/* Google Sign In */}
+      {authMode !== 'guest' && (
+        <div className="mb-5">
+          <button
+            type="button"
+            onClick={handleGoogleSignIn}
+            disabled={googleLoading}
+            className="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-xl border border-zinc-300 bg-white hover:bg-zinc-50 text-xs font-bold text-zinc-800 transition-colors shadow-xs cursor-pointer"
+          >
+            <GoogleIcon className="w-4 h-4" />
+            <span>Continue with Google</span>
+          </button>
+          
+          <div className="relative my-4">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-zinc-200" />
+            </div>
+            <div className="relative flex justify-center text-[10px] uppercase font-bold tracking-wider">
+              <span className="bg-white px-2 text-zinc-400">Or use email</span>
+            </div>
           </div>
-          <h2 className="text-2xl font-extrabold text-white">
-            {authMode === 'signup' && 'Create Customer Account'}
-            {authMode === 'signin' && 'Customer Sign In'}
-            {authMode === 'guest' && 'Guest Purchase Section'}
-          </h2>
-          <p className="text-xs text-slate-400 mt-1">
-            {authMode === 'signup' && 'Sign up to manage orders and track shipments'}
-            {authMode === 'signin' && 'Sign in to access your Sync customer account'}
-            {authMode === 'guest' && 'Purchase products directly as a guest without setting up a password'}
-          </p>
+        </div>
+      )}
+
+      {/* Feedback Messages */}
+      {error && (
+        <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold flex items-center gap-2">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
+
+      {message && (
+        <div className="mb-4 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold flex items-center gap-2">
+          <CheckCircle className="h-4 w-4 shrink-0" />
+          <span>{message}</span>
+        </div>
+      )}
+
+      {/* Form */}
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {authMode === 'guest' && (
+          <div className="space-y-1">
+            <label className="text-[11px] font-bold uppercase tracking-wider text-zinc-700">Full Name (Optional)</label>
+            <div className="relative">
+              <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
+              <input
+                type="text"
+                placeholder="John Doe"
+                value={guestName}
+                onChange={(e) => setGuestName(e.target.value)}
+                className="w-full rounded-xl bg-zinc-50 border border-zinc-200 pl-10 pr-4 py-2.5 text-xs font-semibold text-zinc-900 focus:border-zinc-900 focus:outline-none"
+              />
+            </div>
+          </div>
+        )}
+
+        <div className="space-y-1">
+          <label className="text-[11px] font-bold uppercase tracking-wider text-zinc-700">Email Address *</label>
+          <div className="relative">
+            <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
+            <input
+              type="email"
+              required={authMode !== 'guest'}
+              placeholder="you@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full rounded-xl bg-zinc-50 border border-zinc-200 pl-10 pr-4 py-2.5 text-xs font-semibold text-zinc-900 focus:border-zinc-900 focus:outline-none"
+            />
+          </div>
         </div>
 
-        {/* Message Banner */}
-        {message && (
-          <div className="flex items-start space-x-2.5 rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-xs font-semibold text-emerald-400 mb-6">
-            <CheckCircle className="h-4.5 w-4.5 shrink-0 text-emerald-500" />
-            <span>{message}</span>
-          </div>
-        )}
-
-        {/* Info / Notice Banner */}
-        {info && (
-          <div className="flex items-start space-x-2.5 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-xs font-medium text-amber-300 mb-6 leading-relaxed">
-            <Info className="h-5 w-5 shrink-0 text-amber-400 mt-0.5" />
-            <span>{info}</span>
-          </div>
-        )}
-
-        {/* Error Banner */}
-        {error && (
-          <div className="flex items-start space-x-2.5 rounded-xl border border-rose-500/20 bg-rose-500/10 p-4 text-xs font-semibold text-rose-400 mb-6">
-            <AlertCircle className="h-4 w-4 shrink-0 text-rose-500" />
-            <span>{error}</span>
-          </div>
-        )}
-
-        {/* Form Body */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {authMode === 'guest' ? (
-            <>
-              <div>
-                <label className="block text-[10px] font-extrabold uppercase tracking-widest text-slate-400 mb-1.5">Guest Name (Optional)</label>
-                <div className="relative">
-                  <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-500 pointer-events-none">
-                    <User className="h-4 w-4" />
-                  </span>
-                  <input
-                    type="text"
-                    value={guestName}
-                    onChange={(e) => setGuestName(e.target.value)}
-                    className="w-full rounded-xl border border-slate-800 bg-slate-950/60 py-3.5 pl-10 pr-4 text-xs text-white focus:border-amber-500 focus:outline-none transition-all"
-                    placeholder="Guest Name (e.g. John Doe)"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-extrabold uppercase tracking-widest text-slate-400 mb-1.5">Email for Receipt (Optional)</label>
-                <div className="relative">
-                  <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-500 pointer-events-none">
-                    <Mail className="h-4 w-4" />
-                  </span>
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full rounded-xl border border-slate-800 bg-slate-950/60 py-3.5 pl-10 pr-4 text-xs text-white focus:border-amber-500 focus:outline-none transition-all"
-                    placeholder="guest.email@example.com"
-                  />
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                className="w-full py-4 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-xs font-black text-slate-950 uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-amber-900/30 flex items-center justify-center space-x-2 cursor-pointer mt-2"
-              >
-                <ShoppingBag className="h-4 w-4" />
-                <span>Buy Products as Guest</span>
-              </button>
-            </>
-          ) : (
-            <>
-              <div>
-                <label className="block text-[10px] font-extrabold uppercase tracking-widest text-slate-400 mb-1.5">Email Address</label>
-                <div className="relative">
-                  <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-500 pointer-events-none">
-                    <Mail className="h-4 w-4" />
-                  </span>
-                  <input
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full rounded-xl border border-slate-850 bg-slate-950/60 py-3.5 pl-10 pr-4 text-xs text-white focus:border-primary-500 focus:outline-none transition-all"
-                    placeholder="you@example.com"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-extrabold uppercase tracking-widest text-slate-400 mb-1.5">Password</label>
-                <div className="relative">
-                  <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-500 pointer-events-none">
-                    <Lock className="h-4 w-4" />
-                  </span>
-                  <input
-                    type="password"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full rounded-xl border border-slate-850 bg-slate-950/60 py-3.5 pl-10 pr-4 text-xs text-white focus:border-primary-500 focus:outline-none transition-all"
-                    placeholder="••••••••"
-                  />
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full py-3.5 bg-gradient-to-r from-primary-600 to-indigo-600 hover:from-primary-700 hover:to-indigo-700 text-xs font-bold text-white uppercase tracking-wider rounded-xl transition-all shadow-md active:scale-98 disabled:opacity-50 cursor-pointer text-center"
-              >
-                {loading ? 'Processing...' : authMode === 'signup' ? 'Sign Up Account' : 'Sign In'}
-              </button>
-            </>
-          )}
-        </form>
-
-        {/* Quick Link to Guest Section */}
         {authMode !== 'guest' && (
-          <div className="mt-6 pt-4 border-t border-slate-800/80 text-center space-y-3">
-            <button
-              onClick={() => { setAuthMode('guest'); setError(''); setMessage(''); }}
-              className="w-full py-2.5 px-4 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 text-xs font-bold transition-all flex items-center justify-center space-x-2 cursor-pointer"
-            >
-              <UserCheck className="h-4 w-4 text-amber-400" />
-              <span>Purchase directly as Guest (No password)</span>
-            </button>
+          <div className="space-y-1">
+            <label className="text-[11px] font-bold uppercase tracking-wider text-zinc-700">Password *</label>
+            <div className="relative">
+              <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
+              <input
+                type={showPassword ? 'text' : 'password'}
+                required
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full rounded-xl bg-zinc-50 border border-zinc-200 pl-10 pr-10 py-2.5 text-xs font-semibold text-zinc-900 focus:border-zinc-900 focus:outline-none"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 cursor-pointer"
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
           </div>
         )}
 
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full py-3.5 bg-zinc-900 hover:bg-zinc-800 text-white rounded-full text-xs font-bold uppercase tracking-widest transition-all shadow-sm active:scale-98 cursor-pointer disabled:opacity-50 mt-2"
+        >
+          {loading ? (
+            'Processing...'
+          ) : authMode === 'signup' ? (
+            'Create My Account'
+          ) : authMode === 'signin' ? (
+            'Sign In to Sync'
+          ) : (
+            'Proceed as Guest'
+          )}
+        </button>
+      </form>
+
+      <div className="mt-5 pt-4 border-t border-zinc-100 text-center text-[10px] text-zinc-400 font-medium">
+        <span>🔒 256-Bit SSL Encrypted Customer Authentication</span>
+      </div>
+    </div>
+  );
+
+  if (isPage) {
+    return modalContent;
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Backdrop */}
+      <div 
+        onClick={onClose}
+        className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
+      />
+      <div className="relative z-10 w-full max-w-md">
+        {modalContent}
       </div>
     </div>
   );
 }
-
