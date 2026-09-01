@@ -135,7 +135,7 @@ export default function Footer() {
             {/* Laptop Trust Badge */}
             <div className="hidden md:flex items-center gap-2 text-zinc-400 text-xs font-medium pt-1">
               <span className="flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              <span>100% Genuine Sync Armor • Direct Manufacturer Warranty</span>
+              <span>100% Genuine Sync Screen Guard • Direct Manufacturer Warranty</span>
             </div>
           </div>
 
@@ -209,7 +209,7 @@ export default function Footer() {
               
               <div className="space-y-3 text-xs text-zinc-400">
                 <a 
-                  href="mailto:support@syncarmor.in" 
+                  href="mailto:support@syncforall.com" 
                   className="flex items-start gap-3 p-3 rounded-xl bg-zinc-950/80 border border-zinc-900 hover:border-zinc-800 hover:bg-zinc-900/50 transition-all duration-200 group"
                 >
                   <div className="h-8 w-8 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-400 group-hover:text-emerald-400 group-hover:border-emerald-500/30 transition-colors shrink-0">
@@ -217,7 +217,7 @@ export default function Footer() {
                   </div>
                   <div>
                     <p className="font-semibold text-white group-hover:text-emerald-300 transition-colors">Email Us</p>
-                    <p className="text-[11px] text-zinc-400 font-mono mt-0.5">support@syncarmor.in</p>
+                    <p className="text-[11px] text-zinc-400 font-mono mt-0.5">support@syncforall.com</p>
                   </div>
                 </a>
 
@@ -296,7 +296,7 @@ export default function Footer() {
               <span>Call Support</span>
             </a>
             <a
-              href="mailto:support@syncarmor.in"
+              href="mailto:support@syncforall.com"
               className="flex items-center justify-center gap-2 py-3 px-3 bg-zinc-950 border border-zinc-800 rounded-xl text-white text-xs font-bold uppercase tracking-wider active:bg-zinc-900 transition-colors"
             >
               <Mail className="h-3.5 w-3.5 text-emerald-400" />

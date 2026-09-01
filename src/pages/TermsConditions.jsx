@@ -37,7 +37,7 @@ export default function TermsConditions() {
       id: 'returns',
       title: '5. Return, Replacement & Warranty',
       icon: RefreshCw,
-      content: `We offer a 7-day hassle-free replacement guarantee for products damaged during transit or manufacturing defects. To claim a replacement, contact support@syncarmor.in within 48 hours of delivery with unboxing proof.`
+      content: `We offer a 7-day hassle-free replacement guarantee for products damaged during transit or manufacturing defects. To claim a replacement, contact support@syncforall.com within 48 hours of delivery with unboxing proof.`
     },
     {
       id: 'liability',
@@ -49,7 +49,7 @@ export default function TermsConditions() {
       id: 'contact',
       title: '7. Customer Support & Inquiries',
       icon: HelpCircle,
-      content: `For any legal inquiries, policy questions, or order support, reach out to our team at support@syncarmor.in or call our helpline +91 98765 43210.`
+      content: `For any legal inquiries, policy questions, or order support, reach out to our team at support@syncforall.com or call our helpline +91 98765 43210.`
     }
   ];
 
@@ -136,7 +136,7 @@ export default function TermsConditions() {
             <p className="text-xs text-zinc-400">Our customer support specialists are ready to help.</p>
           </div>
           <a
-            href="mailto:support@syncarmor.in"
+            href="mailto:support@syncforall.com"
             className="px-6 py-3 rounded-full bg-white hover:bg-zinc-200 text-zinc-950 font-bold text-xs uppercase tracking-wider transition-colors shrink-0"
           >
             Contact Support

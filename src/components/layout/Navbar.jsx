@@ -66,28 +66,27 @@ export default function Navbar() {
         }`}
       >
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center justify-between">
             
             {/* Left: Mobile Menu Trigger (md:hidden) */}
-            <div className="flex items-center md:hidden">
+            <div className="flex items-center md:hidden min-w-[72px]">
               <button
                 onClick={() => setMobileMenuOpen(true)}
-                className="flex h-9 w-9 items-center justify-center rounded-lg text-zinc-300 hover:bg-zinc-900 hover:text-white transition-colors cursor-pointer"
+                className="flex h-10 w-10 items-center justify-center rounded-xl text-zinc-300 hover:bg-zinc-900 hover:text-white transition-colors cursor-pointer"
                 aria-label="Open navigation menu"
               >
                 <Menu className="h-5 w-5" />
               </button>
             </div>
 
-            {/* Logo */}
-            <div className="flex items-center">
-              <Link to="/" title="Sync Screen Guard" aria-label="Sync Screen Guard" className="flex items-center space-x-2 group">
+            {/* Logo: Centered on Mobile, Left-aligned on Desktop */}
+            <div className="flex-1 flex justify-center md:flex-initial md:justify-start">
+              <Link to="/" title="Sync Screen Guard" aria-label="Sync Screen Guard" className="flex items-center group">
                 <img
                   src={syncLogo}
                   alt="Sync Screen Guard"
-                  className="h-8 sm:h-9 w-auto object-contain transition-transform duration-200 group-hover:scale-102"
+                  className="h-10 sm:h-12 md:h-14 w-auto object-contain transition-transform duration-200 group-hover:scale-102"
                 />
-                <span className="sr-only">Sync Screen Guard</span>
               </Link>
             </div>
 
@@ -111,8 +110,8 @@ export default function Navbar() {
               ))}
             </nav>
 
-            {/* Right Utilities: Search, Account, Bag */}
-            <div className="flex items-center space-x-1 sm:space-x-2">
+            {/* Right Utilities: Search, Bag (Desktop also includes Profile) */}
+            <div className="flex items-center justify-end space-x-1 sm:space-x-2 min-w-[72px] md:min-w-0">
               {/* Live Search Trigger */}
               <button
                 onClick={() => setSearchModalOpen(true)}
@@ -123,60 +122,62 @@ export default function Navbar() {
                 <Search className="h-4.5 w-4.5" />
               </button>
 
-              {/* User Account / Sign In */}
-              {customer ? (
-                <div className="relative" ref={profileRef}>
-                  <button
-                    onClick={() => setProfileMenuOpen(!profileMenuOpen)}
-                    className="flex items-center space-x-2 p-1.5 sm:px-3 sm:py-1.5 rounded-full border border-zinc-800 bg-zinc-900 hover:bg-zinc-800 text-zinc-100 transition-colors cursor-pointer"
-                  >
-                    <div className="flex h-7 w-7 items-center justify-center rounded-full bg-zinc-800 border border-zinc-700 text-white font-bold text-xs">
-                      {customerInitial}
-                    </div>
-                    <span className="hidden sm:block text-xs font-bold text-zinc-100 max-w-[100px] truncate">
-                      {customerDisplayName}
-                    </span>
-                    <ChevronDown className={`h-3.5 w-3.5 text-zinc-400 transition-transform ${profileMenuOpen ? 'rotate-180' : ''}`} />
-                  </button>
-
-                  {/* Profile Dropdown */}
-                  {profileMenuOpen && (
-                    <div className="absolute right-0 mt-2 w-56 rounded-2xl bg-zinc-900 border border-zinc-800 p-2 shadow-2xl z-50 animate-in fade-in zoom-in-95">
-                      <div className="px-3 py-2 border-b border-zinc-800 mb-1">
-                        <p className="text-xs font-bold text-white truncate">{customerEmail}</p>
-                        <span className="text-[10px] text-emerald-400 font-semibold">Active Customer</span>
+              {/* User Account / Sign In - Desktop Only (on Mobile it is inside the dropdown drawer menu) */}
+              <div className="hidden md:block">
+                {customer ? (
+                  <div className="relative" ref={profileRef}>
+                    <button
+                      onClick={() => setProfileMenuOpen(!profileMenuOpen)}
+                      className="flex items-center space-x-2 p-1.5 sm:px-3 sm:py-1.5 rounded-full border border-zinc-800 bg-zinc-900 hover:bg-zinc-800 text-zinc-100 transition-colors cursor-pointer"
+                    >
+                      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-zinc-800 border border-zinc-700 text-white font-bold text-xs">
+                        {customerInitial}
                       </div>
-                      <Link
-                        to="/tracking"
-                        onClick={() => setProfileMenuOpen(false)}
-                        className="flex items-center space-x-2 px-3 py-2 text-xs font-semibold text-zinc-300 hover:bg-zinc-800 hover:text-white rounded-xl transition-colors"
-                      >
-                        <Package className="h-4 w-4 text-zinc-400" />
-                        <span>My Orders & Tracking</span>
-                      </Link>
-                      <button
-                        onClick={() => {
-                          setProfileMenuOpen(false);
-                          handleLogout();
-                        }}
-                        className="w-full flex items-center space-x-2 px-3 py-2 text-xs font-semibold text-rose-400 hover:bg-rose-950/40 rounded-xl transition-colors cursor-pointer text-left"
-                      >
-                        <LogOut className="h-4 w-4" />
-                        <span>Sign Out</span>
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <button
-                  onClick={() => openAuthModal({ mode: 'signin' })}
-                  className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full text-zinc-300 hover:bg-zinc-900 hover:text-white transition-colors cursor-pointer"
-                  aria-label="Account Login"
-                  title="Sign In"
-                >
-                  <User className="h-4.5 w-4.5" />
-                </button>
-              )}
+                      <span className="hidden sm:block text-xs font-bold text-zinc-100 max-w-[100px] truncate">
+                        {customerDisplayName}
+                      </span>
+                      <ChevronDown className={`h-3.5 w-3.5 text-zinc-400 transition-transform ${profileMenuOpen ? 'rotate-180' : ''}`} />
+                    </button>
+
+                    {/* Profile Dropdown */}
+                    {profileMenuOpen && (
+                      <div className="absolute right-0 mt-2 w-56 rounded-2xl bg-zinc-900 border border-zinc-800 p-2 shadow-2xl z-50 animate-in fade-in zoom-in-95">
+                        <div className="px-3 py-2 border-b border-zinc-800 mb-1">
+                          <p className="text-xs font-bold text-white truncate">{customerEmail}</p>
+                          <span className="text-[10px] text-emerald-400 font-semibold">Active Customer</span>
+                        </div>
+                        <Link
+                          to="/tracking"
+                          onClick={() => setProfileMenuOpen(false)}
+                          className="flex items-center space-x-2 px-3 py-2 text-xs font-semibold text-zinc-300 hover:bg-zinc-800 hover:text-white rounded-xl transition-colors"
+                        >
+                          <Package className="h-4 w-4 text-zinc-400" />
+                          <span>My Orders & Tracking</span>
+                        </Link>
+                        <button
+                          onClick={() => {
+                            setProfileMenuOpen(false);
+                            handleLogout();
+                          }}
+                          className="w-full flex items-center space-x-2 px-3 py-2 text-xs font-semibold text-rose-400 hover:bg-rose-950/40 rounded-xl transition-colors cursor-pointer text-left"
+                        >
+                          <LogOut className="h-4 w-4" />
+                          <span>Sign Out</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => openAuthModal({ mode: 'signin' })}
+                    className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full text-zinc-300 hover:bg-zinc-900 hover:text-white transition-colors cursor-pointer"
+                    aria-label="Account Login"
+                    title="Sign In"
+                  >
+                    <User className="h-4.5 w-4.5" />
+                  </button>
+                )}
+              </div>
 
               {/* Shopping Bag Drawer Trigger */}
               <button
