@@ -241,26 +241,7 @@ export default function Home() {
               </button>
             </motion.div>
 
-            {/* Feature Chips */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.7, delay: 0.3 }}
-              className="pt-1 flex flex-wrap items-center justify-start gap-y-1.5 gap-x-4 text-[11px] sm:text-xs text-zinc-400 font-medium"
-            >
-              <div className="flex items-center gap-1">
-                <span className="text-emerald-400 font-bold">✓</span>
-                <span>10s Auto-Align Box</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <span className="text-emerald-400 font-bold">✓</span>
-                <span>9H Diamond Hardness</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <span className="text-emerald-400 font-bold">✓</span>
-                <span>Zero Bubble Guarantee</span>
-              </div>
-            </motion.div>
+         
           </div>
 
         </div>
