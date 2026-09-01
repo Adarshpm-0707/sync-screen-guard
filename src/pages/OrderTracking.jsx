@@ -8,6 +8,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../supabaseClient';
 import { restoreStockForCancelledOrder } from '../utils/stockManager';
 import useCustomerAuth from '../hooks/useCustomerAuth';
+import { filterDeletedOrders, isOrderDeleted } from '../utils/orderManager';
+import { sendOrderCancellationEmails } from '../utils/orderEmailNotification';
 
 export default function OrderTracking() {
   const [searchParams] = useSearchParams();
@@ -120,6 +122,7 @@ export default function OrderTracking() {
         }
       } catch (e) {}
 
+      orders = filterDeletedOrders(orders);
       orders = orders.map(normalizeOrderItems);
       orders.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
       setCustomerOrders(orders);
@@ -208,6 +211,7 @@ export default function OrderTracking() {
             }
           } catch (e) {}
 
+          foundOrders = filterDeletedOrders(foundOrders);
           foundOrders = foundOrders.map(normalizeOrderItems);
           foundOrders.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
 
@@ -222,6 +226,12 @@ export default function OrderTracking() {
           }
         } else {
           // Search by Order ID
+          if (isOrderDeleted(queryStr)) {
+            setError(`No order found matching "${queryStr}". Please check the ID or enter your checkout email.`);
+            setTrackingData(null);
+            return;
+          }
+
           primaryOrder = customerOrders.find(o => o.id.toLowerCase() === queryStr.toLowerCase());
 
           if (!primaryOrder) {
@@ -232,7 +242,7 @@ export default function OrderTracking() {
                 .eq('id', queryStr)
                 .maybeSingle();
 
-              if (!sbErr && data) {
+              if (!sbErr && data && !isOrderDeleted(data.id)) {
                 primaryOrder = normalizeOrderItems(data);
               }
             } catch (e) {}
@@ -242,13 +252,13 @@ export default function OrderTracking() {
             try {
               const allLocal = JSON.parse(localStorage.getItem('customer_orders') || '[]');
               const localMatch = allLocal.find(o => o.id.toLowerCase() === queryStr.toLowerCase());
-              if (localMatch) {
+              if (localMatch && !isOrderDeleted(localMatch.id)) {
                 primaryOrder = normalizeOrderItems(localMatch);
               }
             } catch (e) {}
           }
 
-          if (primaryOrder) {
+          if (primaryOrder && !isOrderDeleted(primaryOrder.id)) {
             buildTrackingView(primaryOrder);
             if (!customerOrders.some(o => o.id === primaryOrder.id)) {
               setCustomerOrders([primaryOrder, ...customerOrders]);
@@ -288,7 +298,17 @@ export default function OrderTracking() {
         await restoreStockForCancelledOrder(trackingData.items);
       }
 
-      // Update Supabase if connected
+      // 1. 🚀 Call backend API to automatically cancel & remove from Shiprocket dashboard
+      try {
+        await fetch(`http://localhost:5000/api/orders/${targetId}/cancel`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+      } catch (apiErr) {
+        console.warn('Backend order cancel API call:', apiErr.message);
+      }
+
+      // 2. Update Supabase if connected
       try {
         await supabase
           .from('orders')
@@ -296,16 +316,25 @@ export default function OrderTracking() {
           .eq('id', targetId);
       } catch (e) {}
 
-      // Update local storage
+      // 3. Update local storage
       const localSaved = JSON.parse(localStorage.getItem('customer_orders') || '[]');
       const updated = localSaved.map(o => o.id === targetId ? { ...o, status: 'cancelled' } : o);
       localStorage.setItem('customer_orders', JSON.stringify(updated));
 
-      // Update local state
+      // 4. Update local state
       setCustomerOrders(prev => prev.map(o => o.id === targetId ? { ...o, status: 'cancelled' } : o));
 
       buildTrackingView({ ...trackingData, status: 'cancelled' });
-      alert('Order cancelled successfully.');
+
+      // 5. 📧 Send order cancellation emails to syncallfyp@gmail.com and customer
+      sendOrderCancellationEmails({
+        ...trackingData,
+        orderId: targetId,
+        customer_name: trackingData.customer_name || customerName,
+        customer_email: trackingData.customer_email || customerEmail
+      });
+
+      alert('Order cancelled successfully. Cancellation confirmation emails have been sent to your email and the Sync team.');
     } catch (err) {
       console.error('Cancellation error:', err);
     }
@@ -323,10 +352,13 @@ export default function OrderTracking() {
   const remainingCancelMins = Math.floor(remainingCancelMs / 60000);
   const remainingCancelSecs = Math.floor((remainingCancelMs % 60000) / 1000);
   const isWithin10Mins = remainingCancelMs > 0;
-  const canCancelOrder = isWithin10Mins && 
-                         trackingData && 
-                         trackingData.status !== 'cancelled' && 
-                         trackingData.status !== 'shipped' && 
+  // Only COD orders can be cancelled by the customer (online/Razorpay orders cannot be cancelled)
+  const isCodOrder = trackingData?.payment_type?.toLowerCase() === 'cod';
+  const canCancelOrder = isCodOrder &&
+                         isWithin10Mins &&
+                         trackingData &&
+                         trackingData.status !== 'cancelled' &&
+                         trackingData.status !== 'shipped' &&
                          trackingData.status !== 'delivered';
 
   return (
@@ -465,7 +497,9 @@ export default function OrderTracking() {
                 const isSelected = trackingData?.id === order.id;
 
                 const oCreatedAt = order.created_at ? new Date(order.created_at).getTime() : 0;
-                const oCanCancel = (now - oCreatedAt) < CANCELLATION_WINDOW_MS && order.status !== 'cancelled' && order.status !== 'shipped' && order.status !== 'delivered';
+                // Cancel badge only for COD orders within 10 minutes
+                const oIsCod = order.payment_type?.toLowerCase() === 'cod';
+                const oCanCancel = oIsCod && (now - oCreatedAt) < CANCELLATION_WINDOW_MS && order.status !== 'cancelled' && order.status !== 'shipped' && order.status !== 'delivered';
 
                 return (
                   <motion.button

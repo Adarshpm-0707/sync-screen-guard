@@ -17,6 +17,7 @@ import Pagination from '../components/common/Pagination';
 import OrderDetailDrawer from '../components/orders/OrderDetailDrawer';
 import { supabase } from '../../supabaseClient';
 import { getAdminAuthHeaders } from '../utils/adminAuth';
+import { deleteOrder, filterDeletedOrders } from '../../utils/orderManager';
 
 export default function Orders() {
   const [loading, setLoading] = useState(true);
@@ -38,6 +39,14 @@ export default function Orders() {
 
   useEffect(() => {
     fetchOrders();
+
+    const handleOrdersUpdated = () => {
+      fetchOrders();
+    };
+    window.addEventListener('orders_updated', handleOrdersUpdated);
+    return () => {
+      window.removeEventListener('orders_updated', handleOrdersUpdated);
+    };
   }, [currentPage, statusFilter, paymentFilter, customerTypeFilter, searchTerm]);
 
   const fetchOrders = async () => {
@@ -61,9 +70,9 @@ export default function Orders() {
         });
         if (res.ok) {
           const data = await res.json();
-          fetchedOrders = data.orders;
-          setTotalPages(data.totalPages || 1);
-          setTotalItems(data.totalItems || data.orders?.length || 0);
+          fetchedOrders = Array.isArray(data.orders) ? filterDeletedOrders(data.orders) : [];
+          setTotalPages(data.totalPages || Math.ceil(fetchedOrders.length / itemsPerPage) || 1);
+          setTotalItems(data.totalItems || fetchedOrders.length || 0);
         }
       } catch (apiErr) {
         console.warn('API fetchOrders fallback:', apiErr);
@@ -95,6 +104,9 @@ export default function Orders() {
           allOrders = [...newLocals, ...allOrders];
         }
 
+        // Filter out any deleted orders
+        allOrders = filterDeletedOrders(allOrders);
+
         if (customerTypeFilter !== 'all') {
           if (customerTypeFilter === 'guest') {
             allOrders = allOrders.filter(o => o.is_guest || !o.user_id);
@@ -107,7 +119,7 @@ export default function Orders() {
           allOrders = allOrders.filter(o =>
             (o.customer_name && o.customer_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
             (o.phone && o.phone.includes(searchTerm)) ||
-            (o.id && o.id.toLowerCase().includes(searchTerm.toLowerCase()))
+            (o.id && String(o.id).toLowerCase().includes(searchTerm.toLowerCase()))
           );
         }
 
@@ -132,33 +144,27 @@ export default function Orders() {
   };
 
   const handleDeleteOrder = async (e, order) => {
-    e.stopPropagation();
-    if (!window.confirm(`Permanently delete order #${order.id.slice(0, 8).toUpperCase()}?\nThis action cannot be undone.`)) return;
+    if (e && e.stopPropagation) e.stopPropagation();
+    if (!order || !order.id) return;
+
+    const orderDisplayId = String(order.id).slice(0, 8).toUpperCase();
+    if (!window.confirm(`Permanently delete order #${orderDisplayId}?\nThis action cannot be undone.`)) return;
+
+    // Optimistic UI state update
+    setOrders((prev) => prev.filter((o) => o.id !== order.id));
+    setTotalItems((prev) => Math.max(0, prev - 1));
+    if (selectedOrder?.id === order.id) {
+      setDrawerOpen(false);
+      setSelectedOrder(null);
+    }
 
     try {
-      const headers = await getAdminAuthHeaders();
-      let deleted = false;
-
-      try {
-        const res = await fetch(`http://localhost:5000/api/admin/orders/${order.id}`, {
-          method: 'DELETE',
-          headers,
-        });
-        if (res.ok) deleted = true;
-      } catch (_) {}
-
-      if (!deleted) {
-        await supabase.from('orders').delete().eq('id', order.id);
-      }
-
-      const localOrders = JSON.parse(localStorage.getItem('customer_orders') || '[]');
-      const updated = localOrders.filter(o => o.id !== order.id);
-      localStorage.setItem('customer_orders', JSON.stringify(updated));
-
+      await deleteOrder(order.id);
       fetchOrders();
     } catch (err) {
       console.error('Error deleting order:', err);
       alert('Failed to delete order. Please try again.');
+      fetchOrders();
     }
   };
 

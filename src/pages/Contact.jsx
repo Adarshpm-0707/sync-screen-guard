@@ -11,6 +11,7 @@ export default function Contact() {
     name: '',
     email: '',
     phone: '',
+    subject: 'General Inquiry',
     message: ''
   });
 
@@ -29,85 +30,13 @@ export default function Contact() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
+    setErrorMsg(null);
     try {
-      const dateStr = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
-
-      const htmlBody = `
-<!DOCTYPE html>
-<html>
-<head><meta charset="UTF-8"></head>
-<body style="margin:0;padding:0;background:#f0f4f8;font-family:'Segoe UI',Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f4f8;padding:32px 0;">
-    <tr><td align="center">
-      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.10);">
-
-        <!-- Header -->
-        <tr>
-          <td style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 60%,#0f3460 100%);padding:36px 40px;text-align:center;">
-            <div style="font-size:28px;font-weight:900;letter-spacing:2px;color:#ffffff;">SYNC</div>
-            <div style="font-size:12px;letter-spacing:4px;color:#60a5fa;margin-top:4px;text-transform:uppercase;">Screen Guard</div>
-            <div style="margin-top:16px;display:inline-block;background:rgba(96,165,250,0.15);border:1px solid rgba(96,165,250,0.4);border-radius:20px;padding:6px 18px;">
-              <span style="color:#93c5fd;font-size:13px;font-weight:600;">📬 New Form Message</span>
-            </div>
-          </td>
-        </tr>
-
-        <!-- Body -->
-        <tr>
-          <td style="background:#ffffff;padding:36px 40px;">
-            <p style="margin:0 0 24px;font-size:15px;color:#374151;">Hello <strong>Sync Team</strong>,<br>A new message was submitted through the <strong>Sync Screen Guard</strong> website contact form.</p>
-
-            <!-- Customer Info Block -->
-            <table width="100%" cellpadding="0" cellspacing="0" style="border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;margin-bottom:24px;">
-              <tr style="background:#f8fafc;">
-                <td colspan="2" style="padding:12px 20px;font-size:12px;font-weight:700;letter-spacing:1px;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb;">Customer Information</td>
-              </tr>
-              <tr style="background:#ffffff;">
-                <td style="padding:14px 20px;font-size:13px;color:#6b7280;font-weight:600;width:40%;border-bottom:1px solid #f3f4f6;">👤 Full Name</td>
-                <td style="padding:14px 20px;font-size:14px;color:#111827;font-weight:700;border-bottom:1px solid #f3f4f6;">${formData.name}</td>
-              </tr>
-              <tr style="background:#f9fafb;">
-                <td style="padding:14px 20px;font-size:13px;color:#6b7280;font-weight:600;border-bottom:1px solid #f3f4f6;">📧 Email Address</td>
-                <td style="padding:14px 20px;font-size:14px;color:#2563eb;border-bottom:1px solid #f3f4f6;"><a href="mailto:${formData.email}" style="color:#2563eb;text-decoration:none;">${formData.email}</a></td>
-              </tr>
-              <tr style="background:#ffffff;">
-                <td style="padding:14px 20px;font-size:13px;color:#6b7280;font-weight:600;">📱 Phone Number</td>
-                <td style="padding:14px 20px;font-size:14px;color:#111827;font-weight:600;">${formData.phone || 'Not Provided'}</td>
-              </tr>
-            </table>
-
-            <!-- Message Block -->
-            <table width="100%" cellpadding="0" cellspacing="0" style="border-radius:12px;overflow:hidden;border:1px solid #dbeafe;margin-bottom:24px;">
-              <tr style="background:#eff6ff;">
-                <td style="padding:12px 20px;font-size:12px;font-weight:700;letter-spacing:1px;color:#3b82f6;text-transform:uppercase;border-bottom:1px solid #dbeafe;">💬 Message</td>
-              </tr>
-              <tr style="background:#ffffff;">
-                <td style="padding:20px;font-size:15px;color:#1f2937;line-height:1.7;font-style:italic;">"${formData.message}"</td>
-              </tr>
-            </table>
-
-            <!-- Meta Info -->
-            <table width="100%" cellpadding="0" cellspacing="0" style="border-radius:10px;background:#f9fafb;border:1px solid #e5e7eb;">
-              <tr>
-                <td style="padding:12px 20px;font-size:12px;color:#9ca3af;">🕐 Received on: <strong style="color:#374151;">${dateStr}</strong> &nbsp;|&nbsp; 📍 Source: Sync Screen Guard Website Contact Form</td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-
-        <!-- Footer -->
-        <tr>
-          <td style="background:#1a1a2e;padding:24px 40px;text-align:center;">
-            <p style="margin:0;font-size:12px;color:#6b7280;">Reply directly to this email to respond to <strong style="color:#93c5fd;">${formData.name}</strong></p>
-            <p style="margin:8px 0 0;font-size:11px;color:#4b5563;">© 2025 Sync Screen Guard &nbsp;|&nbsp; syncallfyp@gmail.com &nbsp;|&nbsp; +91 98465 45949</p>
-          </td>
-        </tr>
-
-      </table>
-    </td></tr>
-  </table>
-</body>
-</html>`;
+      const dateStr = new Date().toLocaleString('en-IN', {
+        timeZone: 'Asia/Kolkata',
+        dateStyle: 'full',
+        timeStyle: 'short'
+      });
 
       const response = await fetch("https://formsubmit.co/ajax/syncallfyp@gmail.com", {
         method: "POST",
@@ -116,26 +45,33 @@ export default function Contact() {
           "Accept": "application/json"
         },
         body: JSON.stringify({
-          _subject: `📬 FORM MESSAGE from ${formData.name} — Sync Screen Guard`,
-          _name: "Sync Screen Guard",
+          _subject: `📬 [${formData.subject || 'Contact Form'}] ${formData.name} — Sync Screen Guard`,
+          _template: "box",
+          _captcha: "false",
           _replyto: formData.email,
-          _html: htmlBody,
-          _captcha: "false"
+          "👤 Sender Name": formData.name,
+          "📧 Email Address": formData.email,
+          "📱 Phone Number": formData.phone?.trim() ? formData.phone.trim() : "Not Provided",
+          "🏷️ Inquiry Topic": formData.subject || "General Inquiry",
+          "💬 Message Content": formData.message,
+          "🕐 Received Date & Time": dateStr,
+          "🌐 Website Source": "Sync Screen Guard — Contact Page (http://syncscreenguard.com)",
+          "⚡ Store Action": `Reply directly to this email to answer ${formData.name} (${formData.email})`
         })
       });
 
       const data = await response.json();
       if (response.ok && data.success !== "false") {
         setSubmitted(true);
-        setFormData({ name: '', email: '', phone: '', message: '' });
+        setFormData({ name: '', email: '', phone: '', subject: 'General Inquiry', message: '' });
       } else {
         setSubmitted(true);
-        setFormData({ name: '', email: '', phone: '', message: '' });
+        setFormData({ name: '', email: '', phone: '', subject: 'General Inquiry', message: '' });
       }
     } catch (err) {
       console.warn("Contact form submission error:", err);
       setSubmitted(true);
-      setFormData({ name: '', email: '', phone: '', message: '' });
+      setFormData({ name: '', email: '', phone: '', subject: 'General Inquiry', message: '' });
     } finally {
       setSubmitting(false);
     }
@@ -347,13 +283,31 @@ export default function Contact() {
                         id="phone"
                         name="phone"
                         type="tel"
-                        required
                         value={formData.phone}
                         onChange={handleInputChange}
-                        placeholder="Your contact number"
+                        placeholder="+91 98765 43210 (Optional)"
                         className="w-full px-4 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-white placeholder-zinc-500 text-xs sm:text-sm focus:outline-none focus:border-emerald-500 transition-all"
                       />
                     </div>
+                  </div>
+
+                  <div>
+                    <label htmlFor="subject" className="block text-xs font-bold uppercase tracking-wider text-zinc-300 mb-1">
+                      Inquiry Topic / Reason
+                    </label>
+                    <select
+                      id="subject"
+                      name="subject"
+                      value={formData.subject}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-xs sm:text-sm focus:outline-none focus:border-emerald-500 transition-all cursor-pointer"
+                    >
+                      <option value="General Inquiry">General Inquiry & Question</option>
+                      <option value="Order Status & Delivery">Order Status & Delivery Help</option>
+                      <option value="Damaged / Replacement Request">Damaged / Replacement Claim</option>
+                      <option value="Product Fitment & Installation">Product Fitment & Installation Help</option>
+                      <option value="Bulk & Wholesale Orders">Bulk & Wholesale Purchase</option>
+                    </select>
                   </div>
 
                   <div>

@@ -1,4 +1,12 @@
 import { supabaseAdmin } from '../supabase.js';
+import {
+  createShiprocketOrder,
+  assignAWBAndRequestPickup,
+  trackShiprocketShipment,
+  syncAllShipmentStatuses,
+  handleShiprocketWebhook,
+  cancelShiprocketOrder
+} from '../services/shiprocket.service.js';
 
 // Detect mock simulation mode
 export const rawUrl = process.env.SUPABASE_URL;
@@ -85,9 +93,9 @@ export let mockOrderItems = [
   }
 ];
 
-let mockProducts = [];
+export let mockProducts = [];
 
-let mockShipments = [
+export let mockShipments = [
   {
     id: 'ship-1',
     order_id: 'f87b213a-80fa-4a1d-886c-17f7aa67054f',
@@ -124,18 +132,18 @@ async function getPaymentSettings() {
     if (error || !data) {
       return {
         id: 'default',
-        cod_fee: parseFloat(process.env.COD_FEE || 50),
+        cod_fee: parseFloat(process.env.COD_FEE !== undefined ? process.env.COD_FEE : 0),
         cod_enabled: true,
-        razorpay_key_id: process.env.RAZORPAY_KEY_ID || 'rzp_test_placeholder',
+        razorpay_key_id: process.env.RAZORPAY_KEY_ID || 'rzp_live_TWkmVWiZfERb3p',
       };
     }
     return data;
   } catch (err) {
     return {
       id: 'default',
-      cod_fee: 50,
+      cod_fee: parseFloat(process.env.COD_FEE !== undefined ? process.env.COD_FEE : 0),
       cod_enabled: true,
-      razorpay_key_id: 'rzp_test_placeholder',
+      razorpay_key_id: process.env.RAZORPAY_KEY_ID || 'rzp_live_TWkmVWiZfERb3p',
     };
   }
 }
@@ -409,6 +417,9 @@ export async function updateOrderStatus(req, res, next) {
       if (status === 'confirmed') {
         mockOrders[idx].payment_status = 'success';
       }
+      if (status === 'cancelled') {
+        cancelShiprocketOrder({ orderId: id }).catch(e => console.warn('Shiprocket cancel notice:', e.message));
+      }
       return res.status(200).json(mockOrders[idx]);
     }
 
@@ -423,13 +434,68 @@ export async function updateOrderStatus(req, res, next) {
       return res.status(404).json({ message: 'Order not found.' });
     }
 
+    // 🚀 If order is cancelled, automatically cancel on Shiprocket dashboard!
+    if (status === 'cancelled') {
+      cancelShiprocketOrder({ orderId: id }).catch(e => {
+        console.warn('Shiprocket cancellation notice on admin status change:', e.message);
+      });
+    }
+
     res.status(200).json(updatedOrder);
   } catch (err) {
     next(err);
   }
 }
 
+// 4b. DELETE Order
+export async function deleteOrder(req, res, next) {
+  try {
+    const { id } = req.params;
+
+    // Automatically remove/cancel from Shiprocket before deleting
+    cancelShiprocketOrder({ orderId: id }).catch(e => {
+      console.warn('Shiprocket cancellation notice on order delete:', e.message);
+    });
+
+    if (isMockMode) {
+      const idx = mockOrders.findIndex(o => o.id === id);
+      if (idx === -1) {
+        return res.status(404).json({ message: 'Order not found.' });
+      }
+      mockOrders.splice(idx, 1);
+      // Also remove related items
+      const itemsBefore = mockOrderItems.length;
+      mockOrderItems.splice(0, itemsBefore, ...mockOrderItems.filter(item => item.order_id !== id));
+      return res.status(200).json({ success: true, message: 'Order deleted successfully.' });
+    }
+
+    // Delete related order_items first (if no cascade on DB)
+    await supabaseAdmin.from('order_items').delete().eq('order_id', id);
+
+    // Delete related payments
+    await supabaseAdmin.from('payments').delete().eq('order_id', id);
+
+    // Delete shipment record
+    await supabaseAdmin.from('shipments').delete().eq('order_id', id);
+
+    const { error } = await supabaseAdmin
+      .from('orders')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      return res.status(404).json({ message: 'Order not found or could not be deleted.' });
+    }
+
+    res.status(200).json({ success: true, message: 'Order deleted successfully.' });
+  } catch (err) {
+    next(err);
+  }
+}
+
+
 // 5. GET All Products
+
 export async function getProducts(req, res, next) {
   try {
     if (isMockMode) {
@@ -580,47 +646,57 @@ export async function getShipments(req, res, next) {
 
     const { data: shipments, error } = await supabaseAdmin
       .from('shipments')
-      .select('*')
+      .select('*, orders(customer_name, phone, total, city, status)')
       .order('created_at', { ascending: false });
 
-    if (error) throw error;
-    res.status(200).json(shipments);
+    if (error) {
+      // Fallback without join
+      const { data: rawShipments } = await supabaseAdmin
+        .from('shipments')
+        .select('*')
+        .order('created_at', { ascending: false });
+      return res.status(200).json(rawShipments || []);
+    }
+
+    res.status(200).json(shipments || []);
   } catch (err) {
     next(err);
   }
 }
 
-// 9. POST Create shipment (Mocking Shiprocket API push)
+// 9. POST Create shipment (Push order to Shiprocket & Assign AWB)
 export async function createShipment(req, res, next) {
   try {
-    const { orderId } = req.body;
+    const { orderId, courierId } = req.body;
 
     if (isMockMode) {
       const order = mockOrders.find(o => o.id === orderId);
       if (!order) {
         return res.status(404).json({ message: 'Order not found.' });
       }
-      
-      const awb = `SR-${Math.floor(100000000 + Math.random() * 900000000)}`;
-      const trackingUrl = `https://shiprocket.co/tracking/${awb}`;
+
+      // Check if Shiprocket credentials exist to try live push even in mock mode
+      const srResult = await createShiprocketOrder(order, mockOrderItems.filter(i => i.order_id === orderId));
+
+      const awb = srResult?.awb || `SR-${Math.floor(100000000 + Math.random() * 900000000)}`;
+      const trackingUrl = srResult?.tracking_url || `https://shiprocket.co/tracking/${awb}`;
       const etaDate = new Date();
       etaDate.setDate(etaDate.getDate() + 4);
 
       const shipment = {
         id: `ship-${Date.now()}`,
         order_id: orderId,
-        shiprocket_order_id: `SR-ORD-${Math.floor(100000 + Math.random() * 900000)}`,
+        shiprocket_order_id: srResult?.shiprocket_order_id || `SR-ORD-${Math.floor(100000 + Math.random() * 900000)}`,
         awb,
-        status: 'dispatched',
+        status: srResult?.status === 'NEW' ? 'dispatched' : (srResult?.status || 'dispatched'),
         tracking_url: trackingUrl,
         eta: etaDate.toISOString(),
-        courier_name: 'Express Bees',
+        courier_name: srResult?.courier_name || 'Shiprocket Express',
         created_at: new Date().toISOString()
       };
 
       mockShipments.unshift(shipment);
 
-      // Update mock order status
       const oIdx = mockOrders.findIndex(o => o.id === orderId);
       if (oIdx !== -1) {
         mockOrders[oIdx].status = 'shipped';
@@ -629,44 +705,111 @@ export async function createShipment(req, res, next) {
       return res.status(201).json(shipment);
     }
 
+    // Supabase Mode
     const { data: order, error: orderErr } = await supabaseAdmin
       .from('orders')
-      .select('*')
+      .select('*, order_items(*)')
       .eq('id', orderId)
       .single();
 
     if (orderErr || !order) {
-      return res.status(404).json({ message: 'Order not found.' });
+      return res.status(404).json({ message: 'Order not found in database.' });
     }
 
-    const awb = `SR-${Math.floor(100000000 + Math.random() * 900000000)}`;
-    const trackingUrl = `https://shiprocket.co/tracking/${awb}`;
-    
-    const { data: shipment, error } = await supabaseAdmin
+    // 🚀 1. Push to Shiprocket API
+    let srResult = await createShiprocketOrder(order, order.order_items || []);
+
+    // 📦 2. If shipment_id obtained, optionally assign AWB & request pickup
+    let awbCode = srResult?.awb || null;
+    let courierName = srResult?.courier_name || 'Shiprocket Express';
+
+    if (srResult?.shipment_id) {
+      const awbResult = await assignAWBAndRequestPickup(srResult.shipment_id, courierId);
+      if (awbResult?.awb_code) {
+        awbCode = awbResult.awb_code;
+        courierName = awbResult.courier_name || courierName;
+      }
+    }
+
+    const finalAwb = awbCode || `SR-${Math.floor(100000000 + Math.random() * 900000000)}`;
+    const trackingUrl = `https://shiprocket.co/tracking/${finalAwb}`;
+
+    // 3. Upsert / Insert into Supabase shipments table
+    const { data: existingShipment } = await supabaseAdmin
       .from('shipments')
-      .insert({
-        order_id: orderId,
-        shiprocket_order_id: `SR-ORD-${Math.floor(100000 + Math.random() * 900000)}`,
-        awb,
-        status: 'dispatched',
-        tracking_url: trackingUrl,
-        created_at: new Date().toISOString(),
-      })
-      .select()
-      .single();
+      .select('id')
+      .eq('order_id', orderId)
+      .maybeSingle();
 
-    if (error) throw error;
+    let shipmentRecord;
+    if (existingShipment?.id) {
+      const { data: updated, error: uErr } = await supabaseAdmin
+        .from('shipments')
+        .update({
+          shiprocket_order_id: srResult?.shiprocket_order_id || null,
+          awb: finalAwb,
+          courier_name: courierName,
+          status: 'dispatched',
+          tracking_url: trackingUrl
+        })
+        .eq('id', existingShipment.id)
+        .select()
+        .single();
+      if (uErr) throw uErr;
+      shipmentRecord = updated;
+    } else {
+      const { data: inserted, error: iErr } = await supabaseAdmin
+        .from('shipments')
+        .insert({
+          order_id: orderId,
+          shiprocket_order_id: srResult?.shiprocket_order_id || null,
+          awb: finalAwb,
+          courier_name: courierName,
+          status: 'dispatched',
+          tracking_url: trackingUrl,
+          created_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+      if (iErr) throw iErr;
+      shipmentRecord = inserted;
+    }
 
+    // 4. Update order status to shipped
     await supabaseAdmin
       .from('orders')
       .update({ status: 'shipped' })
       .eq('id', orderId);
 
-    res.status(201).json(shipment);
+    console.log(`🚚 [Shiprocket] Shipment created and Order #${orderId} marked as shipped!`);
+    res.status(201).json(shipmentRecord);
+  } catch (err) {
+    console.error('Error creating shipment:', err);
+    next(err);
+  }
+}
+
+// 9b. POST Synchronize all tracking statuses from Shiprocket
+export async function syncShipments(req, res, next) {
+  try {
+    const result = await syncAllShipmentStatuses();
+    res.status(200).json({ success: true, ...result });
   } catch (err) {
     next(err);
   }
 }
+
+// 9c. POST Shiprocket Live Webhook Handler
+export async function handleShiprocketWebhookCall(req, res, next) {
+  try {
+    const result = await handleShiprocketWebhook(req.body);
+    res.status(200).json(result);
+  } catch (err) {
+    console.error('Webhook error:', err);
+    res.status(200).json({ success: false, error: err.message });
+  }
+}
+
 
 // 10. GET Payment settings configurations
 export async function getSettings(req, res, next) {

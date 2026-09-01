@@ -13,13 +13,16 @@ import {
   Clock,
   ChevronRight,
   ExternalLink,
-  PackageCheck
+  PackageCheck,
+  Trash2
 } from 'lucide-react';
 import { supabase } from '../../../supabaseClient';
 import { restoreStockForCancelledOrder } from '../../../utils/stockManager';
 import OrderStatusBadge from './OrderStatusBadge';
 import AdminButton from '../common/AdminButton';
 import { getAdminAuthHeaders } from '../../utils/adminAuth';
+import { deleteOrder, isOrderDeleted } from '../../../utils/orderManager';
+import { sendOrderCancellationEmails } from '../../../utils/orderEmailNotification';
 
 export default function OrderDetailDrawer({ isOpen, onClose, orderId, initialOrder, onStatusUpdated }) {
   const [loading, setLoading] = useState(true);
@@ -28,6 +31,10 @@ export default function OrderDetailDrawer({ isOpen, onClose, orderId, initialOrd
 
   useEffect(() => {
     if (isOpen && orderId) {
+      if (isOrderDeleted(orderId)) {
+        onClose();
+        return;
+      }
       if (initialOrder && initialOrder.id === orderId) {
         setOrder(initialOrder);
         setLoading(false);
@@ -114,8 +121,15 @@ export default function OrderDetailDrawer({ isOpen, onClose, orderId, initialOrd
         .update({ status: newStatus })
         .eq('id', orderId);
 
-      if (newStatus === 'cancelled' && order?.items && order.items.length > 0) {
-        await restoreStockForCancelledOrder(order.items);
+      if (newStatus === 'cancelled') {
+        if (order?.items && order.items.length > 0) {
+          await restoreStockForCancelledOrder(order.items);
+        }
+        sendOrderCancellationEmails({
+          ...order,
+          orderId: orderId,
+          status: 'cancelled'
+        });
       }
 
       const localSaved = JSON.parse(localStorage.getItem('customer_orders') || '[]');
@@ -126,6 +140,47 @@ export default function OrderDetailDrawer({ isOpen, onClose, orderId, initialOrd
       if (onStatusUpdated) onStatusUpdated();
     } catch (err) {
       console.error('Error updating order status:', err);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleShipWithShiprocket = async () => {
+    setIsUpdating(true);
+    try {
+      const headers = await getAdminAuthHeaders({ 'Content-Type': 'application/json' });
+      const res = await fetch('http://localhost:5000/api/admin/shipments', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ orderId })
+      });
+
+      if (res.ok) {
+        setOrder(prev => prev ? { ...prev, status: 'shipped' } : null);
+        if (onStatusUpdated) onStatusUpdated();
+      } else {
+        await updateOrderStatus('shipped');
+      }
+    } catch (e) {
+      await updateOrderStatus('shipped');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleDeleteOrder = async () => {
+    if (!order || !order.id) return;
+    const orderDisplayId = String(order.id).slice(0, 8).toUpperCase();
+    if (!window.confirm(`Permanently delete order #${orderDisplayId}?\nThis action cannot be undone.`)) return;
+
+    setIsUpdating(true);
+    try {
+      await deleteOrder(order.id);
+      onClose();
+      if (onStatusUpdated) onStatusUpdated();
+    } catch (err) {
+      console.error('Error deleting order:', err);
+      alert('Failed to delete order. Please try again.');
     } finally {
       setIsUpdating(false);
     }
@@ -155,15 +210,25 @@ export default function OrderDetailDrawer({ isOpen, onClose, orderId, initialOrd
               <h3 className="text-sm font-black text-white uppercase tracking-wider">Order Inspection</h3>
             </div>
             <p className="text-[10px] font-mono text-indigo-400 font-bold uppercase tracking-wider mt-0.5">
-              ID: #{orderId.slice(0, 8).toUpperCase()}
+              ID: #{String(orderId || '').slice(0, 8).toUpperCase()}
             </p>
           </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-xl border border-slate-800 bg-slate-900/60 hover:bg-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer"
-          >
-            <X className="h-4.5 w-4.5" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleDeleteOrder}
+              disabled={isUpdating}
+              title="Delete Order Permanently"
+              className="p-1.5 rounded-xl border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/25 text-rose-400 hover:text-rose-300 transition-colors cursor-pointer"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+            <button
+              onClick={onClose}
+              className="p-1.5 rounded-xl border border-slate-800 bg-slate-900/60 hover:bg-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer"
+            >
+              <X className="h-4.5 w-4.5" />
+            </button>
+          </div>
         </div>
 
         {/* Drawer Body */}
@@ -330,23 +395,33 @@ export default function OrderDetailDrawer({ isOpen, onClose, orderId, initialOrd
         {order && !loading && (
           <div className="p-4 sm:p-6 border-t border-slate-800/90 bg-[#090D16]/80 flex flex-col sm:flex-row gap-2.5 shrink-0">
             {order.status === 'pending' && (
-              <AdminButton
-                variant="success"
-                onClick={() => updateOrderStatus('confirmed')}
-                isLoading={isUpdating}
-                className="flex-1"
-              >
-                <CheckCircle2 className="h-4 w-4 mr-2" /> Confirm Order
-              </AdminButton>
+              <>
+                <AdminButton
+                  variant="success"
+                  onClick={() => updateOrderStatus('confirmed')}
+                  isLoading={isUpdating}
+                  className="flex-1"
+                >
+                  <CheckCircle2 className="h-4 w-4 mr-2" /> Confirm Order
+                </AdminButton>
+                <AdminButton
+                  variant="primary"
+                  onClick={handleShipWithShiprocket}
+                  isLoading={isUpdating}
+                  className="flex-1"
+                >
+                  <Truck className="h-4 w-4 mr-2" /> Ship with Shiprocket
+                </AdminButton>
+              </>
             )}
             {order.status === 'confirmed' && (
               <AdminButton
                 variant="primary"
-                onClick={() => updateOrderStatus('shipped')}
+                onClick={handleShipWithShiprocket}
                 isLoading={isUpdating}
                 className="flex-1"
               >
-                <Truck className="h-4 w-4 mr-2" /> Mark as Shipped
+                <Truck className="h-4 w-4 mr-2" /> Ship with Shiprocket
               </AdminButton>
             )}
             {order.status === 'shipped' && (

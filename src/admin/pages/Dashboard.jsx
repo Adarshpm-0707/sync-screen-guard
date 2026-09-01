@@ -21,6 +21,8 @@ import OrderDetailDrawer from '../components/orders/OrderDetailDrawer';
 import { supabase } from '../../supabaseClient';
 import { getAdminAuthHeaders } from '../utils/adminAuth';
 
+import { filterDeletedOrders } from '../../utils/orderManager';
+
 export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
@@ -37,6 +39,14 @@ export default function Dashboard() {
 
   useEffect(() => {
     fetchDashboardData();
+
+    const handleOrdersUpdated = () => {
+      fetchDashboardData();
+    };
+    window.addEventListener('orders_updated', handleOrdersUpdated);
+    return () => {
+      window.removeEventListener('orders_updated', handleOrdersUpdated);
+    };
   }, []);
 
   const fetchDashboardData = async () => {
@@ -54,7 +64,7 @@ export default function Dashboard() {
 
     if (fetchedData && fetchedData.stats) {
       setStats(fetchedData.stats);
-      setRecentOrders(fetchedData.recentOrders || []);
+      setRecentOrders(filterDeletedOrders(fetchedData.recentOrders || []));
       setSalesHistory(fetchedData.salesHistory || []);
     } else {
       // Direct Supabase + local calculation fallback
@@ -68,6 +78,8 @@ export default function Dashboard() {
           const newLocals = localSaved.filter(o => !existingIds.has(o.id));
           allOrders = [...newLocals, ...allOrders];
         }
+
+        allOrders = filterDeletedOrders(allOrders);
 
         const totalOrdersVal = allOrders.length;
         const pendingOrdersVal = allOrders.filter(o => o.status === 'pending').length;

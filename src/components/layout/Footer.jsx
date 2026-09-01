@@ -353,13 +353,7 @@ export default function Footer() {
             © {new Date().getFullYear()} Sync Screen Guard. All rights reserved.
           </p>
 
-          <div className="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-[11px] text-zinc-400 font-medium flex-wrap justify-center">
-            <span className="text-zinc-500">Secure Payments:</span>
-            <span className="px-2.5 py-1 bg-zinc-950 rounded-lg border border-zinc-800 text-white font-bold text-[9px] sm:text-[10px]">UPI</span>
-            <span className="px-2.5 py-1 bg-zinc-950 rounded-lg border border-zinc-800 text-white font-bold text-[9px] sm:text-[10px]">Cards</span>
-            <span className="px-2.5 py-1 bg-zinc-950 rounded-lg border border-zinc-800 text-white font-bold text-[9px] sm:text-[10px]">Razorpay</span>
-            <span className="px-2.5 py-1 bg-zinc-950 rounded-lg border border-zinc-800 text-emerald-400 font-bold text-[9px] sm:text-[10px]">COD</span>
-          </div>
+         
         </div>
 
       </div>

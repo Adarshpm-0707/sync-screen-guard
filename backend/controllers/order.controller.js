@@ -1,7 +1,13 @@
 import { supabaseAdmin } from '../supabase.js';
-import { mockOrders, mockOrderItems, isMockMode } from '../controllers/admin.controller.js';
+import { mockOrders, mockOrderItems, mockShipments, isMockMode } from '../controllers/admin.controller.js';
+import {
+  createShiprocketOrder,
+  cancelShiprocketOrder,
+  orderInFlightPromises,
+  orderShiprocketMap
+} from '../services/shiprocket.service.js';
 
-// Create a new customer order
+// Create a new customer order & automatically sync to Shiprocket
 export async function createOrder(req, res, next) {
   try {
     const {
@@ -13,6 +19,10 @@ export async function createOrder(req, res, next) {
       state,
       pincode,
       paymentMethod,
+      paymentStatus,
+      razorpay_payment_id,
+      razorpay_order_id,
+      razorpay_signature,
       total,
       codFee,
       items,
@@ -41,7 +51,10 @@ export async function createOrder(req, res, next) {
       pincode: pincode,
       status: 'pending',
       payment_type: paymentMethod || 'cod',
-      payment_status: paymentMethod === 'cod' ? 'pending' : 'success',
+      payment_status: paymentStatus || (paymentMethod === 'cod' ? 'pending' : 'success'),
+      razorpay_payment_id: razorpay_payment_id || null,
+      razorpay_order_id: razorpay_order_id || null,
+      razorpay_signature: razorpay_signature || null,
       total: parseFloat(total),
       cod_fee: parseFloat(codFee || 0),
       created_at: createdAt
@@ -62,6 +75,22 @@ export async function createOrder(req, res, next) {
           });
         });
       }
+
+      // Automatically push to Shiprocket in background
+      createShiprocketOrder(orderData, items).then(srResult => {
+        if (srResult?.success) {
+          mockShipments.unshift({
+            id: `ship-${Date.now()}`,
+            order_id: newOrderId,
+            shiprocket_order_id: srResult.shiprocket_order_id,
+            awb: srResult.awb,
+            status: 'dispatched',
+            courier_name: srResult.courier_name || 'Shiprocket Express',
+            tracking_url: srResult.tracking_url,
+            created_at: new Date().toISOString()
+          });
+        }
+      }).catch(e => console.warn('Background Shiprocket push notice:', e.message));
 
       return res.status(201).json({
         success: true,
@@ -85,7 +114,10 @@ export async function createOrder(req, res, next) {
         pincode: pincode,
         status: 'pending',
         payment_type: paymentMethod || 'cod',
-        payment_status: paymentMethod === 'cod' ? 'pending' : 'success',
+        payment_status: paymentStatus || (paymentMethod === 'cod' ? 'pending' : 'success'),
+        razorpay_payment_id: razorpay_payment_id || null,
+        razorpay_order_id: razorpay_order_id || null,
+        razorpay_signature: razorpay_signature || null,
         total: parseFloat(total),
         cod_fee: parseFloat(codFee || 0)
       })
@@ -108,6 +140,31 @@ export async function createOrder(req, res, next) {
       await supabaseAdmin.from('order_items').insert(orderItemsData);
     }
 
+    // 🚀 Automatically push the new order to Shiprocket!
+    const pushPromise = createShiprocketOrder(dbOrder, items).then(async (srResult) => {
+      if (srResult?.success) {
+        try {
+          await supabaseAdmin.from('shipments').insert({
+            order_id: realOrderId,
+            shiprocket_order_id: srResult.shiprocket_order_id,
+            awb: srResult.awb,
+            status: 'dispatched',
+            courier_name: srResult.courier_name || 'Shiprocket Express',
+            tracking_url: srResult.tracking_url
+          });
+          console.log(`🚚 [Shiprocket] Auto-linked shipment for Order #${realOrderId}`);
+        } catch (dbShipErr) {
+          console.warn('Could not record shipment in Supabase:', dbShipErr.message);
+        }
+      }
+    }).catch(err => {
+      console.warn('Automatic Shiprocket order push caught error:', err.message);
+    }).finally(() => {
+      orderInFlightPromises.delete(String(realOrderId));
+    });
+
+    orderInFlightPromises.set(String(realOrderId), pushPromise);
+
     res.status(201).json({
       success: true,
       orderId: realOrderId,
@@ -118,3 +175,124 @@ export async function createOrder(req, res, next) {
     next(err);
   }
 }
+
+// Cancel an order & automatically cancel it in Shiprocket dashboard
+export async function cancelOrder(req, res, next) {
+  try {
+    const { id } = req.params;
+    console.log(`\n🚫 [Cancel Order API] Processing customer cancellation for Order #${id}`);
+
+    if (isMockMode) {
+      const idx = mockOrders.findIndex(o => o.id === id);
+      if (idx !== -1) {
+        mockOrders[idx].status = 'cancelled';
+      }
+      const sIdx = mockShipments.findIndex(s => s.order_id === id);
+      if (sIdx !== -1) {
+        mockShipments[sIdx].status = 'cancelled';
+      }
+
+      // Try cancelling in live Shiprocket if shipment exists
+      const mockShipment = mockShipments.find(s => s.order_id === id);
+      if (mockShipment?.shiprocket_order_id || mockShipment?.awb) {
+        cancelShiprocketOrder({
+          orderId: id,
+          shiprocketOrderId: mockShipment.shiprocket_order_id,
+          awb: mockShipment.awb
+        }).catch(e => console.warn('Shiprocket cancellation notice:', e.message));
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: 'Order cancelled successfully and removed from Shiprocket.'
+      });
+    }
+
+    // Supabase Mode
+    // 1. Update order status to cancelled
+    const { data: updatedOrder, error: orderErr } = await supabaseAdmin
+      .from('orders')
+      .update({ status: 'cancelled' })
+      .eq('id', id)
+      .select()
+      .maybeSingle();
+
+    if (orderErr) {
+      console.warn('Could not update order status in DB:', orderErr.message);
+    }
+
+    // 2. Lookup shipment for this order to get Shiprocket IDs
+    const { data: shipment } = await supabaseAdmin
+      .from('shipments')
+      .select('shiprocket_order_id, awb')
+      .eq('order_id', id)
+      .maybeSingle();
+
+    // 3. 🚀 Trigger cancellation in Shiprocket Dashboard!
+    const srCancelResult = await cancelShiprocketOrder({
+      orderId: id,
+      shiprocketOrderId: shipment?.shiprocket_order_id,
+      awb: shipment?.awb
+    });
+
+    // 4. Update shipment status in database
+    await supabaseAdmin
+      .from('shipments')
+      .update({ status: 'cancelled' })
+      .eq('order_id', id);
+
+    console.log(`✅ [Cancel Order API] Order #${id} cancelled in DB & Shiprocket:`, srCancelResult);
+
+    res.status(200).json({
+      success: true,
+      message: 'Order cancelled successfully and removed from Shiprocket.',
+      shiprocket: srCancelResult
+    });
+  } catch (err) {
+    console.error('Error in cancelOrder API:', err);
+    next(err);
+  }
+}
+
+// Create a server-side Razorpay Order (official recommended live/production flow)
+export async function createRazorpayOrder(req, res, next) {
+  try {
+    const { amount, currency = 'INR', receipt } = req.body;
+    const keyId = process.env.RAZORPAY_KEY_ID || process.env.VITE_RAZORPAY_KEY_ID;
+    const keySecret = process.env.RAZORPAY_KEY_SECRET;
+
+    if (!keyId || !keySecret || keyId === 'rzp_test_placeholder') {
+      return res.status(400).json({
+        success: false,
+        message: 'Razorpay keys not configured. Please add your live RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in .env'
+      });
+    }
+
+    const Razorpay = (await import('razorpay')).default;
+    const instance = new Razorpay({
+      key_id: keyId,
+      key_secret: keySecret
+    });
+
+    const options = {
+      amount: Math.round(Number(amount) * 100), // in paise
+      currency,
+      receipt: receipt || `rcpt_${Date.now()}`
+    };
+
+    const razorpayOrder = await instance.orders.create(options);
+    return res.status(200).json({
+      success: true,
+      order: razorpayOrder,
+      keyId
+    });
+  } catch (err) {
+    console.error('Error in createRazorpayOrder API:', err);
+    return res.status(err.statusCode || 500).json({
+      success: false,
+      error: err.error?.description || err.message || 'Razorpay order creation failed. Please check your credentials.'
+    });
+  }
+}
+
+

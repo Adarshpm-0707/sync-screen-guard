@@ -179,6 +179,8 @@ const MIGRATION_SQL = [
   awb TEXT,
   status TEXT NOT NULL DEFAULT 'pending',
   tracking_url TEXT,
+  courier_name TEXT,
+  eta TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT timezone('utc',now()) NOT NULL
 )`
   },
@@ -187,6 +189,8 @@ const MIGRATION_SQL = [
   { label: 'Add category column', sql: `ALTER TABLE public.products ADD COLUMN IF NOT EXISTS category TEXT DEFAULT 'glass'` },
   { label: 'Add theme_color column', sql: `ALTER TABLE public.products ADD COLUMN IF NOT EXISTS theme_color TEXT DEFAULT 'blue'` },
   { label: 'Add is_guest column to orders', sql: `ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS is_guest BOOLEAN DEFAULT false` },
+  { label: 'Add courier_name column to shipments', sql: `ALTER TABLE public.shipments ADD COLUMN IF NOT EXISTS courier_name TEXT` },
+  { label: 'Add eta column to shipments', sql: `ALTER TABLE public.shipments ADD COLUMN IF NOT EXISTS eta TIMESTAMPTZ` },
 
   // Enable RLS
   { label: 'Enable RLS: products', sql: `ALTER TABLE public.products ENABLE ROW LEVEL SECURITY` },
@@ -205,19 +209,25 @@ const MIGRATION_SQL = [
   { label: 'Policy: orders INSERT', sql: `DROP POLICY IF EXISTS "Allow public order placement" ON public.orders; CREATE POLICY "Allow public order placement" ON public.orders FOR INSERT WITH CHECK (true)` },
   { label: 'Policy: orders SELECT (all)', sql: `DROP POLICY IF EXISTS "Allow admin to read all orders" ON public.orders; CREATE POLICY "Allow admin to read all orders" ON public.orders FOR SELECT USING (true)` },
   { label: 'Policy: orders UPDATE', sql: `DROP POLICY IF EXISTS "Allow admin to update orders" ON public.orders; CREATE POLICY "Allow admin to update orders" ON public.orders FOR UPDATE USING (true) WITH CHECK (true)` },
+  { label: 'Policy: orders DELETE', sql: `DROP POLICY IF EXISTS "Allow admin to delete orders" ON public.orders; CREATE POLICY "Allow admin to delete orders" ON public.orders FOR DELETE USING (true)` },
 
   // Order items policies
   { label: 'Policy: order_items INSERT', sql: `DROP POLICY IF EXISTS "Allow public order items creation" ON public.order_items; CREATE POLICY "Allow public order items creation" ON public.order_items FOR INSERT WITH CHECK (true)` },
   { label: 'Policy: order_items SELECT', sql: `DROP POLICY IF EXISTS "Allow read access to order items" ON public.order_items; CREATE POLICY "Allow read access to order items" ON public.order_items FOR SELECT USING (true)` },
+  { label: 'Policy: order_items UPDATE', sql: `DROP POLICY IF EXISTS "Allow update order items" ON public.order_items; CREATE POLICY "Allow update order items" ON public.order_items FOR UPDATE USING (true) WITH CHECK (true)` },
+  { label: 'Policy: order_items DELETE', sql: `DROP POLICY IF EXISTS "Allow delete order items" ON public.order_items; CREATE POLICY "Allow delete order items" ON public.order_items FOR DELETE USING (true)` },
 
   // Payments policies
   { label: 'Policy: payments INSERT', sql: `DROP POLICY IF EXISTS "Allow insert payments" ON public.payments; CREATE POLICY "Allow insert payments" ON public.payments FOR INSERT WITH CHECK (true)` },
   { label: 'Policy: payments SELECT', sql: `DROP POLICY IF EXISTS "Allow read payments" ON public.payments; CREATE POLICY "Allow read payments" ON public.payments FOR SELECT USING (true)` },
+  { label: 'Policy: payments UPDATE', sql: `DROP POLICY IF EXISTS "Allow update payments" ON public.payments; CREATE POLICY "Allow update payments" ON public.payments FOR UPDATE USING (true) WITH CHECK (true)` },
+  { label: 'Policy: payments DELETE', sql: `DROP POLICY IF EXISTS "Allow delete payments" ON public.payments; CREATE POLICY "Allow delete payments" ON public.payments FOR DELETE USING (true)` },
 
   // Shipments policies
   { label: 'Policy: shipments SELECT', sql: `DROP POLICY IF EXISTS "Allow read shipments" ON public.shipments; CREATE POLICY "Allow read shipments" ON public.shipments FOR SELECT USING (true)` },
   { label: 'Policy: shipments INSERT', sql: `DROP POLICY IF EXISTS "Allow insert shipments" ON public.shipments; CREATE POLICY "Allow insert shipments" ON public.shipments FOR INSERT WITH CHECK (true)` },
   { label: 'Policy: shipments UPDATE', sql: `DROP POLICY IF EXISTS "Allow update shipments" ON public.shipments; CREATE POLICY "Allow update shipments" ON public.shipments FOR UPDATE USING (true) WITH CHECK (true)` },
+  { label: 'Policy: shipments DELETE', sql: `DROP POLICY IF EXISTS "Allow delete shipments" ON public.shipments; CREATE POLICY "Allow delete shipments" ON public.shipments FOR DELETE USING (true)` },
 
   // Grants
   { label: 'Grant: products', sql: `GRANT SELECT,INSERT,UPDATE,DELETE ON public.products TO anon,authenticated` },

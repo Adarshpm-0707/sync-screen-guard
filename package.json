@@ -11,7 +11,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "start": "node server.js",
-    "db:migrate": "node backend/db-migrate.js",
+    "db:migrate": "node backend/auto-migrate.cjs",
     "db:setup": "node setup-database.cjs"
   },
   "dependencies": {

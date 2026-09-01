@@ -12,13 +12,16 @@ import {
   Phone,
   Mail,
   PackageCheck,
-  Calendar
+  Calendar,
+  Trash2
 } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import { restoreStockForCancelledOrder } from '../../utils/stockManager';
 import OrderStatusBadge from '../components/orders/OrderStatusBadge';
 import AdminButton from '../components/common/AdminButton';
 import { getAdminAuthHeaders } from '../utils/adminAuth';
+import { deleteOrder, isOrderDeleted } from '../../utils/orderManager';
+import { sendOrderCancellationEmails } from '../../utils/orderEmailNotification';
 
 export default function OrderDetail() {
   const { id } = useParams();
@@ -28,10 +31,18 @@ export default function OrderDetail() {
   const [isUpdating, setIsUpdating] = useState(false);
 
   useEffect(() => {
+    if (isOrderDeleted(id)) {
+      navigate('/admin/orders');
+      return;
+    }
     fetchOrderDetail();
   }, [id]);
 
   const fetchOrderDetail = async () => {
+    if (isOrderDeleted(id)) {
+      navigate('/admin/orders');
+      return;
+    }
     setLoading(true);
     try {
       const headers = await getAdminAuthHeaders();
@@ -46,11 +57,11 @@ export default function OrderDetail() {
         }
       } catch (e) {}
 
-      if (fetched && fetched.id) {
+      if (fetched && fetched.id && !isOrderDeleted(fetched.id)) {
         setOrder(fetched);
       } else {
         const { data: dbOrder } = await supabase.from('orders').select('*').eq('id', id).maybeSingle();
-        if (dbOrder) {
+        if (dbOrder && !isOrderDeleted(dbOrder.id)) {
           const { data: dbItems } = await supabase.from('order_items').select('*').eq('order_id', id);
           setOrder({
             ...dbOrder,
@@ -62,6 +73,22 @@ export default function OrderDetail() {
       console.error('Error fetching order details:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteOrder = async () => {
+    if (!order || !order.id) return;
+    const orderDisplayId = String(order.id).slice(0, 8).toUpperCase();
+    if (!window.confirm(`Permanently delete order #${orderDisplayId}?\nThis action cannot be undone.`)) return;
+
+    setIsUpdating(true);
+    try {
+      await deleteOrder(order.id);
+      navigate('/admin/orders');
+    } catch (err) {
+      console.error('Error deleting order:', err);
+      alert('Failed to delete order. Please try again.');
+      setIsUpdating(false);
     }
   };
 
@@ -83,8 +110,15 @@ export default function OrderDetail() {
         .update({ status: newStatus })
         .eq('id', id);
 
-      if (newStatus === 'cancelled' && order?.items && order.items.length > 0) {
-        await restoreStockForCancelledOrder(order.items);
+      if (newStatus === 'cancelled') {
+        if (order?.items && order.items.length > 0) {
+          await restoreStockForCancelledOrder(order.items);
+        }
+        sendOrderCancellationEmails({
+          ...order,
+          orderId: id,
+          status: 'cancelled'
+        });
       }
 
       const localSaved = JSON.parse(localStorage.getItem('customer_orders') || '[]');
@@ -116,7 +150,7 @@ export default function OrderDetail() {
           </button>
           <div className="flex items-center space-x-3">
             <h1 className="font-display text-xl sm:text-2xl font-black text-white uppercase">
-              Order Audit #{id?.slice(0, 8).toUpperCase()}
+              Order Audit #{String(id || '').slice(0, 8).toUpperCase()}
             </h1>
           </div>
           <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
@@ -127,6 +161,15 @@ export default function OrderDetail() {
         {order && (
           <div className="flex items-center space-x-3 self-start sm:self-center">
             <OrderStatusBadge status={order.status} />
+            <button
+              onClick={handleDeleteOrder}
+              disabled={isUpdating}
+              title="Delete Order Permanently"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 text-xs font-bold transition-all cursor-pointer shadow-sm active:scale-95"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              <span>Delete</span>
+            </button>
           </div>
         )}
       </div>

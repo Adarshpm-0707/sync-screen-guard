@@ -107,6 +107,7 @@ ON public.products FOR DELETE
 USING (true);
 
 -- Orders
+-- Orders
 DROP POLICY IF EXISTS "Allow public order placement" ON public.orders;
 CREATE POLICY "Allow public order placement"
 ON public.orders FOR INSERT
@@ -115,10 +116,18 @@ WITH CHECK (true);
 DROP POLICY IF EXISTS "Allow users to read own orders" ON public.orders;
 CREATE POLICY "Allow users to read own orders"
 ON public.orders FOR SELECT
-USING (
-    (auth.uid() IS NOT NULL AND user_id = auth.uid()) OR
-    (auth.uid() IS NULL)
-);
+USING (true);
+
+DROP POLICY IF EXISTS "Allow admin update orders" ON public.orders;
+CREATE POLICY "Allow admin update orders"
+ON public.orders FOR UPDATE
+USING (true)
+WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow admin delete orders" ON public.orders;
+CREATE POLICY "Allow admin delete orders"
+ON public.orders FOR DELETE
+USING (true);
 
 -- Order Items
 DROP POLICY IF EXISTS "Allow public order items creation" ON public.order_items;
@@ -129,6 +138,17 @@ WITH CHECK (true);
 DROP POLICY IF EXISTS "Allow read access to order items" ON public.order_items;
 CREATE POLICY "Allow read access to order items"
 ON public.order_items FOR SELECT
+USING (true);
+
+DROP POLICY IF EXISTS "Allow update order items" ON public.order_items;
+CREATE POLICY "Allow update order items"
+ON public.order_items FOR UPDATE
+USING (true)
+WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow delete order items" ON public.order_items;
+CREATE POLICY "Allow delete order items"
+ON public.order_items FOR DELETE
 USING (true);
 
 -- Payments
@@ -142,10 +162,37 @@ CREATE POLICY "Allow read payments"
 ON public.payments FOR SELECT
 USING (true);
 
+DROP POLICY IF EXISTS "Allow update payments" ON public.payments;
+CREATE POLICY "Allow update payments"
+ON public.payments FOR UPDATE
+USING (true)
+WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow delete payments" ON public.payments;
+CREATE POLICY "Allow delete payments"
+ON public.payments FOR DELETE
+USING (true);
+
 -- Shipments
 DROP POLICY IF EXISTS "Allow read shipments" ON public.shipments;
 CREATE POLICY "Allow read shipments"
 ON public.shipments FOR SELECT
+USING (true);
+
+DROP POLICY IF EXISTS "Allow insert shipments" ON public.shipments;
+CREATE POLICY "Allow insert shipments"
+ON public.shipments FOR INSERT
+WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow update shipments" ON public.shipments;
+CREATE POLICY "Allow update shipments"
+ON public.shipments FOR UPDATE
+USING (true)
+WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow delete shipments" ON public.shipments;
+CREATE POLICY "Allow delete shipments"
+ON public.shipments FOR DELETE
 USING (true);
 
 -- ====================================================

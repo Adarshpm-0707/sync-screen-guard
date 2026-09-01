@@ -78,8 +78,9 @@ export default function OrderSuccess() {
       city: orderInfo?.city || 'Bengaluru',
       state: orderInfo?.state || 'Karnataka',
       pincode: orderInfo?.pincode || '560001',
-      payment_type: orderInfo?.payment_type || 'online',
+      payment_type: orderInfo?.payment_type || (state?.paymentId ? 'razorpay' : 'online'),
       payment_status: orderInfo?.payment_status || 'success',
+      razorpay_payment_id: state?.paymentId || orderInfo?.razorpay_payment_id || null,
       cod_fee: orderInfo?.cod_fee || 0,
       date: orderDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
       time: orderDate.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }),
@@ -335,7 +336,11 @@ export default function OrderSuccess() {
                         ? 'bg-amber-100 text-amber-900 border border-amber-300' 
                         : 'bg-emerald-100 text-emerald-900 border border-emerald-300'
                     }`}>
-                      {orderData.payment_type === 'cod' ? 'COD (PAY ON DELIVERY)' : 'PAID (ONLINE)'}
+                      {orderData.payment_type === 'cod' 
+                        ? 'COD (PAY ON DELIVERY)' 
+                        : orderData.razorpay_payment_id 
+                          ? `PAID (RAZORPAY: ${orderData.razorpay_payment_id.slice(-8)})` 
+                          : 'PAID (ONLINE)'}
                     </span>
                   </div>
 

@@ -34,32 +34,36 @@ export default function Checkout() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
 
-  // Auto-fill logged in customer data
+  // Auto-fill logged in or guest customer data
   useEffect(() => {
-    if (customer) {
-      setFormData((prev) => ({
-        ...prev,
-        name: prev.name || customer.user_metadata?.full_name || customer.name || (customer.email ? customer.email.split('@')[0] : ''),
-        email: prev.email || customer.email || '',
-      }));
-    }
+    let localUser = null;
+    try {
+      const localUserStr = localStorage.getItem('local_customer_user');
+      if (localUserStr) localUser = JSON.parse(localUserStr);
+    } catch (e) {}
 
+    const activeUser = customer || localUser;
+    const resolvedName = activeUser?.name || activeUser?.full_name || activeUser?.user_metadata?.full_name || activeUser?.user_metadata?.name || '';
+    const resolvedEmail = activeUser?.email || '';
+
+    let previousOrder = null;
     try {
       const existingLocals = JSON.parse(localStorage.getItem('customer_orders') || '[]');
       if (existingLocals.length > 0) {
-        const latest = existingLocals[0];
-        setFormData((prev) => ({
-          ...prev,
-          name: prev.name || latest.customer_name || '',
-          email: prev.email || latest.customer_email || '',
-          phone: prev.phone || latest.phone || '',
-          address: prev.address || latest.address || '',
-          city: prev.city || latest.city || '',
-          state: prev.state || latest.state || '',
-          pincode: prev.pincode || latest.pincode || '',
-        }));
+        previousOrder = existingLocals[0];
       }
     } catch (e) {}
+
+    setFormData((prev) => ({
+      ...prev,
+      name: resolvedName || prev.name || previousOrder?.customer_name || '',
+      email: resolvedEmail || prev.email || previousOrder?.customer_email || '',
+      phone: prev.phone || previousOrder?.phone || '',
+      address: prev.address || previousOrder?.address || '',
+      city: prev.city || previousOrder?.city || '',
+      state: prev.state || previousOrder?.state || '',
+      pincode: prev.pincode || previousOrder?.pincode || '',
+    }));
   }, [customer]);
 
   if (cart.length === 0) {
@@ -77,11 +81,10 @@ export default function Checkout() {
     );
   }
 
-  const codRate = storeSettings?.cod_fee !== undefined ? Number(storeSettings.cod_fee) : 50;
+  const codRate = storeSettings?.cod_fee !== undefined ? Number(storeSettings.cod_fee) : 0;
   const codEnabled = storeSettings?.cod_enabled !== undefined ? Boolean(storeSettings.cod_enabled) : true;
   const codFee = (paymentMethod === 'cod' && codEnabled) ? codRate : 0;
   const orderTotal = cartTotal + codFee;
-
 
   const validateStep1 = () => {
     const newErrors = {};
@@ -118,14 +121,24 @@ export default function Checkout() {
     else if (step === 2 && validateStep2()) setCurrentStep(3);
   };
 
-  const handleSubmit = async () => {
-    if (!validateStep1() || !validateStep2()) {
-      setIsSubmitting(false);
-      return;
-    }
+  // Helper to dynamically load Razorpay Checkout script
+  const loadRazorpayScript = () => {
+    return new Promise((resolve) => {
+      if (window.Razorpay) {
+        resolve(true);
+        return;
+      }
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.async = true;
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
 
-    setIsSubmitting(true);
-
+  // Order Placement Processor (called for COD or after successful Razorpay payment)
+  const completeOrderPlacement = async (paymentDetails = { payment_type: 'cod', payment_status: 'pending' }) => {
     try {
       // 1. Get current auth/local user session
       const { data: { session } } = await supabase.auth.getSession();
@@ -136,17 +149,25 @@ export default function Checkout() {
       const effectiveUser = customer || session?.user || localUser;
       const isGuest = !isLoggedIn || !effectiveUser || Boolean(effectiveUser.is_guest);
       const userId = (!isGuest && effectiveUser?.id && !effectiveUser.id.startsWith('guest-')) ? effectiveUser.id : null;
-      const customerEmail = effectiveUser?.email || formData.email.trim();
+      const customerEmail = formData.email.trim() || effectiveUser?.email || '';
+      const customerName = formData.name.trim() || effectiveUser?.name || effectiveUser?.full_name || 'Customer';
+
+      const chosenPaymentType = paymentDetails.payment_type || paymentMethod;
+      const chosenPaymentStatus = paymentDetails.payment_status || (chosenPaymentType === 'cod' ? 'pending' : 'success');
 
       const orderPayload = {
-        name: formData.name.trim(),
+        name: customerName,
         email: customerEmail,
         phone: formData.phone.trim(),
         address: formData.address.trim(),
         city: formData.city.trim(),
         state: formData.state.trim(),
         pincode: formData.pincode.trim(),
-        paymentMethod,
+        paymentMethod: chosenPaymentType,
+        paymentStatus: chosenPaymentStatus,
+        razorpay_payment_id: paymentDetails.razorpay_payment_id || null,
+        razorpay_order_id: paymentDetails.razorpay_order_id || null,
+        razorpay_signature: paymentDetails.razorpay_signature || null,
         total: orderTotal,
         codFee,
         items: cart,
@@ -179,7 +200,7 @@ export default function Checkout() {
             .insert({
               user_id: userId,
               is_guest: isGuest,
-              customer_name: formData.name.trim(),
+              customer_name: customerName,
               customer_email: customerEmail || null,
               phone: formData.phone.trim(),
               address: formData.address.trim(),
@@ -187,8 +208,11 @@ export default function Checkout() {
               state: formData.state.trim(),
               pincode: formData.pincode.trim(),
               status: 'pending',
-              payment_type: paymentMethod,
-              payment_status: paymentMethod === 'cod' ? 'pending' : 'success',
+              payment_type: chosenPaymentType,
+              payment_status: chosenPaymentStatus,
+              razorpay_payment_id: paymentDetails.razorpay_payment_id || null,
+              razorpay_order_id: paymentDetails.razorpay_order_id || null,
+              razorpay_signature: paymentDetails.razorpay_signature || null,
               total: orderTotal,
               cod_fee: codFee
             })
@@ -202,6 +226,7 @@ export default function Checkout() {
               const orderItemsData = cart.map(item => ({
                 order_id: dbOrder.id,
                 product_id: item.id && item.id.length === 36 ? item.id : 'a3c7849e-b7d1-41f2-892a-fa82f2541a7d',
+                product_name: item.name,
                 quantity: item.quantity,
                 price: item.price
               }));
@@ -230,8 +255,9 @@ export default function Checkout() {
         state: formData.state.trim(),
         pincode: formData.pincode.trim(),
         status: 'pending',
-        payment_type: paymentMethod,
-        payment_status: paymentMethod === 'cod' ? 'pending' : 'success',
+        payment_type: chosenPaymentType,
+        payment_status: chosenPaymentStatus,
+        razorpay_payment_id: paymentDetails.razorpay_payment_id || null,
         total: orderTotal,
         cod_fee: codFee,
         is_guest: isGuest,
@@ -253,13 +279,120 @@ export default function Checkout() {
       navigate('/success', { 
         state: { 
           orderId: createdOrderId, 
-          amount: orderTotal,
-          order: localOrderObj 
+          amount: orderTotal, 
+          order: localOrderObj,
+          paymentId: paymentDetails.razorpay_payment_id || null
         } 
       });
     } catch (err) {
       console.error('Order submission error:', err);
       setIsSubmitting(false);
+      alert('There was an issue processing your order. Please try again.');
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!validateStep1() || !validateStep2()) {
+      setIsSubmitting(false);
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    if (paymentMethod === 'razorpay') {
+      const isLoaded = await loadRazorpayScript();
+      if (!isLoaded) {
+        setIsSubmitting(false);
+        alert('Razorpay payment gateway script could not be loaded. Please check your internet connection.');
+        return;
+      }
+
+      let razorpayOrderId = null;
+      let effectiveKeyId = import.meta.env.VITE_RAZORPAY_KEY_ID || storeSettings?.razorpay_key_id || 'rzp_live_TWkmVWiZfERb3p';
+
+      // 1. Try creating official Razorpay Order from backend (recommended for live mode)
+      try {
+        const orderRes = await fetch('http://localhost:5000/api/orders/razorpay/create-order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            amount: orderTotal,
+            currency: 'INR',
+            receipt: `rcpt_${Date.now()}`
+          })
+        });
+
+        if (orderRes.ok) {
+          const apiOrder = await orderRes.json();
+          if (apiOrder?.order?.id) {
+            razorpayOrderId = apiOrder.order.id;
+            if (apiOrder.keyId) effectiveKeyId = apiOrder.keyId;
+          }
+        }
+      } catch (err) {
+        console.warn('Backend Razorpay order creation notice, falling back to direct client checkout:', err);
+      }
+
+      const options = {
+        key: effectiveKeyId,
+        amount: Math.round(orderTotal * 100), // amount in paise
+        currency: 'INR',
+        name: 'Sync Screen Guard',
+        description: `Order Payment (${cart.length} item${cart.length > 1 ? 's' : ''})`,
+        prefill: {
+          name: formData.name.trim(),
+          email: formData.email.trim(),
+          contact: formData.phone.trim()
+        },
+        notes: {
+          delivery_address: [formData.address, formData.city, formData.state, formData.pincode].filter(Boolean).join(', ')
+        },
+        theme: {
+          color: '#09090b'
+        },
+        modal: {
+          ondismiss: () => {
+            setIsSubmitting(false);
+          }
+        },
+        handler: async function (response) {
+          await completeOrderPlacement({
+            payment_type: 'razorpay',
+            payment_status: 'success',
+            razorpay_payment_id: response.razorpay_payment_id,
+            razorpay_order_id: response.razorpay_order_id || razorpayOrderId || null,
+            razorpay_signature: response.razorpay_signature || null
+          });
+        }
+      };
+
+      if (razorpayOrderId) {
+        options.order_id = razorpayOrderId;
+      }
+
+      try {
+        const rzp = new window.Razorpay(options);
+        rzp.on('payment.failed', function (response) {
+          setIsSubmitting(false);
+          const errorMsg = response.error?.description || response.error?.reason || 'Transaction could not be completed.';
+          if (errorMsg.toLowerCase().includes('auth') || errorMsg.toLowerCase().includes('key') || response.error?.code === 'BAD_REQUEST_ERROR') {
+            alert(`Razorpay Gateway Notice:\n${errorMsg}\n\nPlease add your valid live Razorpay Key ID (rzp_live_...) & Secret in your .env file or Admin Settings.`);
+          } else {
+            alert(`Payment Failed: ${errorMsg}`);
+          }
+        });
+        rzp.open();
+      } catch (err) {
+        console.error('Error opening Razorpay checkout modal:', err);
+        setIsSubmitting(false);
+        alert('Failed to initialize Razorpay checkout. Please check your Key ID or choose Cash on Delivery.');
+      }
+    } else {
+      // Cash on delivery
+      await completeOrderPlacement({
+        payment_type: 'cod',
+        payment_status: 'pending'
+      });
     }
   };
 
@@ -298,19 +431,45 @@ export default function Checkout() {
               <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center justify-between shadow-xs">
                 <div className="flex items-center gap-2.5 text-xs text-emerald-950 font-medium">
                   <div className="h-7 w-7 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-xs">
-                    {customer?.email ? customer.email.charAt(0).toUpperCase() : 'C'}
+                    {customer?.name ? customer.name.charAt(0).toUpperCase() : (customer?.email ? customer.email.charAt(0).toUpperCase() : 'C')}
                   </div>
                   <div>
                     <p className="font-bold text-zinc-900 leading-tight">
-                      Logged in as <span className="text-emerald-700">{customer?.email}</span>
+                      Signed in as <span className="text-emerald-700 font-extrabold">{customer?.name || customer?.email}</span>
                     </p>
-                    <p className="text-[10px] text-zinc-500 font-medium">Your shipping & tracking details are linked to your Sync account.</p>
+                    <p className="text-[10px] text-zinc-500 font-medium">Your shipping & tracking details are linked to your Sync account ({customer?.email}).</p>
                   </div>
                 </div>
                 <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wider text-emerald-700 bg-white border border-emerald-200 px-2.5 py-1 rounded-full shadow-2xs">
                   <CheckCircle className="h-3 w-3 text-emerald-600" />
-                  Verified
+                  Verified Account
                 </span>
+              </div>
+            ) : customer?.is_guest ? (
+              <div className="p-4 bg-zinc-50 border border-zinc-200 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+                <div className="flex items-center gap-2.5 text-xs text-zinc-800 font-medium">
+                  <div className="h-7 w-7 rounded-full bg-zinc-900 text-white flex items-center justify-center font-bold text-xs">
+                    {customer?.name ? customer.name.charAt(0).toUpperCase() : 'G'}
+                  </div>
+                  <div>
+                    <p className="font-bold text-zinc-900 leading-tight">
+                      Guest Checkout: <span className="text-zinc-900 font-extrabold">{customer?.name}</span> ({customer?.email})
+                    </p>
+                    <p className="text-[10px] text-zinc-500 font-medium">Name and email loaded. You can also sign in to permanently save your address.</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => openAuthModal({ 
+                    mode: 'signin', 
+                    redirectTo: '/checkout',
+                    title: 'Sign In to Sync',
+                    subtitle: 'Sign in to auto-fill your shipping address and link your order'
+                  })}
+                  className="px-3.5 py-1.5 bg-white border border-zinc-300 hover:bg-zinc-100 text-zinc-900 text-[11px] font-bold uppercase tracking-wider rounded-xl transition-all shadow-2xs cursor-pointer shrink-0"
+                >
+                  Sign In to Account
+                </button>
               </div>
             ) : (
               <div className="p-4 bg-white border border-zinc-200 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">

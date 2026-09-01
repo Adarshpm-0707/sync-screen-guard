@@ -40,15 +40,14 @@ export default function CustomerAuthModal({
   const navigate = useNavigate();
   const location = useLocation();
   const [authMode, setAuthMode] = useState(initialMode); // 'signin' | 'signup' | 'guest'
+  const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [guestName, setGuestName] = useState('');
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
-  const [info, setInfo] = useState('');
 
   if (!isOpen && !isPage) return null;
 
@@ -70,14 +69,13 @@ export default function CustomerAuthModal({
   const handleGoogleSignIn = async () => {
     setError('');
     setMessage('');
-    setInfo('');
     setGoogleLoading(true);
 
     try {
       if (targetRedirect) {
         sessionStorage.setItem('auth_redirect_target', targetRedirect);
       }
-      const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
+      const { error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: window.location.origin,
@@ -97,18 +95,30 @@ export default function CustomerAuthModal({
   const handleGuestProceed = (e) => {
     e?.preventDefault();
     setError('');
+
+    const cleanName = fullName.trim();
     const cleanEmail = email.trim();
-    const cleanName = guestName.trim() || 'Guest Customer';
+
+    if (!cleanName) {
+      setError('Please enter your full name to continue as Guest.');
+      return;
+    }
+
+    if (!cleanEmail || !/\S+@\S+\.\S+/.test(cleanEmail)) {
+      setError('Please enter a valid email address for your order invoice.');
+      return;
+    }
 
     const guestUser = {
       id: 'guest-' + Date.now(),
-      email: cleanEmail || 'guest@syncarmor.in',
+      email: cleanEmail,
       name: cleanName,
+      full_name: cleanName,
       is_guest: true
     };
 
     localStorage.setItem('local_customer_user', JSON.stringify(guestUser));
-    setMessage('Continuing as Guest...');
+    setMessage('Guest details saved! Proceeding to checkout...');
     if (onAuthSuccess) onAuthSuccess(guestUser);
     setTimeout(() => {
       executeRedirect();
@@ -119,14 +129,30 @@ export default function CustomerAuthModal({
     e.preventDefault();
     setError('');
     setMessage('');
-    setInfo('');
 
     if (authMode === 'guest') {
       return handleGuestProceed(e);
     }
 
-    setLoading(true);
     const cleanEmail = email.trim();
+    const cleanName = fullName.trim();
+
+    if (authMode === 'signup' && !cleanName) {
+      setError('Please enter your full name to create an account.');
+      return;
+    }
+
+    if (!cleanEmail || !/\S+@\S+\.\S+/.test(cleanEmail)) {
+      setError('Please enter a valid email address.');
+      return;
+    }
+
+    if (!password || password.length < 6) {
+      setError('Password must be at least 6 characters long.');
+      return;
+    }
+
+    setLoading(true);
 
     try {
       if (authMode === 'signup') {
@@ -137,6 +163,12 @@ export default function CustomerAuthModal({
           const { data, error: signUpError } = await supabase.auth.signUp({
             email: cleanEmail,
             password,
+            options: {
+              data: {
+                full_name: cleanName,
+                name: cleanName
+              }
+            }
           });
 
           if (signUpError) {
@@ -158,31 +190,22 @@ export default function CustomerAuthModal({
           authError = err;
         }
 
-        if (customerUser) {
-          const formattedUser = { ...customerUser, is_guest: false };
-          localStorage.setItem('local_customer_user', JSON.stringify(formattedUser));
-          setMessage('Account registered! Proceeding...');
-          if (onAuthSuccess) onAuthSuccess(formattedUser);
-          setTimeout(() => {
-            executeRedirect();
-          }, 600);
-        } else if (authError) {
-          const fallbackUser = { id: 'cust-' + Date.now(), email: cleanEmail, is_guest: false };
-          localStorage.setItem('local_customer_user', JSON.stringify(fallbackUser));
-          setMessage('Signed in! Proceeding...');
-          if (onAuthSuccess) onAuthSuccess(fallbackUser);
-          setTimeout(() => {
-            executeRedirect();
-          }, 600);
-        } else {
-          const fallbackUser = { id: 'cust-' + Date.now(), email: cleanEmail, is_guest: false };
-          localStorage.setItem('local_customer_user', JSON.stringify(fallbackUser));
-          setMessage('Signed in! Proceeding...');
-          if (onAuthSuccess) onAuthSuccess(fallbackUser);
-          setTimeout(() => {
-            executeRedirect();
-          }, 600);
-        }
+        const resolvedName = cleanName || customerUser?.user_metadata?.full_name || 'Customer';
+        const formattedUser = {
+          ...(customerUser || {}),
+          id: customerUser?.id || ('cust-' + Date.now()),
+          email: cleanEmail,
+          name: resolvedName,
+          full_name: resolvedName,
+          is_guest: false
+        };
+
+        localStorage.setItem('local_customer_user', JSON.stringify(formattedUser));
+        setMessage('Account registered! Proceeding...');
+        if (onAuthSuccess) onAuthSuccess(formattedUser);
+        setTimeout(() => {
+          executeRedirect();
+        }, 600);
       } else {
         // Sign In mode
         let customerUser = null;
@@ -204,7 +227,14 @@ export default function CustomerAuthModal({
         }
 
         if (customerUser) {
-          const formattedUser = { ...customerUser, is_guest: false };
+          const userMeta = customerUser.user_metadata || {};
+          const resolvedName = userMeta.full_name || userMeta.name || (cleanEmail.split('@')[0]);
+          const formattedUser = { 
+            ...customerUser, 
+            name: resolvedName,
+            full_name: resolvedName,
+            is_guest: false 
+          };
           localStorage.setItem('local_customer_user', JSON.stringify(formattedUser));
           setMessage('Welcome back! Proceeding...');
           if (onAuthSuccess) onAuthSuccess(formattedUser);
@@ -264,16 +294,16 @@ export default function CustomerAuthModal({
               ? (isPurchasingFlow ? 'Register & Purchase' : 'Create Account')
               : authMode === 'signin' 
                 ? (isPurchasingFlow ? 'Sign In to Purchase' : 'Welcome Back')
-                : 'Guest Checkout'
+                : (isPurchasingFlow ? 'Guest Checkout' : 'Guest Sign In')
           )}
         </h2>
         <p className="text-xs text-zinc-500 mt-1 font-medium">
           {customSubtitle || (
             authMode === 'signup' 
-              ? 'Sign up to track orders, save shipping info & complete your purchase.'
+              ? 'Enter your name, email & password to create an account and purchase.'
               : authMode === 'signin' 
-                ? 'Sign in to access your saved details and proceed directly to purchase.'
-                : 'Buy screen protectors quickly without setting a password.'
+                ? 'Sign in to access your saved address and proceed directly to purchase.'
+                : 'Enter your name and email to proceed quickly to checkout without a password.'
           )}
         </p>
       </div>
@@ -356,40 +386,55 @@ export default function CustomerAuthModal({
 
       {/* Form */}
       <form onSubmit={handleSubmit} className="space-y-4">
-        {authMode === 'guest' && (
+        {/* Full Name for Guest and Register Modes */}
+        {(authMode === 'guest' || authMode === 'signup') && (
           <div className="space-y-1">
-            <label className="text-[11px] font-bold uppercase tracking-wider text-zinc-700">Full Name (Optional)</label>
+            <label className="text-[11px] font-bold uppercase tracking-wider text-zinc-700">
+              Full Name <span className="text-red-500">*</span>
+            </label>
             <div className="relative">
               <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
               <input
                 type="text"
-                placeholder="John Doe"
-                value={guestName}
-                onChange={(e) => setGuestName(e.target.value)}
+                required
+                placeholder="e.g. Rahul Sharma"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
                 className="w-full rounded-xl bg-zinc-50 border border-zinc-200 pl-10 pr-4 py-2.5 text-xs font-semibold text-zinc-900 focus:border-zinc-900 focus:outline-none"
               />
             </div>
           </div>
         )}
 
+        {/* Email Address for All Modes */}
         <div className="space-y-1">
-          <label className="text-[11px] font-bold uppercase tracking-wider text-zinc-700">Email Address *</label>
+          <label className="text-[11px] font-bold uppercase tracking-wider text-zinc-700">
+            Email Address <span className="text-red-500">*</span>
+          </label>
           <div className="relative">
             <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
             <input
               type="email"
-              required={authMode !== 'guest'}
+              required
               placeholder="you@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full rounded-xl bg-zinc-50 border border-zinc-200 pl-10 pr-4 py-2.5 text-xs font-semibold text-zinc-900 focus:border-zinc-900 focus:outline-none"
             />
           </div>
+          {authMode === 'guest' && (
+            <p className="text-[10px] text-zinc-400 font-medium pt-0.5">
+              Order confirmation, invoice and tracking link will be sent to this email.
+            </p>
+          )}
         </div>
 
+        {/* Password for Sign In and Register */}
         {authMode !== 'guest' && (
           <div className="space-y-1">
-            <label className="text-[11px] font-bold uppercase tracking-wider text-zinc-700">Password *</label>
+            <label className="text-[11px] font-bold uppercase tracking-wider text-zinc-700">
+              Password <span className="text-red-500">*</span>
+            </label>
             <div className="relative">
               <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
               <input
@@ -423,9 +468,9 @@ export default function CustomerAuthModal({
           ) : authMode === 'signin' ? (
             isPurchasingFlow ? 'Sign In & Continue to Purchase' : 'Sign In to Sync'
           ) : (
-            'Proceed to Checkout'
+            isPurchasingFlow ? 'Proceed to Checkout as Guest' : 'Continue as Guest'
           )}
-          {!loading && isPurchasingFlow && <ArrowRight className="h-4 w-4" />}
+          {!loading && <ArrowRight className="h-4 w-4" />}
         </button>
       </form>
 

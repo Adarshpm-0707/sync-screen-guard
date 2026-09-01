@@ -5,6 +5,7 @@ import AdminTable from '../components/common/AdminTable';
 import AdminButton from '../components/common/AdminButton';
 import { supabase } from '../../supabaseClient';
 import { getAdminAuthHeaders } from '../utils/adminAuth';
+import { filterDeletedOrders, getDeletedOrderIdsSet } from '../../utils/orderManager';
 
 export default function Shipments() {
   const [loading, setLoading] = useState(true);
@@ -14,6 +15,14 @@ export default function Shipments() {
 
   useEffect(() => {
     fetchShipmentData();
+
+    const handleOrdersUpdated = () => {
+      fetchShipmentData();
+    };
+    window.addEventListener('orders_updated', handleOrdersUpdated);
+    return () => {
+      window.removeEventListener('orders_updated', handleOrdersUpdated);
+    };
   }, []);
 
   const fetchShipmentData = async () => {
@@ -37,6 +46,10 @@ export default function Shipments() {
         const { data: dbShipments } = await supabase.from('shipments').select('*');
         fetchedShipments = dbShipments || [];
       }
+
+      // Filter out shipments for deleted orders
+      const deletedIds = getDeletedOrderIdsSet();
+      fetchedShipments = fetchedShipments.filter(s => s && s.order_id && !deletedIds.has(String(s.order_id)));
 
       let allOrders = [];
       try {
@@ -63,15 +76,17 @@ export default function Shipments() {
         }
       }
 
+      allOrders = filterDeletedOrders(allOrders);
+
       if (fetchedShipments.length === 0 && allOrders.length > 0) {
         const autoShipments = allOrders.map(o => ({
           id: `ship-${o.id}`,
           order_id: o.id,
           courier_name: 'Shiprocket Express',
-          awb: `AWB-SR-${o.id.slice(0, 6).toUpperCase()}`,
+          awb: `AWB-SR-${String(o.id).slice(0, 6).toUpperCase()}`,
           status: o.status === 'delivered' ? 'delivered' : o.status === 'shipped' ? 'in_transit' : 'dispatched',
           eta: new Date(Date.now() + 86400000 * 3).toISOString(),
-          tracking_url: `https://shiprocket.co/tracking/AWB-SR-${o.id.slice(0, 6).toUpperCase()}`
+          tracking_url: `https://shiprocket.co/tracking/AWB-SR-${String(o.id).slice(0, 6).toUpperCase()}`
         }));
         setShipments(autoShipments);
       } else {
@@ -86,6 +101,25 @@ export default function Shipments() {
       console.error('Error fetching shipments data:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSyncShipments = async () => {
+    setLoading(true);
+    try {
+      const headers = await getAdminAuthHeaders();
+      const res = await fetch('http://localhost:5000/api/admin/shipments/sync', {
+        method: 'POST',
+        headers
+      });
+      if (res.ok) {
+        const data = await res.json();
+        console.log('Shiprocket sync complete:', data);
+      }
+    } catch (e) {
+      console.warn('Shiprocket live sync note:', e);
+    } finally {
+      await fetchShipmentData();
     }
   };
 
@@ -128,17 +162,17 @@ export default function Shipments() {
             </h1>
           </div>
           <p className="text-[11px] text-slate-400 font-semibold tracking-wider uppercase mt-1 sm:ml-11">
-            Carrier integrations, automated AWB generation & live delivery tracking
+            Shiprocket carrier integration, automatic AWB generation & live delivery tracking
           </p>
         </div>
 
         <button
-          onClick={fetchShipmentData}
+          onClick={handleSyncShipments}
           disabled={loading}
           className="flex items-center space-x-2 px-4 py-2.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs font-bold text-slate-300 hover:text-white rounded-xl transition-all self-start md:self-center cursor-pointer shadow-sm"
         >
           <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin text-purple-400' : ''}`} />
-          <span>Sync Shipments</span>
+          <span>Sync with Shiprocket</span>
         </button>
       </div>
 

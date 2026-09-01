@@ -1,7 +1,7 @@
 import { supabase } from '../supabaseClient';
 
 const DEFAULT_SETTINGS = {
-  cod_fee: 50,
+  cod_fee: 0,
   cod_enabled: true,
   razorpay_key_id: '',
 };

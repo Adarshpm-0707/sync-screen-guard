@@ -5,6 +5,7 @@ import {
   getOrders,
   getOrderDetail,
   updateOrderStatus,
+  deleteOrder,
   getCustomers,
   getCustomerDetail,
   getProducts,
@@ -14,6 +15,7 @@ import {
   updateProductStock,
   getShipments,
   createShipment,
+  syncShipments,
   getSettings,
   updateSettings,
 } from '../controllers/admin.controller.js';
@@ -30,6 +32,8 @@ router.get('/dashboard', getDashboardStats);
 router.get('/orders', getOrders);
 router.get('/orders/:id', getOrderDetail);
 router.patch('/orders/:id', updateOrderStatus);
+router.delete('/orders/:id', deleteOrder);
+
 
 // Customers Management
 router.get('/customers', getCustomers);
@@ -42,9 +46,11 @@ router.put('/products/:id', updateProduct);
 router.delete('/products/:id', deleteProduct);
 router.patch('/products/:id/stock', updateProductStock);
 
-// Logistics
+// Logistics & Shiprocket
 router.get('/shipments', getShipments);
 router.post('/shipments', createShipment);
+router.post('/shipments/sync', syncShipments);
+
 
 // Store Payment settings
 router.get('/settings', getSettings);

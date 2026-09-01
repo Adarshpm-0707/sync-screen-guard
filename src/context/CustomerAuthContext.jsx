@@ -25,19 +25,34 @@ export function CustomerAuthProvider({ children }) {
     subtitle: null,
   });
 
+  const formatUserWithMetadata = (user) => {
+    if (!user) return null;
+    const meta = user.user_metadata || {};
+    const resolvedName = user.name || user.full_name || meta.full_name || meta.name || (user.email ? user.email.split('@')[0] : '');
+    return {
+      ...user,
+      name: resolvedName,
+      full_name: resolvedName,
+      email: user.email || '',
+      is_guest: Boolean(user.is_guest),
+    };
+  };
+
   useEffect(() => {
     // 1. Initial Supabase session check
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
-        setCustomer(session.user);
+        const formatted = formatUserWithMetadata({ ...session.user, is_guest: false });
+        setCustomer(formatted);
         try {
-          localStorage.setItem('local_customer_user', JSON.stringify({ ...session.user, is_guest: false }));
+          localStorage.setItem('local_customer_user', JSON.stringify(formatted));
         } catch (e) {}
       } else {
         const localUser = localStorage.getItem('local_customer_user');
         if (localUser) {
           try {
-            setCustomer(JSON.parse(localUser));
+            const parsed = JSON.parse(localUser);
+            setCustomer(formatUserWithMetadata(parsed));
           } catch (e) {}
         }
       }
@@ -49,16 +64,17 @@ export function CustomerAuthProvider({ children }) {
     // 2. Listen to Supabase auth state change
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
-        const userObj = { ...session.user, is_guest: false };
-        setCustomer(userObj);
+        const formatted = formatUserWithMetadata({ ...session.user, is_guest: false });
+        setCustomer(formatted);
         try {
-          localStorage.setItem('local_customer_user', JSON.stringify(userObj));
+          localStorage.setItem('local_customer_user', JSON.stringify(formatted));
         } catch (e) {}
       } else {
         const localUser = localStorage.getItem('local_customer_user');
         if (localUser) {
           try {
-            setCustomer(JSON.parse(localUser));
+            const parsed = JSON.parse(localUser);
+            setCustomer(formatUserWithMetadata(parsed));
           } catch (e) {}
         } else {
           setCustomer(null);
@@ -105,9 +121,10 @@ export function CustomerAuthProvider({ children }) {
   };
 
   const setCustomerUser = (user) => {
-    setCustomer(user);
-    if (user) {
-      localStorage.setItem('local_customer_user', JSON.stringify(user));
+    const formatted = formatUserWithMetadata(user);
+    setCustomer(formatted);
+    if (formatted) {
+      localStorage.setItem('local_customer_user', JSON.stringify(formatted));
     } else {
       localStorage.removeItem('local_customer_user');
     }

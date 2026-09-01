@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../supabaseClient';
 import { getAdminAuthHeaders } from '../utils/adminAuth';
+import { filterDeletedOrders } from '../../utils/orderManager';
 
 export default function useCustomers(initialFilters = {}) {
   const [customers, setCustomers] = useState([]);
@@ -82,6 +83,9 @@ export default function useCustomers(initialFilters = {}) {
             allOrders = [...newLocals, ...allOrders];
           }
         } catch (e) {}
+
+        // Exclude deleted orders
+        allOrders = filterDeletedOrders(allOrders);
 
         // Group orders by unique customer identifier
         const customerMap = new Map();
@@ -243,6 +247,14 @@ export default function useCustomers(initialFilters = {}) {
 
   useEffect(() => {
     fetchCustomers();
+
+    const handleOrdersUpdated = () => {
+      fetchCustomers();
+    };
+    window.addEventListener('orders_updated', handleOrdersUpdated);
+    return () => {
+      window.removeEventListener('orders_updated', handleOrdersUpdated);
+    };
   }, [fetchCustomers]);
 
   return {

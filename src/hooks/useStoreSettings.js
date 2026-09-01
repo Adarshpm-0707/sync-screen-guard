@@ -7,7 +7,7 @@ export default function useStoreSettings() {
       const cached = localStorage.getItem('sync_store_settings');
       if (cached) return JSON.parse(cached);
     } catch (e) {}
-    return { cod_fee: 50, cod_enabled: true, razorpay_key_id: '' };
+    return { cod_fee: 0, cod_enabled: true, razorpay_key_id: '' };
   });
   const [loading, setLoading] = useState(true);
 
