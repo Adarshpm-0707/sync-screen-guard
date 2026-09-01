@@ -8,16 +8,19 @@ import {
   Calendar, 
   User, 
   CreditCard,
-  AlertCircle
+  AlertCircle,
+  CheckSquare,
+  Square
 } from 'lucide-react';
 import OrderFilters from '../components/orders/OrderFilters';
 import AdminTable from '../components/common/AdminTable';
 import OrderStatusBadge from '../components/orders/OrderStatusBadge';
 import Pagination from '../components/common/Pagination';
 import OrderDetailDrawer from '../components/orders/OrderDetailDrawer';
+import ConfirmDialog from '../components/common/ConfirmDialog';
 import { supabase } from '../../supabaseClient';
 import { getAdminAuthHeaders } from '../utils/adminAuth';
-import { deleteOrder, filterDeletedOrders } from '../../utils/orderManager';
+import { deleteOrder, deleteMultipleOrders, clearAllOrders, filterDeletedOrders } from '../../utils/orderManager';
 
 export default function Orders() {
   const [loading, setLoading] = useState(true);
@@ -26,6 +29,18 @@ export default function Orders() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [paymentFilter, setPaymentFilter] = useState('all');
   const [customerTypeFilter, setCustomerTypeFilter] = useState('all');
+  
+  // Selection states
+  const [selectedIds, setSelectedIds] = useState(new Set());
+
+  // Dialog states
+  const [clearDialogOpen, setClearDialogOpen] = useState(false);
+  const [isClearing, setIsClearing] = useState(false);
+  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [orderToDelete, setOrderToDelete] = useState(null);
+  const [singleDeleteDialogOpen, setSingleDeleteDialogOpen] = useState(false);
+  const [isDeletingSingle, setIsDeletingSingle] = useState(false);
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
@@ -143,32 +158,137 @@ export default function Orders() {
     fetchOrders();
   };
 
-  const handleDeleteOrder = async (e, order) => {
-    if (e && e.stopPropagation) e.stopPropagation();
-    if (!order || !order.id) return;
+  // Selection handlers
+  const isAllSelected = orders.length > 0 && orders.every(o => selectedIds.has(o.id));
+  const isSomeSelected = orders.some(o => selectedIds.has(o.id)) && !isAllSelected;
 
-    const orderDisplayId = String(order.id).slice(0, 8).toUpperCase();
-    if (!window.confirm(`Permanently delete order #${orderDisplayId}?\nThis action cannot be undone.`)) return;
-
-    // Optimistic UI state update
-    setOrders((prev) => prev.filter((o) => o.id !== order.id));
-    setTotalItems((prev) => Math.max(0, prev - 1));
-    if (selectedOrder?.id === order.id) {
-      setDrawerOpen(false);
-      setSelectedOrder(null);
-    }
-
-    try {
-      await deleteOrder(order.id);
-      fetchOrders();
-    } catch (err) {
-      console.error('Error deleting order:', err);
-      alert('Failed to delete order. Please try again.');
-      fetchOrders();
+  const toggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedIds(new Set());
+    } else {
+      const nextSet = new Set(selectedIds);
+      orders.forEach(o => nextSet.add(o.id));
+      setSelectedIds(nextSet);
     }
   };
 
-  const headers = ['Order ID', 'Date', 'Customer', 'Contact', 'Payment', 'Status', 'Total', 'Action'];
+  const toggleSelectOrder = (id) => {
+    const nextSet = new Set(selectedIds);
+    if (nextSet.has(id)) {
+      nextSet.delete(id);
+    } else {
+      nextSet.add(id);
+    }
+    setSelectedIds(nextSet);
+  };
+
+  // Single Delete Handler
+  const promptDeleteSingle = (e, order) => {
+    if (e && e.stopPropagation) e.stopPropagation();
+    setOrderToDelete(order);
+    setSingleDeleteDialogOpen(true);
+  };
+
+  const handleDeleteSingleConfirm = async () => {
+    if (!orderToDelete || !orderToDelete.id) return;
+    setIsDeletingSingle(true);
+    try {
+      setOrders(prev => prev.filter(o => o.id !== orderToDelete.id));
+      setTotalItems(prev => Math.max(0, prev - 1));
+      setSelectedIds(prev => {
+        const next = new Set(prev);
+        next.delete(orderToDelete.id);
+        return next;
+      });
+
+      if (selectedOrder?.id === orderToDelete.id) {
+        setDrawerOpen(false);
+        setSelectedOrder(null);
+      }
+
+      await deleteOrder(orderToDelete.id);
+      setSingleDeleteDialogOpen(false);
+      setOrderToDelete(null);
+      await fetchOrders();
+    } catch (err) {
+      console.error('Error deleting order:', err);
+      alert('Failed to delete order.');
+    } finally {
+      setIsDeletingSingle(false);
+    }
+  };
+
+  // Bulk Delete Handler
+  const handleBulkDeleteConfirm = async () => {
+    if (selectedIds.size === 0) return;
+    setIsBulkDeleting(true);
+    const idsToDelete = Array.from(selectedIds);
+    try {
+      setOrders(prev => prev.filter(o => !selectedIds.has(o.id)));
+      setTotalItems(prev => Math.max(0, prev - idsToDelete.length));
+      
+      if (selectedOrder && selectedIds.has(selectedOrder.id)) {
+        setDrawerOpen(false);
+        setSelectedOrder(null);
+      }
+
+      await deleteMultipleOrders(idsToDelete);
+      setSelectedIds(new Set());
+      setBulkDeleteDialogOpen(false);
+      await fetchOrders();
+    } catch (err) {
+      console.error('Error bulk deleting orders:', err);
+      alert('Failed to delete selected orders.');
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
+
+  // Clear All Orders Handler
+  const handleClearAllOrders = async () => {
+    setIsClearing(true);
+    try {
+      setOrders([]);
+      setTotalItems(0);
+      setTotalPages(1);
+      setSelectedIds(new Set());
+      setSelectedOrder(null);
+      setDrawerOpen(false);
+
+      await clearAllOrders();
+      setClearDialogOpen(false);
+      await fetchOrders();
+    } catch (err) {
+      console.error('Error clearing all orders:', err);
+      alert('Failed to clear orders. Please try again.');
+    } finally {
+      setIsClearing(false);
+    }
+  };
+
+  const headers = [
+    <div key="th-select" className="flex items-center gap-2">
+      <input
+        type="checkbox"
+        id="select-all-orders"
+        checked={isAllSelected}
+        ref={(el) => {
+          if (el) el.indeterminate = isSomeSelected;
+        }}
+        onChange={toggleSelectAll}
+        className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-0 cursor-pointer accent-indigo-600"
+        title="Select all orders on this page"
+      />
+      <label htmlFor="select-all-orders" className="cursor-pointer">Order ID</label>
+    </div>,
+    'Date',
+    'Customer',
+    'Contact',
+    'Payment',
+    'Status',
+    'Total',
+    'Action'
+  ];
 
   return (
     <div className="space-y-6 text-left">
@@ -188,15 +308,69 @@ export default function Orders() {
           </p>
         </div>
 
-        <button
-          onClick={fetchOrders}
-          disabled={loading}
-          className="flex items-center justify-center space-x-2 px-4 py-2.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-indigo-500/30 text-xs font-bold text-slate-300 hover:text-white rounded-xl transition-all self-start sm:self-center cursor-pointer shadow-sm active:scale-95"
-        >
-          <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin text-indigo-400' : ''}`} />
-          <span>Refresh Orders</span>
-        </button>
+        <div className="flex items-center gap-2.5 flex-wrap self-start sm:self-center">
+          {selectedIds.size > 0 && (
+            <button
+              onClick={() => setBulkDeleteDialogOpen(true)}
+              disabled={loading || isBulkDeleting}
+              className="flex items-center justify-center space-x-2 px-4 py-2.5 bg-red-600 hover:bg-red-500 text-xs font-black uppercase tracking-wider text-white rounded-xl transition-all cursor-pointer shadow-lg active:scale-95 animate-pulse"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              <span>Delete Selected ({selectedIds.size})</span>
+            </button>
+          )}
+
+          <button
+            onClick={() => setClearDialogOpen(true)}
+            disabled={loading || isClearing}
+            className="flex items-center justify-center space-x-2 px-4 py-2.5 bg-red-950/40 hover:bg-red-900/60 border border-red-800/60 hover:border-red-500/80 text-xs font-bold text-red-300 hover:text-white rounded-xl transition-all cursor-pointer shadow-sm active:scale-95"
+            title="Permanently clear and delete all orders and customer history"
+          >
+            <Trash2 className="h-3.5 w-3.5 text-red-400" />
+            <span>Clear All</span>
+          </button>
+
+          <button
+            onClick={fetchOrders}
+            disabled={loading || isClearing}
+            className="flex items-center justify-center space-x-2 px-4 py-2.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-indigo-500/30 text-xs font-bold text-slate-300 hover:text-white rounded-xl transition-all cursor-pointer shadow-sm active:scale-95"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin text-indigo-400' : ''}`} />
+            <span>Refresh</span>
+          </button>
+        </div>
       </div>
+
+      {/* Bulk Action Sticky Bar */}
+      {selectedIds.size > 0 && (
+        <div className="bg-indigo-950/90 border border-indigo-500/40 rounded-2xl p-3 sm:px-5 flex items-center justify-between shadow-2xl backdrop-blur-xl animate-fade-in text-white">
+          <div className="flex items-center gap-3">
+            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-600 text-white font-bold text-xs">
+              {selectedIds.size}
+            </span>
+            <span className="text-xs sm:text-sm font-bold">
+              {selectedIds.size} {selectedIds.size === 1 ? 'order' : 'orders'} selected
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setSelectedIds(new Set())}
+              className="px-3 py-1.5 rounded-xl border border-slate-700 bg-slate-900/80 hover:bg-slate-800 text-xs font-bold text-slate-300 hover:text-white transition-all cursor-pointer"
+            >
+              Deselect All
+            </button>
+            <button
+              onClick={() => setBulkDeleteDialogOpen(true)}
+              disabled={isBulkDeleting}
+              className="flex items-center gap-1.5 px-4 py-1.5 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-md active:scale-95"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              <span>Delete ({selectedIds.size})</span>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Filter Component */}
       <OrderFilters
@@ -222,7 +396,7 @@ export default function Orders() {
         }}
       />
 
-      {/* Mobile Card View (< sm/md) */}
+      {/* Mobile Card View (< md) */}
       <div className="md:hidden space-y-3">
         {loading ? (
           <div className="p-8 text-center bg-[#0E1322]/80 border border-slate-800/80 rounded-2xl">
@@ -236,17 +410,31 @@ export default function Orders() {
         ) : (
           orders.map((order) => {
             const isGuestOrder = order.is_guest || !order.user_id;
+            const isSelected = selectedIds.has(order.id);
 
             return (
               <div
                 key={order.id}
                 onClick={() => handleRowClick(order)}
-                className="bg-[#0E1322]/90 border border-slate-800/80 rounded-2xl p-4 space-y-3 shadow-lg active:scale-[0.99] transition-transform cursor-pointer"
+                className={`bg-[#0E1322]/90 border rounded-2xl p-4 space-y-3 shadow-lg active:scale-[0.99] transition-all cursor-pointer ${
+                  isSelected ? 'border-indigo-500/80 bg-indigo-950/20' : 'border-slate-800/80'
+                }`}
               >
                 <div className="flex items-center justify-between border-b border-slate-800/80 pb-2.5">
-                  <span className="font-mono text-xs font-black text-indigo-400">
-                    #{order.id.slice(0, 8).toUpperCase()}
-                  </span>
+                  <div className="flex items-center gap-2.5">
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        toggleSelectOrder(order.id);
+                      }}
+                      className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-indigo-600 focus:ring-indigo-500 cursor-pointer accent-indigo-600"
+                    />
+                    <span className="font-mono text-xs font-black text-indigo-400">
+                      #{order.id.slice(0, 8).toUpperCase()}
+                    </span>
+                  </div>
                   <OrderStatusBadge status={order.status} />
                 </div>
 
@@ -292,8 +480,9 @@ export default function Orders() {
                     Inspect
                   </button>
                   <button
-                    onClick={(e) => handleDeleteOrder(e, order)}
+                    onClick={(e) => promptDeleteSingle(e, order)}
                     className="p-1.5 rounded-xl border border-rose-500/30 bg-rose-500/10 text-rose-400"
+                    title="Delete order"
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
@@ -309,15 +498,29 @@ export default function Orders() {
         <AdminTable headers={headers} isLoading={loading} emptyMessage="No orders match search filters">
           {orders.map((order) => {
             const isGuestOrder = order.is_guest || !order.user_id;
+            const isSelected = selectedIds.has(order.id);
 
             return (
               <tr 
                 key={order.id} 
-                className="hover:bg-slate-800/30 transition-colors cursor-pointer group"
+                className={`transition-colors cursor-pointer group ${
+                  isSelected ? 'bg-indigo-950/30 hover:bg-indigo-900/40' : 'hover:bg-slate-800/30'
+                }`}
                 onClick={() => handleRowClick(order)}
               >
                 <td className="px-4 sm:px-5 py-4 font-black font-mono text-indigo-400 whitespace-nowrap">
-                  #{order.id.slice(0, 8).toUpperCase()}
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        toggleSelectOrder(order.id);
+                      }}
+                      className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-indigo-600 focus:ring-indigo-500 cursor-pointer accent-indigo-600 shrink-0"
+                    />
+                    <span>#{order.id.slice(0, 8).toUpperCase()}</span>
+                  </div>
                 </td>
                 <td className="px-4 sm:px-5 py-4 text-slate-400 whitespace-nowrap text-xs">
                   {new Date(order.created_at).toLocaleDateString('en-IN', {
@@ -366,7 +569,7 @@ export default function Orders() {
                       Inspect
                     </button>
                     <button
-                      onClick={(e) => handleDeleteOrder(e, order)}
+                      onClick={(e) => promptDeleteSingle(e, order)}
                       title="Delete order"
                       className="p-1.5 rounded-xl border border-rose-500/25 bg-rose-500/10 hover:bg-rose-500/25 hover:border-rose-500/50 text-rose-400 hover:text-rose-300 transition-all cursor-pointer"
                     >
@@ -402,6 +605,48 @@ export default function Orders() {
           onStatusUpdated={handleStatusUpdated}
         />
       )}
+
+      {/* Single Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={singleDeleteDialogOpen}
+        onClose={() => {
+          setSingleDeleteDialogOpen(false);
+          setOrderToDelete(null);
+        }}
+        onConfirm={handleDeleteSingleConfirm}
+        title={`Delete Order #${orderToDelete?.id?.slice(0, 8).toUpperCase()}?`}
+        message="This action will permanently delete this order, its items, and shipments. This action cannot be undone."
+        confirmText="Delete Order"
+        cancelText="Cancel"
+        isConfirming={isDeletingSingle}
+        variant="danger"
+      />
+
+      {/* Bulk Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={bulkDeleteDialogOpen}
+        onClose={() => setBulkDeleteDialogOpen(false)}
+        onConfirm={handleBulkDeleteConfirm}
+        title={`Delete ${selectedIds.size} Selected Orders?`}
+        message={`Are you sure you want to delete ${selectedIds.size} selected orders? All associated customer order items and shipments will be removed permanently.`}
+        confirmText={`Yes, Delete ${selectedIds.size} Orders`}
+        cancelText="Cancel"
+        isConfirming={isBulkDeleting}
+        variant="danger"
+      />
+
+      {/* Clear All Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={clearDialogOpen}
+        onClose={() => setClearDialogOpen(false)}
+        onConfirm={handleClearAllOrders}
+        title="Permanently Delete All Orders?"
+        message="This action will delete all orders, associated customer purchase history, and shipment tracking records. This action cannot be undone."
+        confirmText="Yes, Delete All Orders"
+        cancelText="Keep Orders"
+        isConfirming={isClearing}
+        variant="danger"
+      />
     </div>
   );
 }

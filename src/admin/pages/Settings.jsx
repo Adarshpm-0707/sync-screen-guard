@@ -12,12 +12,16 @@ import {
   AlertCircle, 
   Sparkles, 
   KeyRound,
+  Trash2,
+  Database,
   Settings as SettingsIcon
 } from 'lucide-react';
 import AdminButton from '../components/common/AdminButton';
+import ConfirmDialog from '../components/common/ConfirmDialog';
 import useAdminAuth from '../hooks/useAdminAuth';
 import { supabase } from '../../supabaseClient';
 import { fetchStoreSettings, saveStoreSettings } from '../../utils/settingsStore';
+import { clearAllOrders } from '../../utils/orderManager';
 
 export default function Settings() {
   const { adminUser, updateProfile, updatePassword } = useAdminAuth();
@@ -26,6 +30,9 @@ export default function Settings() {
   const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [isSavingPassword, setIsSavingPassword] = useState(false);
+  const [clearDialogOpen, setClearDialogOpen] = useState(false);
+  const [isClearingStoreData, setIsClearingStoreData] = useState(false);
+  const [dataMessage, setDataMessage] = useState({ type: '', text: '' });
 
   // Profile State
   const [displayName, setDisplayName] = useState('');
@@ -168,6 +175,29 @@ export default function Settings() {
       });
     } finally {
       setIsSavingSettings(false);
+    }
+  };
+
+  // 4. Clear Store Data Handler
+  const handleClearStoreData = async () => {
+    setIsClearingStoreData(true);
+    setDataMessage({ type: '', text: '' });
+    try {
+      await clearAllOrders();
+      setClearDialogOpen(false);
+      setDataMessage({
+        type: 'success',
+        text: 'All store orders, customer transaction histories, and shipments have been completely cleared!'
+      });
+      setTimeout(() => setDataMessage({ type: '', text: '' }), 6000);
+    } catch (err) {
+      console.error('Error clearing store data:', err);
+      setDataMessage({
+        type: 'error',
+        text: 'Failed to clear store data. Please try again.'
+      });
+    } finally {
+      setIsClearingStoreData(false);
     }
   };
 
@@ -432,8 +462,88 @@ export default function Settings() {
             </div>
           </form>
 
+          {/* ── 4. Store Data Management & Reset ── */}
+          <div className="rounded-2xl sm:rounded-3xl border border-red-900/40 bg-[#0E1322]/90 p-5 sm:p-7 shadow-xl relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-48 h-48 bg-red-600/5 rounded-full blur-3xl pointer-events-none" />
+
+            <div className="flex items-center space-x-3 mb-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-500/10 border border-red-500/20 text-red-400">
+                <Trash2 className="h-5 w-5" />
+              </div>
+              <div>
+                <h2 className="text-base sm:text-lg font-black text-white uppercase tracking-tight">
+                  Store Data Management & Reset
+                </h2>
+                <p className="text-[11px] text-slate-400 font-semibold tracking-wider uppercase">
+                  Danger zone: Clear all orders, customers, and shipments data
+                </p>
+              </div>
+            </div>
+
+            {dataMessage.text && (
+              <div className={`p-3.5 mb-5 rounded-xl border flex items-center gap-3 text-xs font-semibold ${
+                dataMessage.type === 'error' 
+                  ? 'bg-rose-500/10 border-rose-500/30 text-rose-300' 
+                  : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
+              }`}>
+                {dataMessage.type === 'error' ? <AlertCircle className="w-4 h-4 shrink-0" /> : <CheckCircle2 className="w-4 h-4 shrink-0" />}
+                <span>{dataMessage.text}</span>
+              </div>
+            )}
+
+            <div className="space-y-4 py-2">
+              <p className="text-xs text-slate-400 leading-relaxed font-medium">
+                Wipe all historical and test data from the system in one click. This will permanently delete:
+              </p>
+
+              <ul className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                <li className="p-3 rounded-xl bg-slate-900/80 border border-slate-800/80 text-slate-300 flex items-center gap-2 font-bold">
+                  <span className="w-2 h-2 rounded-full bg-red-500" />
+                  <span>All Customer Orders</span>
+                </li>
+                <li className="p-3 rounded-xl bg-slate-900/80 border border-slate-800/80 text-slate-300 flex items-center gap-2 font-bold">
+                  <span className="w-2 h-2 rounded-full bg-amber-500" />
+                  <span>Client & Guest Records</span>
+                </li>
+                <li className="p-3 rounded-xl bg-slate-900/80 border border-slate-800/80 text-slate-300 flex items-center gap-2 font-bold">
+                  <span className="w-2 h-2 rounded-full bg-purple-500" />
+                  <span>Shipment & AWB Logs</span>
+                </li>
+              </ul>
+
+              <div className="pt-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-t border-slate-800/80">
+                <span className="text-[11px] text-slate-500 font-semibold uppercase tracking-wider">
+                  ⚠️ Products catalog and Admin credentials will remain untouched
+                </span>
+
+                <button
+                  type="button"
+                  onClick={() => setClearDialogOpen(true)}
+                  disabled={isClearingStoreData}
+                  className="flex items-center justify-center space-x-2 px-5 py-3 bg-red-950/40 hover:bg-red-900/60 border border-red-800/60 hover:border-red-500/80 text-xs font-black uppercase tracking-wider text-red-300 hover:text-white rounded-xl transition-all cursor-pointer shadow-sm active:scale-95 shrink-0"
+                >
+                  <Trash2 className="h-4 w-4 text-red-400" />
+                  <span>Clear All Orders & Customer Data</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
         </div>
       )}
+
+      {/* ── Safety Confirm Dialog ── */}
+      <ConfirmDialog
+        isOpen={clearDialogOpen}
+        onClose={() => setClearDialogOpen(false)}
+        onConfirm={handleClearStoreData}
+        title="Reset & Wipe All Store Data?"
+        message="Are you sure you want to permanently delete all orders, customer history, and shipment tracking records? Your product inventory and admin account will be kept safe."
+        confirmText="Yes, Wipe All Store Data"
+        cancelText="Cancel"
+        isConfirming={isClearingStoreData}
+        variant="danger"
+      />
     </div>
   );
 }

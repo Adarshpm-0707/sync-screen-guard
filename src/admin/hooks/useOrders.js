@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../supabaseClient';
 import { getAdminAuthHeaders } from '../utils/adminAuth';
+import { filterDeletedOrders } from '../../utils/orderManager';
 
 export default function useOrders(initialFilters = {}) {
   const [orders, setOrders] = useState([]);
@@ -29,9 +30,10 @@ export default function useOrders(initialFilters = {}) {
       const data = await res.json();
       
       if (res.ok) {
-        setOrders(data.orders || []);
+        const validOrders = Array.isArray(data.orders) ? filterDeletedOrders(data.orders) : [];
+        setOrders(validOrders);
         setTotalPages(data.totalPages || 1);
-        setTotalItems(data.totalItems || 0);
+        setTotalItems(data.totalItems !== undefined ? data.totalItems : validOrders.length);
       } else {
         throw new Error(data.message || 'Failed to fetch orders.');
       }
@@ -44,6 +46,14 @@ export default function useOrders(initialFilters = {}) {
 
   useEffect(() => {
     fetchOrders();
+
+    const handleOrdersUpdated = () => {
+      fetchOrders();
+    };
+    window.addEventListener('orders_updated', handleOrdersUpdated);
+    return () => {
+      window.removeEventListener('orders_updated', handleOrdersUpdated);
+    };
   }, [currentPage, filters]);
 
   return {

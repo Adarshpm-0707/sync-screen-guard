@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../supabaseClient';
 import { getAdminAuthHeaders } from '../utils/adminAuth';
+import { filterDeletedShipments } from '../../utils/orderManager';
 
 export default function useShipments() {
   const [shipments, setShipments] = useState([]);
@@ -19,7 +20,8 @@ export default function useShipments() {
       const data = await res.json();
 
       if (res.ok) {
-        setShipments(data || []);
+        const validShipments = Array.isArray(data) ? filterDeletedShipments(data) : [];
+        setShipments(validShipments);
       } else {
         throw new Error(data.message || 'Failed to fetch shipments.');
       }
@@ -32,6 +34,14 @@ export default function useShipments() {
 
   useEffect(() => {
     fetchShipments();
+
+    const handleOrdersUpdated = () => {
+      fetchShipments();
+    };
+    window.addEventListener('orders_updated', handleOrdersUpdated);
+    return () => {
+      window.removeEventListener('orders_updated', handleOrdersUpdated);
+    };
   }, []);
 
   return {

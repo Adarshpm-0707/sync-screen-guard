@@ -15,99 +15,12 @@ export const isMockMode = !rawUrl || rawUrl.includes('your_supabase_url') || raw
 // ----------------------------------------------------
 // LOCAL IN-MEMORY DATABASE MOCK DATA (for offline/simulated mode)
 // ----------------------------------------------------
-export let mockOrders = [
-  {
-    id: 'e27b213a-80fa-4a1d-886c-17f7aa67054a',
-    customer_name: 'Adarsh PM',
-    customer_email: 'adarshpm0707@gmail.com',
-    phone: '9876543210',
-    address: 'Flat 402, Sea Breeze Residency, Bandra West',
-    city: 'Mumbai',
-    state: 'Maharashtra',
-    pincode: '400050',
-    status: 'pending',
-    payment_type: 'cod',
-    total: 690.00,
-    cod_fee: 50.00,
-    created_at: new Date(Date.now() - 3600000 * 2).toISOString(),
-    payment_status: 'pending'
-  },
-  {
-    id: 'a3c7849e-b7d1-41f2-892a-fa82f2541a7d',
-    customer_name: 'Rohan Sharma',
-    customer_email: 'rohan@example.com',
-    phone: '9123456789',
-    address: 'H-45, Green Park Main Area',
-    city: 'New Delhi',
-    state: 'Delhi',
-    pincode: '110016',
-    status: 'confirmed',
-    payment_type: 'razorpay',
-    total: 640.00,
-    cod_fee: 0.00,
-    created_at: new Date(Date.now() - 3600000 * 25).toISOString(),
-    payment_status: 'success'
-  },
-  {
-    id: 'f87b213a-80fa-4a1d-886c-17f7aa67054f',
-    customer_name: 'Sneha Patel',
-    customer_email: 'sneha@example.com',
-    phone: '9822334455',
-    address: 'B-704, Shanti Heights, Satellite',
-    city: 'Ahmedabad',
-    state: 'Gujarat',
-    pincode: '380015',
-    status: 'delivered',
-    payment_type: 'razorpay',
-    total: 640.00,
-    cod_fee: 0.00,
-    created_at: new Date(Date.now() - 3600000 * 50).toISOString(),
-    payment_status: 'success'
-  }
-];
-
-export let mockOrderItems = [
-  {
-    id: 'item-1',
-    order_id: 'e27b213a-80fa-4a1d-886c-17f7aa67054a',
-    product_id: 'prod-1',
-    product_name: 'Sync EZ Fit Glass Screenguard',
-    quantity: 1,
-    price: 640.00
-  },
-  {
-    id: 'item-2',
-    order_id: 'a3c7849e-b7d1-41f2-892a-fa82f2541a7d',
-    product_id: 'prod-1',
-    product_name: 'Sync EZ Fit Glass Screenguard',
-    quantity: 1,
-    price: 640.00
-  },
-  {
-    id: 'item-3',
-    order_id: 'f87b213a-80fa-4a1d-886c-17f7aa67054f',
-    product_id: 'prod-1',
-    product_name: 'Sync EZ Fit Glass Screenguard',
-    quantity: 1,
-    price: 640.00
-  }
-];
-
+export let mockOrders = [];
+export let mockOrderItems = [];
 export let mockProducts = [];
-
-export let mockShipments = [
-  {
-    id: 'ship-1',
-    order_id: 'f87b213a-80fa-4a1d-886c-17f7aa67054f',
-    shiprocket_order_id: 'SR-ORD-928172',
-    awb: 'SR-928172654',
-    status: 'delivered',
-    tracking_url: 'https://shiprocket.co/tracking/SR-928172654',
-    eta: new Date(Date.now() - 3600000 * 20).toISOString(),
-    courier_name: 'Delhivery',
-    created_at: new Date(Date.now() - 3600000 * 48).toISOString()
-  }
-];
+export let mockShipments = [];
+export let ordersClearedTimestamp = null;
+export let shipmentsClearedTimestamp = null;
 
 let mockSettings = {
   id: 'default',
@@ -199,41 +112,41 @@ export async function getDashboardStats(req, res, next) {
     }
 
     // Real Supabase Mode
-    const { count: totalOrders } = await supabaseAdmin
-      .from('orders')
-      .select('*', { count: 'exact', head: true });
+    let totalQuery = supabaseAdmin.from('orders').select('*', { count: 'exact', head: true });
+    let pendingQuery = supabaseAdmin.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'pending');
+    let codQuery = supabaseAdmin.from('orders').select('*', { count: 'exact', head: true }).eq('payment_type', 'cod');
+    let prepaidQuery = supabaseAdmin.from('orders').select('*', { count: 'exact', head: true }).eq('payment_type', 'razorpay');
+    let recentQuery = supabaseAdmin.from('orders').select('*').order('created_at', { ascending: false }).limit(10);
 
-    const { count: pendingOrders } = await supabaseAdmin
-      .from('orders')
-      .select('*', { count: 'exact', head: true })
-      .eq('status', 'pending');
+    if (ordersClearedTimestamp) {
+      totalQuery = totalQuery.gt('created_at', ordersClearedTimestamp);
+      pendingQuery = pendingQuery.gt('created_at', ordersClearedTimestamp);
+      codQuery = codQuery.gt('created_at', ordersClearedTimestamp);
+      prepaidQuery = prepaidQuery.gt('created_at', ordersClearedTimestamp);
+      recentQuery = recentQuery.gt('created_at', ordersClearedTimestamp);
+    }
+
+    const { count: totalOrders } = await totalQuery;
+    const { count: pendingOrders } = await pendingQuery;
+    const { count: codCount } = await codQuery;
+    const { count: prepaidCount } = await prepaidQuery;
+    const { data: recentOrders } = await recentQuery;
 
     const startOfToday = new Date();
     startOfToday.setHours(0, 0, 0, 0);
 
-    const { data: todayOrders } = await supabaseAdmin
+    let todayOrdersQuery = supabaseAdmin
       .from('orders')
       .select('total')
       .neq('status', 'cancelled')
       .gte('created_at', startOfToday.toISOString());
 
+    if (ordersClearedTimestamp) {
+      todayOrdersQuery = todayOrdersQuery.gt('created_at', ordersClearedTimestamp);
+    }
+
+    const { data: todayOrders } = await todayOrdersQuery;
     const revenueToday = (todayOrders || []).reduce((acc, curr) => acc + parseFloat(curr.total), 0);
-
-    const { count: codCount } = await supabaseAdmin
-      .from('orders')
-      .select('*', { count: 'exact', head: true })
-      .eq('payment_type', 'cod');
-
-    const { count: prepaidCount } = await supabaseAdmin
-      .from('orders')
-      .select('*', { count: 'exact', head: true })
-      .eq('payment_type', 'razorpay');
-
-    const { data: recentOrders } = await supabaseAdmin
-      .from('orders')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(10);
 
     const salesHistory = [];
     for (let i = 6; i >= 0; i--) {
@@ -246,13 +159,18 @@ export async function getDashboardStats(req, res, next) {
       const end = new Date(d);
       end.setHours(23, 59, 59, 999);
 
-      const { data: dayOrders } = await supabaseAdmin
+      let dayOrdersQuery = supabaseAdmin
         .from('orders')
         .select('total')
         .neq('status', 'cancelled')
         .gte('created_at', start.toISOString())
         .lte('created_at', end.toISOString());
 
+      if (ordersClearedTimestamp) {
+        dayOrdersQuery = dayOrdersQuery.gt('created_at', ordersClearedTimestamp);
+      }
+
+      const { data: dayOrders } = await dayOrdersQuery;
       const dailyRevenue = (dayOrders || []).reduce((acc, curr) => acc + parseFloat(curr.total), 0);
       salesHistory.push({
         date: dateString,
@@ -315,6 +233,10 @@ export async function getOrders(req, res, next) {
     let query = supabaseAdmin
       .from('orders')
       .select('*', { count: 'exact' });
+
+    if (ordersClearedTimestamp) {
+      query = query.gt('created_at', ordersClearedTimestamp);
+    }
 
     if (status && status !== 'all') {
       query = query.eq('status', status);
@@ -493,6 +415,186 @@ export async function deleteOrder(req, res, next) {
   }
 }
 
+// 4c. DELETE / CLEAR ALL Orders & Associated Data
+export async function clearAllOrders(req, res, next) {
+  try {
+    ordersClearedTimestamp = new Date().toISOString();
+    shipmentsClearedTimestamp = ordersClearedTimestamp;
+    mockOrders.length = 0;
+    mockOrderItems.length = 0;
+    mockShipments.length = 0;
+
+    // Supabase DB cleanup
+    try {
+      await supabaseAdmin.from('order_items').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    } catch (_) {}
+    try {
+      await supabaseAdmin.from('payments').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    } catch (_) {}
+    try {
+      await supabaseAdmin.from('shipments').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    } catch (_) {}
+    try {
+      await supabaseAdmin.from('orders').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    } catch (_) {}
+
+    return res.status(200).json({
+      success: true,
+      message: 'All orders, items, customer histories, and shipment tracking records have been cleared successfully.'
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// 4d. DELETE / CLEAR ALL Shipments
+export async function clearAllShipments(req, res, next) {
+  try {
+    shipmentsClearedTimestamp = new Date().toISOString();
+    mockShipments.length = 0;
+
+    try {
+      await supabaseAdmin.from('shipments').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    } catch (_) {}
+
+    return res.status(200).json({
+      success: true,
+      message: 'All shipment records have been cleared successfully.'
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// 4e. DELETE / CLEAR ALL Customers
+export async function clearAllCustomers(req, res, next) {
+  return clearAllOrders(req, res, next);
+}
+
+// 4f. POST/DELETE Bulk Delete Multiple Orders
+export async function deleteMultipleOrders(req, res, next) {
+  try {
+    const { orderIds = [] } = req.body;
+    if (!Array.isArray(orderIds) || orderIds.length === 0) {
+      return res.status(400).json({ message: 'No order IDs provided for deletion.' });
+    }
+
+    const idsSet = new Set(orderIds.map(String));
+
+    // Cancel from Shiprocket in background
+    for (const orderId of orderIds) {
+      cancelShiprocketOrder({ orderId }).catch(() => {});
+    }
+
+    if (isMockMode) {
+      const remainingOrders = mockOrders.filter(o => !idsSet.has(String(o.id)));
+      mockOrders.length = 0;
+      mockOrders.push(...remainingOrders);
+
+      const remainingItems = mockOrderItems.filter(i => !idsSet.has(String(i.order_id)));
+      mockOrderItems.length = 0;
+      mockOrderItems.push(...remainingItems);
+
+      const remainingShip = mockShipments.filter(s => !idsSet.has(String(s.order_id)));
+      mockShipments.length = 0;
+      mockShipments.push(...remainingShip);
+
+      return res.status(200).json({
+        success: true,
+        deletedCount: orderIds.length,
+        message: `${orderIds.length} orders deleted successfully.`
+      });
+    }
+
+    // Direct Supabase deletion
+    try {
+      await supabaseAdmin.from('order_items').delete().in('order_id', orderIds);
+    } catch (_) {}
+    try {
+      await supabaseAdmin.from('payments').delete().in('order_id', orderIds);
+    } catch (_) {}
+    try {
+      await supabaseAdmin.from('shipments').delete().in('order_id', orderIds);
+    } catch (_) {}
+    try {
+      await supabaseAdmin.from('orders').delete().in('id', orderIds);
+    } catch (_) {}
+
+    return res.status(200).json({
+      success: true,
+      deletedCount: orderIds.length,
+      message: `${orderIds.length} orders deleted successfully.`
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// 4g. DELETE Single Customer & Associated Orders
+export async function deleteCustomer(req, res, next) {
+  try {
+    const { id } = req.params;
+    let allOrders = [];
+
+    if (isMockMode) {
+      allOrders = [...mockOrders];
+    } else {
+      const { data: dbOrders } = await supabaseAdmin.from('orders').select('*');
+      allOrders = dbOrders || [];
+    }
+
+    const matchingOrders = allOrders.filter(o => {
+      const custId = o.user_id || `cust-${Buffer.from((o.customer_email || o.phone || o.customer_name || '').toLowerCase().trim()).toString('hex').slice(0, 16)}`;
+      return custId === id || o.user_id === id || (o.customer_email && o.customer_email.toLowerCase() === id.toLowerCase()) || (o.phone && o.phone === id);
+    });
+
+    const orderIds = matchingOrders.map(o => o.id);
+    if (orderIds.length > 0) {
+      req.body = { orderIds };
+      return deleteMultipleOrders(req, res, next);
+    }
+
+    return res.status(200).json({ success: true, message: 'Customer record deleted.' });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// 4h. POST/DELETE Bulk Delete Multiple Customers
+export async function deleteMultipleCustomers(req, res, next) {
+  try {
+    const { customerKeys = [], orderIds = [] } = req.body;
+    let targetOrderIds = [...orderIds];
+
+    if (customerKeys.length > 0) {
+      let allOrders = [];
+      if (isMockMode) {
+        allOrders = [...mockOrders];
+      } else {
+        const { data: dbOrders } = await supabaseAdmin.from('orders').select('*');
+        allOrders = dbOrders || [];
+      }
+
+      const matchingOrders = allOrders.filter(o => {
+        const custKey = (o.customer_email || o.user_id || o.phone || o.customer_name || 'unknown').toLowerCase().trim();
+        const custId = o.user_id || `cust-${Buffer.from(custKey).toString('hex').slice(0, 16)}`;
+        return customerKeys.includes(custKey) || customerKeys.includes(custId) || customerKeys.includes(o.user_id) || customerKeys.includes(o.customer_email) || customerKeys.includes(o.phone);
+      });
+
+      targetOrderIds = Array.from(new Set([...targetOrderIds, ...matchingOrders.map(o => o.id)]));
+    }
+
+    if (targetOrderIds.length > 0) {
+      req.body = { orderIds: targetOrderIds };
+      return deleteMultipleOrders(req, res, next);
+    }
+
+    return res.status(200).json({ success: true, message: 'Selected customers deleted.' });
+  } catch (err) {
+    next(err);
+  }
+}
+
 
 // 5. GET All Products
 
@@ -644,17 +746,29 @@ export async function getShipments(req, res, next) {
       return res.status(200).json(mockShipments);
     }
 
-    const { data: shipments, error } = await supabaseAdmin
+    let query = supabaseAdmin
       .from('shipments')
       .select('*, orders(customer_name, phone, total, city, status)')
       .order('created_at', { ascending: false });
 
+    if (shipmentsClearedTimestamp) {
+      query = query.gt('created_at', shipmentsClearedTimestamp);
+    }
+
+    const { data: shipments, error } = await query;
+
     if (error) {
       // Fallback without join
-      const { data: rawShipments } = await supabaseAdmin
+      let fallbackQuery = supabaseAdmin
         .from('shipments')
         .select('*')
         .order('created_at', { ascending: false });
+
+      if (shipmentsClearedTimestamp) {
+        fallbackQuery = fallbackQuery.gt('created_at', shipmentsClearedTimestamp);
+      }
+
+      const { data: rawShipments } = await fallbackQuery;
       return res.status(200).json(rawShipments || []);
     }
 
@@ -870,10 +984,16 @@ export async function getCustomers(req, res, next) {
     if (isMockMode) {
       allOrders = [...mockOrders];
     } else {
-      const { data: dbOrders, error } = await supabaseAdmin
+      let query = supabaseAdmin
         .from('orders')
         .select('*')
         .order('created_at', { ascending: false });
+
+      if (ordersClearedTimestamp) {
+        query = query.gt('created_at', ordersClearedTimestamp);
+      }
+
+      const { data: dbOrders, error } = await query;
 
       if (error) {
         console.warn('Supabase orders fetch for customers failed:', error);

@@ -1,17 +1,20 @@
 import React, { useEffect, useState } from 'react';
-import { RefreshCw, PackageOpen, Truck, Send, AlertCircle } from 'lucide-react';
+import { RefreshCw, PackageOpen, Truck, Send, AlertCircle, Trash2 } from 'lucide-react';
 import ShipmentsTable from '../components/shipments/ShipmentsTable';
 import AdminTable from '../components/common/AdminTable';
 import AdminButton from '../components/common/AdminButton';
+import ConfirmDialog from '../components/common/ConfirmDialog';
 import { supabase } from '../../supabaseClient';
 import { getAdminAuthHeaders } from '../utils/adminAuth';
-import { filterDeletedOrders, getDeletedOrderIdsSet } from '../../utils/orderManager';
+import { filterDeletedOrders, filterDeletedShipments, clearAllShipments, getDeletedOrderIdsSet } from '../../utils/orderManager';
 
 export default function Shipments() {
   const [loading, setLoading] = useState(true);
   const [shipments, setShipments] = useState([]);
   const [unshippedOrders, setUnshippedOrders] = useState([]);
   const [pushingOrderId, setPushingOrderId] = useState(null);
+  const [clearDialogOpen, setClearDialogOpen] = useState(false);
+  const [isClearing, setIsClearing] = useState(false);
 
   useEffect(() => {
     fetchShipmentData();
@@ -47,9 +50,8 @@ export default function Shipments() {
         fetchedShipments = dbShipments || [];
       }
 
-      // Filter out shipments for deleted orders
-      const deletedIds = getDeletedOrderIdsSet();
-      fetchedShipments = fetchedShipments.filter(s => s && s.order_id && !deletedIds.has(String(s.order_id)));
+      // Filter out shipments for deleted/cleared orders and shipments
+      fetchedShipments = filterDeletedShipments(fetchedShipments);
 
       let allOrders = [];
       try {
@@ -101,6 +103,22 @@ export default function Shipments() {
       console.error('Error fetching shipments data:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleClearShipments = async () => {
+    setIsClearing(true);
+    try {
+      setShipments([]);
+      setUnshippedOrders([]);
+      await clearAllShipments();
+      setClearDialogOpen(false);
+      await fetchShipmentData();
+    } catch (err) {
+      console.error('Error clearing shipments:', err);
+      alert('Failed to clear shipments. Please try again.');
+    } finally {
+      setIsClearing(false);
     }
   };
 
@@ -166,14 +184,26 @@ export default function Shipments() {
           </p>
         </div>
 
-        <button
-          onClick={handleSyncShipments}
-          disabled={loading}
-          className="flex items-center space-x-2 px-4 py-2.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs font-bold text-slate-300 hover:text-white rounded-xl transition-all self-start md:self-center cursor-pointer shadow-sm"
-        >
-          <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin text-purple-400' : ''}`} />
-          <span>Sync with Shiprocket</span>
-        </button>
+        <div className="flex items-center gap-2.5 flex-wrap self-start md:self-center">
+          <button
+            onClick={() => setClearDialogOpen(true)}
+            disabled={loading || isClearing}
+            className="flex items-center justify-center space-x-2 px-4 py-2.5 bg-red-950/40 hover:bg-red-900/60 border border-red-800/60 hover:border-red-500/80 text-xs font-bold text-red-300 hover:text-white rounded-xl transition-all cursor-pointer shadow-sm active:scale-95"
+            title="Permanently clear all shipment and tracking logs"
+          >
+            <Trash2 className="h-3.5 w-3.5 text-red-400" />
+            <span>Clear Shipments</span>
+          </button>
+
+          <button
+            onClick={handleSyncShipments}
+            disabled={loading || isClearing}
+            className="flex items-center space-x-2 px-4 py-2.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs font-bold text-slate-300 hover:text-white rounded-xl transition-all cursor-pointer shadow-sm"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin text-purple-400' : ''}`} />
+            <span>Sync with Shiprocket</span>
+          </button>
+        </div>
       </div>
 
       {/* Grid: Left - Shipments Table, Right - Pending Actions */}
@@ -225,6 +255,19 @@ export default function Shipments() {
           </AdminTable>
         </div>
       </div>
+
+      {/* ── Confirm Clear Shipments Dialog ── */}
+      <ConfirmDialog
+        isOpen={clearDialogOpen}
+        onClose={() => setClearDialogOpen(false)}
+        onConfirm={handleClearShipments}
+        title="Permanently Clear All Shipments?"
+        message="This action will permanently delete all shipment tracking numbers, courier dispatch logs, and live tracking records. This action cannot be undone."
+        confirmText="Yes, Clear Shipments"
+        cancelText="Cancel"
+        isConfirming={isClearing}
+        variant="danger"
+      />
     </div>
   );
 }
