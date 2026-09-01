@@ -11,7 +11,7 @@ import {
 import useCart from '../hooks/useCart';
 import useCustomerAuth from '../hooks/useCustomerAuth';
 import useStoreSettings from '../hooks/useStoreSettings';
-import { fetchStoreProducts } from '../utils/productStore';
+import { fetchStoreProducts, getInstantProducts } from '../utils/productStore';
 
 export default function ProductDetail({ product: propProduct }) {
   const { addToCart } = useCart();
@@ -19,8 +19,10 @@ export default function ProductDetail({ product: propProduct }) {
   const { settings: storeSettings } = useStoreSettings();
   const navigate = useNavigate();
   const location = useLocation();
-  const [product, setProduct] = useState(location.state?.product || propProduct || null);
-  const [allProducts, setAllProducts] = useState([]);
+  const [product, setProduct] = useState(() => {
+    return location.state?.product || propProduct || getInstantProducts()[0] || null;
+  });
+  const [allProducts, setAllProducts] = useState(() => getInstantProducts());
 
   const [quantity, setQuantity] = useState(1);
   const [isAdded, setIsAdded] = useState(false);
@@ -280,7 +282,7 @@ export default function ProductDetail({ product: propProduct }) {
               </div>
               <div className="p-2.5 sm:p-3 rounded-xl bg-white border border-zinc-200 flex items-center gap-2">
                 <RefreshCw className="h-4 w-4 text-emerald-600 shrink-0" />
-                <span className="text-[10px] sm:text-[11px] font-bold text-zinc-800">7-Day Replacement</span>
+                <span className="text-[10px] sm:text-[11px] font-bold text-zinc-800">100% Quality Assured</span>
               </div>
             </div>
 
@@ -370,7 +372,7 @@ export default function ProductDetail({ product: propProduct }) {
             <h2 className="font-display text-lg sm:text-2xl font-black uppercase tracking-tight text-zinc-900 mb-4 sm:mb-6">
               You May Also Like
             </h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2.5 sm:gap-3.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-4 md:gap-5 max-w-md sm:max-w-none mx-auto">
               {relatedProducts.map((p) => (
                 <ProductCard
                   key={p.id}

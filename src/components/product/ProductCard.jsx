@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ShoppingBag, Star, Check, Sparkles } from 'lucide-react';
+import { Plus, Check, Star } from 'lucide-react';
 
 export default function ProductCard({ product, onAddToCart, isAdded }) {
   const navigate = useNavigate();
@@ -21,96 +21,90 @@ export default function ProductCard({ product, onAddToCart, isAdded }) {
   const discountPercent = originalPrice > price 
     ? Math.round(((originalPrice - price) / originalPrice) * 100) 
     : 0;
-
   const mainImage = product.images?.[0] || 'https://images.unsplash.com/photo-1611532736597-de2d4265fba3?auto=format&fit=crop&q=80&w=600';
 
   return (
     <div
       onClick={handleCardClick}
-      className="group relative flex flex-col justify-between rounded-xl sm:rounded-2xl bg-white border border-zinc-200/80 p-2 sm:p-3 transition-all duration-300 hover:shadow-lg hover:border-zinc-300 cursor-pointer h-full"
+      className="group relative flex flex-col justify-between w-full h-full bg-white rounded-2xl sm:rounded-3xl border border-zinc-200/90 p-4 sm:p-4 hover:border-zinc-400 hover:shadow-lg hover:shadow-zinc-200/50 transition-all duration-300 cursor-pointer"
     >
+      {/* ── TOP SECTION: Badges & Header ── */}
       <div>
-        {/* ── 1. Compact Image Container with Badges ── */}
-        <div className="relative aspect-square w-full overflow-hidden rounded-lg sm:rounded-xl bg-zinc-50 border border-zinc-100 mb-2 sm:mb-2.5 flex items-center justify-center p-1.5 sm:p-2.5">
-          {/* Main Product Image */}
+        {/* Top bar: Badge & Rating */}
+        <div className="flex items-center justify-between gap-1 mb-2">
+          {product.is_best_seller ? (
+            <span className="bg-zinc-900 text-white text-[9px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider shrink-0 shadow-xs">
+              Bestseller
+            </span>
+          ) : (
+            <span />
+          )}
+          
+          <div className="inline-flex items-center gap-1 bg-zinc-50 border border-zinc-200/80 px-2 py-0.5 rounded-full ml-auto">
+            <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400" />
+            <span className="text-[10px] font-bold text-zinc-700">4.9</span>
+          </div>
+        </div>
+
+        {/* ── PRODUCT HERO IMAGE ── */}
+        <div className="relative aspect-square w-full rounded-xl sm:rounded-2xl bg-zinc-50/80 group-hover:bg-zinc-100/60 transition-colors p-3 sm:p-4 flex items-center justify-center overflow-hidden mb-2.5 sm:mb-3">
+          {/* Discount Pill in Corner */}
+          {discountPercent > 0 && (
+            <div className="absolute top-2 left-2 z-10 bg-emerald-600 text-white text-[8px] sm:text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-tight shadow-xs">
+              {discountPercent}% OFF
+            </div>
+          )}
+
           <img
             src={mainImage}
             alt={product.name}
-            className="h-full w-full max-h-[115px] sm:max-h-[145px] object-contain rounded-md transition-transform duration-300 group-hover:scale-105 drop-shadow-xs"
+            className="w-full h-full object-contain drop-shadow-sm group-hover:scale-105 transition-transform duration-300 ease-out"
             loading="lazy"
           />
-
-          {/* Badges */}
-          <div className="absolute top-1.5 left-1.5 flex flex-col gap-1 z-10">
-            {product.is_best_seller && (
-              <span className="rounded bg-zinc-900 px-1.5 py-0.5 text-[7.5px] sm:text-[8px] font-extrabold uppercase tracking-wider text-white shadow-xs">
-                BESTSELLER
-              </span>
-            )}
-            {discountPercent > 0 && (
-              <span className="rounded bg-emerald-600 px-1.5 py-0.5 text-[7.5px] sm:text-[8px] font-extrabold uppercase tracking-wider text-white shadow-xs">
-                {discountPercent}% OFF
-              </span>
-            )}
-          </div>
         </div>
 
-        {/* ── 2. Product Information ── */}
-        <div className="space-y-0.5 sm:space-y-1 px-0.5">
-          {/* Category / Subtitle */}
-          <p className="text-[8.5px] sm:text-[9px] font-bold uppercase tracking-wider text-zinc-400 truncate">
-            {product.category 
-              ? product.category.replace(/[-_]/g, ' ') 
-              : 'Screen Guard'}
-          </p>
-
-          {/* Title */}
-          <h3 className="font-display text-[11px] sm:text-xs font-bold text-zinc-900 line-clamp-2 leading-tight group-hover:text-zinc-700 transition-colors min-h-[1.75rem] sm:min-h-[2rem]">
+        {/* ── PRODUCT TITLE ── */}
+        <div className="mb-2">
+          <h3 className="text-xs sm:text-sm font-bold text-zinc-900 tracking-tight leading-snug line-clamp-2 min-h-[2rem] group-hover:text-zinc-600 transition-colors">
             {product.name}
           </h3>
-
-          {/* Rating stars */}
-          <div className="flex items-center gap-1 pt-0.5">
-            <div className="flex items-center text-amber-400">
-              <Star className="h-3 w-3 fill-amber-400" />
-            </div>
-            <span className="text-[10px] sm:text-[11px] font-bold text-zinc-800">4.9</span>
-            <span className="text-[9px] sm:text-[10px] text-zinc-400 font-medium">(180+)</span>
-          </div>
-
-          {/* Pricing */}
-          <div className="flex items-baseline gap-1.5 pt-0.5 flex-wrap">
-            <span className="text-xs sm:text-sm font-extrabold text-zinc-900">
-              ₹{price.toLocaleString()}
-            </span>
-            {originalPrice > price && (
-              <span className="text-[9px] sm:text-[10px] text-zinc-400 line-through font-medium">
-                ₹{originalPrice.toLocaleString()}
-              </span>
-            )}
-          </div>
         </div>
       </div>
 
-      {/* ── 3. Action Buttons ── */}
-      <div className="mt-2.5 pt-2 border-t border-zinc-100">
+      {/* ── BOTTOM ACTION ISLAND (Price + Add Button) ── */}
+      <div className="mt-auto pt-2.5 border-t border-zinc-100 flex items-center justify-between gap-2">
+        {/* Price stack */}
+        <div className="flex items-baseline gap-1.5 min-w-0">
+          <span className="text-sm sm:text-base font-black text-zinc-900 tracking-tight">
+            ₹{price.toLocaleString()}
+          </span>
+          {originalPrice > price && (
+            <span className="text-[10px] sm:text-xs text-zinc-400 line-through font-medium truncate">
+              ₹{originalPrice.toLocaleString()}
+            </span>
+          )}
+        </div>
+
+        {/* Action Button: Pill button that never clips */}
         <button
+          type="button"
           onClick={handleAddClick}
-          className={`w-full flex items-center justify-center gap-1.5 py-1.5 sm:py-2 rounded-lg text-[9px] sm:text-[10px] font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer shadow-xs ${
+          aria-label={isAdded ? 'Added to bag' : 'Add to bag'}
+          className={`inline-flex items-center justify-center gap-1 h-8 px-3 rounded-full text-[11px] font-bold uppercase tracking-wider transition-all duration-200 active:scale-95 cursor-pointer shrink-0 shadow-xs ${
             isAdded
               ? 'bg-emerald-600 text-white'
-              : 'bg-zinc-900 hover:bg-zinc-800 text-white active:scale-98'
+              : 'bg-zinc-900 hover:bg-zinc-800 text-white'
           }`}
         >
           {isAdded ? (
             <>
-              <Check className="h-3 w-3" />
+              <Check className="w-3.5 h-3.5 stroke-[2.5px]" />
               <span>Added</span>
             </>
           ) : (
             <>
-              <ShoppingBag className="h-3 w-3" />
-              <span>Add to Bag</span>
+              <Plus className="w-3.5 h-3.5 stroke-[2.5px]" />
+              <span>Add</span>
             </>
           )}
         </button>

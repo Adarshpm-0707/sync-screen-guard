@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../supabaseClient';
+import { getAdminAuthHeaders } from '../utils/adminAuth';
 
 export default function useShipments() {
   const [shipments, setShipments] = useState([]);
@@ -10,11 +11,10 @@ export default function useShipments() {
     setLoading(true);
     setError(null);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
+      const headers = await getAdminAuthHeaders();
 
       const res = await fetch('http://localhost:5000/api/admin/shipments', {
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers,
       });
       const data = await res.json();
 

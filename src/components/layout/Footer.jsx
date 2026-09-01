@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { 
-  Mail, Phone, ShieldCheck, Truck, RefreshCw, 
+  Mail, Phone, MessageSquare, ShieldCheck, Truck, RefreshCw, 
   Sparkles, Check, ArrowRight, Lock, ChevronDown, ChevronUp 
 } from 'lucide-react';
 import syncLogo from '../../assets/sync logo.PNG';
@@ -101,8 +101,8 @@ export default function Footer() {
                 <RefreshCw className="h-4 w-4 sm:h-5 sm:w-5" />
               </div>
               <div className="min-w-0">
-                <h4 className="text-[11px] sm:text-xs font-bold text-white uppercase tracking-wider truncate">7-Day Replacement</h4>
-                <p className="text-[10px] sm:text-[11px] text-zinc-400 truncate mt-0.5">Zero hassle guarantee</p>
+                <h4 className="text-[11px] sm:text-xs font-bold text-white uppercase tracking-wider truncate">100% Quality Assured</h4>
+                <p className="text-[10px] sm:text-[11px] text-zinc-400 truncate mt-0.5">Genuine sync guarantee</p>
               </div>
             </div>
 
@@ -178,9 +178,15 @@ export default function Footer() {
               </div>
               <ul className="space-y-3 text-xs text-zinc-400 font-medium">
                 <li>
-                  <Link to="/tracking" className="hover:text-white hover:translate-x-1.5 transition-all duration-200 inline-flex items-center gap-1.5 group">
+                  <Link to="/about" className="hover:text-white hover:translate-x-1.5 transition-all duration-200 inline-flex items-center gap-1.5 group">
                     <span className="text-zinc-600 group-hover:text-indigo-400 transition-colors">›</span>
-                    <span>Track Your Order</span>
+                    <span>About Us</span>
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/contact" className="hover:text-white hover:translate-x-1.5 transition-all duration-200 inline-flex items-center gap-1.5 group">
+                    <span className="text-zinc-600 group-hover:text-indigo-400 transition-colors">›</span>
+                    <span>Contact Us</span>
                   </Link>
                 </li>
                 <li>
@@ -209,7 +215,7 @@ export default function Footer() {
               
               <div className="space-y-3 text-xs text-zinc-400">
                 <a 
-                  href="mailto:support@syncforall.com" 
+                  href="mailto:syncallfyp@gmail.com" 
                   className="flex items-start gap-3 p-3 rounded-xl bg-zinc-950/80 border border-zinc-900 hover:border-zinc-800 hover:bg-zinc-900/50 transition-all duration-200 group"
                 >
                   <div className="h-8 w-8 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-400 group-hover:text-emerald-400 group-hover:border-emerald-500/30 transition-colors shrink-0">
@@ -217,12 +223,12 @@ export default function Footer() {
                   </div>
                   <div>
                     <p className="font-semibold text-white group-hover:text-emerald-300 transition-colors">Email Us</p>
-                    <p className="text-[11px] text-zinc-400 font-mono mt-0.5">support@syncforall.com</p>
+                    <p className="text-[11px] text-zinc-400 font-mono mt-0.5">syncallfyp@gmail.com</p>
                   </div>
                 </a>
 
                 <a 
-                  href="tel:+919876543210" 
+                  href="tel:+919846545949" 
                   className="flex items-start gap-3 p-3 rounded-xl bg-zinc-950/80 border border-zinc-900 hover:border-zinc-800 hover:bg-zinc-900/50 transition-all duration-200 group"
                 >
                   <div className="h-8 w-8 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-400 group-hover:text-emerald-400 group-hover:border-emerald-500/30 transition-colors shrink-0">
@@ -230,8 +236,26 @@ export default function Footer() {
                   </div>
                   <div>
                     <p className="font-semibold text-white group-hover:text-emerald-300 transition-colors">Helpline Support</p>
-                    <p className="text-[11px] text-zinc-400 font-mono mt-0.5">+91 98765 43210</p>
+                    <p className="text-[11px] text-zinc-400 font-mono mt-0.5">+91 98465 45949</p>
                     <p className="text-[10px] text-zinc-500 mt-0.5">(Mon - Sat, 10 AM - 7 PM)</p>
+                  </div>
+                </a>
+
+                <a 
+                  href="https://wa.me/919846545949?text=Hi%20Sync%20Screen%20Guard%2C%20I%20have%20an%20inquiry%20regarding%20screen%20protectors." 
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-start gap-3 p-3 rounded-xl bg-gradient-to-r from-emerald-950/40 to-zinc-950/80 border border-emerald-900/50 hover:border-emerald-700/60 hover:bg-emerald-950/60 transition-all duration-200 group"
+                >
+                  <div className="h-8 w-8 rounded-lg bg-emerald-950 border border-emerald-800/80 flex items-center justify-center text-emerald-400 group-hover:text-emerald-300 transition-colors shrink-0">
+                    <MessageSquare className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-emerald-400 group-hover:text-emerald-300 transition-colors flex items-center gap-1.5">
+                      WhatsApp Live Chat
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    </p>
+                    <p className="text-[11px] text-zinc-400 mt-0.5">Click to chat directly</p>
                   </div>
                 </a>
               </div>
@@ -279,7 +303,8 @@ export default function Footer() {
             </button>
             {mobileAccordions.care && (
               <div className="px-4 pb-3.5 space-y-2 text-xs text-zinc-400 border-t border-zinc-800/60 pt-2.5">
-                <Link to="/tracking" className="block py-1 hover:text-white transition-colors">Track Your Order</Link>
+                <Link to="/about" className="block py-1 hover:text-white transition-colors">About Us</Link>
+                <Link to="/contact" className="block py-1 hover:text-white transition-colors">Contact Us</Link>
                 <Link to="/terms" className="block py-1 hover:text-white transition-colors">Terms & Conditions</Link>
                 <Link to="/privacy-policy" className="block py-1 hover:text-white transition-colors">Privacy Policy</Link>
               </div>
@@ -287,20 +312,29 @@ export default function Footer() {
           </div>
 
           {/* Mobile Quick Tap-To-Connect Buttons */}
-          <div className="pt-2 grid grid-cols-2 gap-2">
+          <div className="pt-2 grid grid-cols-3 gap-2">
             <a
-              href="tel:+919876543210"
-              className="flex items-center justify-center gap-2 py-3 px-3 bg-zinc-950 border border-zinc-800 rounded-xl text-white text-xs font-bold uppercase tracking-wider active:bg-zinc-900 transition-colors"
+              href="tel:+919846545949"
+              className="flex flex-col sm:flex-row items-center justify-center gap-1.5 py-3 px-2 bg-zinc-950 border border-zinc-800 rounded-xl text-white text-[11px] font-bold uppercase tracking-wider active:bg-zinc-900 transition-colors text-center"
             >
               <Phone className="h-3.5 w-3.5 text-emerald-400" />
-              <span>Call Support</span>
+              <span>Call</span>
             </a>
             <a
-              href="mailto:support@syncforall.com"
-              className="flex items-center justify-center gap-2 py-3 px-3 bg-zinc-950 border border-zinc-800 rounded-xl text-white text-xs font-bold uppercase tracking-wider active:bg-zinc-900 transition-colors"
+              href="https://wa.me/919846545949?text=Hi%20Sync%20Screen%20Guard%20Support%2C%20I%20have%20a%20query."
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex flex-col sm:flex-row items-center justify-center gap-1.5 py-3 px-2 bg-emerald-950/70 border border-emerald-800/80 rounded-xl text-emerald-300 text-[11px] font-bold uppercase tracking-wider active:bg-emerald-900 transition-colors text-center"
+            >
+              <MessageSquare className="h-3.5 w-3.5 text-emerald-400" />
+              <span>WhatsApp</span>
+            </a>
+            <a
+              href="mailto:syncallfyp@gmail.com"
+              className="flex flex-col sm:flex-row items-center justify-center gap-1.5 py-3 px-2 bg-zinc-950 border border-zinc-800 rounded-xl text-white text-[11px] font-bold uppercase tracking-wider active:bg-zinc-900 transition-colors text-center"
             >
               <Mail className="h-3.5 w-3.5 text-emerald-400" />
-              <span>Email Us</span>
+              <span>Email</span>
             </a>
           </div>
 

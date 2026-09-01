@@ -19,6 +19,7 @@ import { supabase } from '../../../supabaseClient';
 import { restoreStockForCancelledOrder } from '../../../utils/stockManager';
 import OrderStatusBadge from './OrderStatusBadge';
 import AdminButton from '../common/AdminButton';
+import { getAdminAuthHeaders } from '../../utils/adminAuth';
 
 export default function OrderDetailDrawer({ isOpen, onClose, orderId, initialOrder, onStatusUpdated }) {
   const [loading, setLoading] = useState(true);
@@ -27,7 +28,7 @@ export default function OrderDetailDrawer({ isOpen, onClose, orderId, initialOrd
 
   useEffect(() => {
     if (isOpen && orderId) {
-      if (initialOrder) {
+      if (initialOrder && initialOrder.id === orderId) {
         setOrder(initialOrder);
         setLoading(false);
       } else {
@@ -40,13 +41,10 @@ export default function OrderDetailDrawer({ isOpen, onClose, orderId, initialOrd
     setLoading(true);
     let fetched = null;
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
+      const headers = await getAdminAuthHeaders();
 
       const res = await fetch(`http://localhost:5000/api/admin/orders/${orderId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        headers,
       });
       if (res.ok) {
         fetched = await res.json();
@@ -101,16 +99,12 @@ export default function OrderDetailDrawer({ isOpen, onClose, orderId, initialOrd
   const updateOrderStatus = async (newStatus) => {
     setIsUpdating(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
+      const headers = await getAdminAuthHeaders({ 'Content-Type': 'application/json' });
 
       try {
         await fetch(`http://localhost:5000/api/admin/orders/${orderId}`, {
           method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
+          headers,
           body: JSON.stringify({ status: newStatus })
         });
       } catch (e) {}

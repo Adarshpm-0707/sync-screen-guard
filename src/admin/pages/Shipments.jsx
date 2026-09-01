@@ -4,6 +4,7 @@ import ShipmentsTable from '../components/shipments/ShipmentsTable';
 import AdminTable from '../components/common/AdminTable';
 import AdminButton from '../components/common/AdminButton';
 import { supabase } from '../../supabaseClient';
+import { getAdminAuthHeaders } from '../utils/adminAuth';
 
 export default function Shipments() {
   const [loading, setLoading] = useState(true);
@@ -18,13 +19,12 @@ export default function Shipments() {
   const fetchShipmentData = async () => {
     setLoading(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
+      const headers = await getAdminAuthHeaders();
 
       let fetchedShipments = [];
       try {
         const resShipments = await fetch('http://localhost:5000/api/admin/shipments', {
-          headers: { 'Authorization': `Bearer ${token}` }
+          headers,
         });
         if (resShipments.ok) {
           fetchedShipments = await resShipments.json();
@@ -41,7 +41,7 @@ export default function Shipments() {
       let allOrders = [];
       try {
         const resOrders = await fetch('http://localhost:5000/api/admin/orders', {
-          headers: { 'Authorization': `Bearer ${token}` }
+          headers,
         });
         if (resOrders.ok) {
           const dataOrders = await resOrders.json();
@@ -92,15 +92,11 @@ export default function Shipments() {
   const handleCreateShipment = async (orderId) => {
     setPushingOrderId(orderId);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
+      const headers = await getAdminAuthHeaders({ 'Content-Type': 'application/json' });
 
       const res = await fetch('http://localhost:5000/api/admin/shipments', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
+        headers,
         body: JSON.stringify({ orderId })
       });
 

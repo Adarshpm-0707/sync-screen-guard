@@ -16,6 +16,8 @@ import Login from './pages/Login';
 import Signup from './pages/Signup';
 import TermsConditions from './pages/TermsConditions';
 import PrivacyPolicy from './pages/PrivacyPolicy';
+import About from './pages/About';
+import Contact from './pages/Contact';
 import NotFound from './pages/NotFound';
 
 // Admin Imports
@@ -64,6 +66,10 @@ export default function AppRoutes() {
         <Route path="terms" element={<TermsConditions />} />
         <Route path="terms-conditions" element={<TermsConditions />} />
         <Route path="privacy-policy" element={<PrivacyPolicy />} />
+        <Route path="about" element={<About />} />
+        <Route path="about-us" element={<About />} />
+        <Route path="contact" element={<Contact />} />
+        <Route path="contact-us" element={<Contact />} />
         <Route path="*" element={<NotFound />} />
       </Route>
 

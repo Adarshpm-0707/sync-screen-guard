@@ -18,6 +18,7 @@ import { supabase } from '../../supabaseClient';
 import { restoreStockForCancelledOrder } from '../../utils/stockManager';
 import OrderStatusBadge from '../components/orders/OrderStatusBadge';
 import AdminButton from '../components/common/AdminButton';
+import { getAdminAuthHeaders } from '../utils/adminAuth';
 
 export default function OrderDetail() {
   const { id } = useParams();
@@ -33,15 +34,12 @@ export default function OrderDetail() {
   const fetchOrderDetail = async () => {
     setLoading(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
+      const headers = await getAdminAuthHeaders();
 
       let fetched = null;
       try {
         const res = await fetch(`http://localhost:5000/api/admin/orders/${id}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
+          headers,
         });
         if (res.ok) {
           fetched = await res.json();
@@ -70,16 +68,12 @@ export default function OrderDetail() {
   const updateOrderStatus = async (newStatus) => {
     setIsUpdating(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
+      const headers = await getAdminAuthHeaders({ 'Content-Type': 'application/json' });
 
       try {
         await fetch(`http://localhost:5000/api/admin/orders/${id}`, {
           method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
+          headers,
           body: JSON.stringify({ status: newStatus })
         });
       } catch (e) {}

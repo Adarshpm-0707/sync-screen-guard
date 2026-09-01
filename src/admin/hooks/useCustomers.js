@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../supabaseClient';
+import { getAdminAuthHeaders } from '../utils/adminAuth';
 
 export default function useCustomers(initialFilters = {}) {
   const [customers, setCustomers] = useState([]);
@@ -27,8 +28,7 @@ export default function useCustomers(initialFilters = {}) {
     setError(null);
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
+      const headers = await getAdminAuthHeaders();
 
       const params = new URLSearchParams({
         page: currentPage,
@@ -43,9 +43,7 @@ export default function useCustomers(initialFilters = {}) {
       // 1. Try Backend API
       try {
         const res = await fetch(`http://localhost:5000/api/admin/customers?${params}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
+          headers,
         });
         if (res.ok) {
           fetchedData = await res.json();

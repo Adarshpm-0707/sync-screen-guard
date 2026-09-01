@@ -610,7 +610,7 @@ export default function OrderTracking() {
                 <div className="text-xs text-zinc-700 space-y-1">
                   <p><strong>Payment Mode:</strong> {trackingData.payment_type?.toUpperCase() || 'PREPAID'}</p>
                   <p><strong>Total Paid:</strong> ₹{trackingData.total?.toLocaleString()}</p>
-                  <p className="text-emerald-600 font-semibold">● 7-Day Free Replacement Guarantee Applies</p>
+                  <p className="text-emerald-600 font-semibold">● 100% Genuine Sync Screen Guard Protected</p>
                 </div>
               </div>
 

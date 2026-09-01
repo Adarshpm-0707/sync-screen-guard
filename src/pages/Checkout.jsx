@@ -6,6 +6,7 @@ import useCustomerAuth from '../hooks/useCustomerAuth';
 import useStoreSettings from '../hooks/useStoreSettings';
 import { supabase } from '../supabaseClient';
 import { decreaseStockForOrder } from '../utils/stockManager';
+import { sendOrderNotificationEmails } from '../utils/orderEmailNotification';
 import { 
   CreditCard, Truck, CheckCircle, ArrowLeft, 
   ChevronRight, MapPin, User, ShieldCheck, Lock, Check, Sparkles, AlertCircle 
@@ -243,6 +244,9 @@ export default function Checkout() {
 
       // Automatically decrease stock for purchased items
       await decreaseStockForOrder(cart);
+
+      // Dispatch order notification emails to both syncallfyp@gmail.com and customer
+      sendOrderNotificationEmails(localOrderObj);
 
       clearCart();
       setIsSubmitting(false);
@@ -668,7 +672,7 @@ export default function Checkout() {
 
             <div className="pt-1 text-center text-[10px] text-zinc-400 space-y-1">
               <p className="flex items-center justify-center gap-1 text-zinc-600 font-semibold">
-                <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" /> Guaranteed 7-Day Replacement
+                <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" /> 100% Genuine Screen Guard & Safe Delivery
               </p>
             </div>
           </div>

@@ -89,23 +89,28 @@ export async function saveStoreSettings(newSettings) {
     console.warn('Supabase store_settings upsert fallback:', err);
   }
 
-  // 4. Send to Backend API if token available
+  // 4. Send to Backend API
   try {
-    const { data: { session } } = await supabase.auth.getSession();
-    const token = session?.access_token;
-    if (token) {
-      await fetch('http://localhost:5000/api/admin/settings', {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          cod_fee: merged.cod_fee,
-          cod_enabled: merged.cod_enabled,
-        }),
-      });
+    let token = localStorage.getItem('admin_token');
+    if (!token || token === 'undefined') {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        token = session?.access_token;
+      } catch (_) {}
     }
+    if (!token) token = 'local_admin_token';
+
+    await fetch('http://localhost:5000/api/admin/settings', {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        cod_fee: merged.cod_fee,
+        cod_enabled: merged.cod_enabled,
+      }),
+    });
   } catch (apiErr) {
     console.warn('Backend API settings save fallback:', apiErr);
   }

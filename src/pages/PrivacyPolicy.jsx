@@ -69,7 +69,7 @@ export default function PrivacyPolicy() {
       icon: Trash2,
       content: `You have complete ownership and control over your personal data:
 • Data Retention: We retain user profile data as long as your account remains active. Transaction and tax records are retained only as required by statutory law.
-• Account & Data Deletion: You can request immediate and permanent deletion of your account, including all Google OAuth linked profile data and contact records, at any time by sending an email with the subject "Data Deletion Request" to support@syncforall.com. Requests are fulfilled within 30 business days.`
+• Account & Data Deletion: You can request immediate and permanent deletion of your account, including all Google OAuth linked profile data and contact records, at any time by sending an email with the subject "Data Deletion Request" to syncallfyp@gmail.com. Requests are fulfilled within 30 business days.`
     },
     {
       id: 'cookies',
@@ -83,9 +83,8 @@ export default function PrivacyPolicy() {
       icon: HelpCircle,
       content: `If you have questions, concerns, or requests regarding this Privacy Policy or our data handling practices, please contact our Data Protection Officer:
 • Brand / App: Sync Screen Guard
-• Website: https://syncforall.com
-• Email: support@syncforall.com
-• Official Support Helpline: +91 98765 43210`
+• Email: syncallfyp@gmail.com
+• Official Support Helpline: +91 98465 45949`
     }
   ];
 
@@ -185,10 +184,10 @@ export default function PrivacyPolicy() {
         <div className="rounded-3xl bg-zinc-900 text-white p-6 sm:p-8 flex flex-col md:flex-row items-center justify-between gap-4">
           <div>
             <h3 className="text-base font-bold text-white">Need privacy or data deletion assistance?</h3>
-            <p className="text-xs text-zinc-400">Reach out to our privacy compliance officer at support@syncforall.com.</p>
+            <p className="text-xs text-zinc-400">Reach out to our privacy compliance officer at syncallfyp@gmail.com.</p>
           </div>
           <a
-            href="mailto:support@syncforall.com"
+            href="mailto:syncallfyp@gmail.com"
             className="px-6 py-3 rounded-full bg-white hover:bg-zinc-200 text-zinc-950 font-bold text-xs uppercase tracking-wider transition-colors shrink-0"
           >
             Contact Privacy Support

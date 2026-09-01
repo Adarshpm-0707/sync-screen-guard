@@ -95,6 +95,8 @@ export default function Navbar() {
               {[
                 { path: '/', label: 'HOME' },
                 { path: '/products', label: 'ALL PRODUCTS' },
+                { path: '/about', label: 'ABOUT US' },
+                { path: '/contact', label: 'CONTACT' },
               ].map((link) => (
                 <Link
                   key={link.path}

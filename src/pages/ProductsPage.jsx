@@ -6,13 +6,13 @@ import {
   ChevronRight, Filter, Smartphone, X 
 } from 'lucide-react';
 import useCart from '../hooks/useCart';
-import { fetchStoreProducts } from '../utils/productStore';
+import { fetchStoreProducts, getInstantProducts } from '../utils/productStore';
 import { fetchCategories } from '../utils/categoryStore';
 import ProductCard from '../components/product/ProductCard';
 import ProductCarousel from '../components/product/ProductCarousel';
 
 export default function ProductsPage() {
-  const [products, setProducts] = useState([]);
+  const [products, setProducts] = useState(() => getInstantProducts());
   const [categoriesList, setCategoriesList] = useState([]);
   const [searchParams, setSearchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
@@ -182,13 +182,15 @@ export default function ProductsPage() {
         </div>
       </div>
 
-      {/* ── 3. GSAP Carousel ── */}
-      <ProductCarousel products={products} />
+      {/* ── 3. Interactive Animated Carousel Showcase ── */}
+      {products.length > 0 && (
+        <ProductCarousel products={products} />
+      )}
 
-      {/* ── 4. Product Grid ── */}
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8">
+      {/* ── 4. Product Grid - Single Card on Mobile, Multi-col on Tablet & Desktop ── */}
+      <div className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8 pt-6 sm:pt-8">
         {processedProducts.length > 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2.5 sm:gap-3.5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-4 md:gap-5 max-w-md sm:max-w-none mx-auto">
             <AnimatePresence mode="popLayout">
               {processedProducts.map((p) => (
                 <ProductCard

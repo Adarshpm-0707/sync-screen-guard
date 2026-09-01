@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../supabaseClient';
+import { getAdminAuthHeaders } from '../utils/adminAuth';
 
 export default function useOrders(initialFilters = {}) {
   const [orders, setOrders] = useState([]);
@@ -14,8 +15,7 @@ export default function useOrders(initialFilters = {}) {
     setLoading(true);
     setError(null);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
+      const headers = await getAdminAuthHeaders();
 
       const params = new URLSearchParams({
         page: currentPage,
@@ -24,7 +24,7 @@ export default function useOrders(initialFilters = {}) {
       });
 
       const res = await fetch(`http://localhost:5000/api/admin/orders?${params}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers,
       });
       const data = await res.json();
       

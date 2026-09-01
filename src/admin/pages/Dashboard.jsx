@@ -19,6 +19,7 @@ import RecentOrdersTable from '../components/dashboard/RecentOrdersTable';
 import SalesChart from '../components/dashboard/SalesChart';
 import OrderDetailDrawer from '../components/orders/OrderDetailDrawer';
 import { supabase } from '../../supabaseClient';
+import { getAdminAuthHeaders } from '../utils/adminAuth';
 
 export default function Dashboard() {
   const [loading, setLoading] = useState(true);
@@ -42,14 +43,8 @@ export default function Dashboard() {
     setLoading(true);
     let fetchedData = null;
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
-
-      const res = await fetch('http://localhost:5000/api/admin/dashboard', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const headers = await getAdminAuthHeaders();
+      const res = await fetch('http://localhost:5000/api/admin/dashboard', { headers });
       if (res.ok) {
         fetchedData = await res.json();
       }

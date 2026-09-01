@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowRight, Smartphone, ChevronRight, ChevronDown, Star, ShieldCheck } from 'lucide-react';
 import useCart from '../hooks/useCart';
-import { fetchStoreProducts } from '../utils/productStore';
+import { fetchStoreProducts, getInstantProducts } from '../utils/productStore';
 import ProductCard from '../components/product/ProductCard';
 import heroBgImage from '../assets/bg image.png';
 import mobileHeroBgImage from '../assets/mobile view bg.png';
@@ -11,7 +11,7 @@ import mobileHeroBgImage from '../assets/mobile view bg.png';
 export default function Home() {
   const navigate = useNavigate();
   const { addToCart } = useCart();
-  const [products, setProducts] = useState([]);
+  const [products, setProducts] = useState(() => getInstantProducts());
   const [addedMap, setAddedMap] = useState({});
   const [activeTab, setActiveTab] = useState('all');
 
@@ -248,7 +248,6 @@ export default function Home() {
 
       </section>
 
-
       {/* ── Lower Content Sections (Clean Spacing) ── */}
       <div className="space-y-10 sm:space-y-16 mt-6 sm:mt-14 w-full">
 
@@ -266,9 +265,9 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Product Grid */}
+          {/* Product Grid - Single Card on Mobile, Multi-col on Tablet & Desktop */}
           {filteredProducts.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-3.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-4 md:gap-5 max-w-md sm:max-w-none mx-auto">
               {filteredProducts.slice(0, 12).map((product) => (
                 <ProductCard
                   key={product.id}

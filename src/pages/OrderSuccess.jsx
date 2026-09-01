@@ -73,7 +73,7 @@ export default function OrderSuccess() {
       amount: amount,
       customer_name: orderInfo?.customer_name || 'Verified Customer',
       customer_email: orderInfo?.customer_email || 'customer@syncguard.in',
-      phone: orderInfo?.phone || '+91 98765 43210',
+      phone: orderInfo?.phone || '+91 98465 45949',
       address: orderInfo?.address || 'Flat 402, Skyline Residency, Express Highway',
       city: orderInfo?.city || 'Bengaluru',
       state: orderInfo?.state || 'Karnataka',
@@ -414,9 +414,9 @@ export default function OrderSuccess() {
                     <ShieldCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   </div>
                   <div className="text-[9px] sm:text-[10px] leading-tight">
-                    <div className="font-extrabold uppercase tracking-wider">7-DAY REPLACEMENT GUARANTEE</div>
+                    <div className="font-extrabold uppercase tracking-wider">100% GENUINE PRODUCT GUARANTEE</div>
                     <div className="text-emerald-800 text-[8px] sm:text-[9px] font-sans">
-                      100% Fit & Zero-Bubble Replacement Protected.
+                      100% Fit & Premium Protection Assured.
                     </div>
                   </div>
                 </div>

@@ -16,6 +16,7 @@ import OrderStatusBadge from '../components/orders/OrderStatusBadge';
 import Pagination from '../components/common/Pagination';
 import OrderDetailDrawer from '../components/orders/OrderDetailDrawer';
 import { supabase } from '../../supabaseClient';
+import { getAdminAuthHeaders } from '../utils/adminAuth';
 
 export default function Orders() {
   const [loading, setLoading] = useState(true);
@@ -40,10 +41,9 @@ export default function Orders() {
   }, [currentPage, statusFilter, paymentFilter, customerTypeFilter, searchTerm]);
 
   const fetchOrders = async () => {
-    setLoading(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
+      setLoading(true);
+      const headers = await getAdminAuthHeaders();
 
       const params = new URLSearchParams({
         page: currentPage,
@@ -57,9 +57,7 @@ export default function Orders() {
       let fetchedOrders = null;
       try {
         const res = await fetch(`http://localhost:5000/api/admin/orders?${params}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
+          headers,
         });
         if (res.ok) {
           const data = await res.json();
@@ -138,14 +136,13 @@ export default function Orders() {
     if (!window.confirm(`Permanently delete order #${order.id.slice(0, 8).toUpperCase()}?\nThis action cannot be undone.`)) return;
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
+      const headers = await getAdminAuthHeaders();
       let deleted = false;
 
       try {
         const res = await fetch(`http://localhost:5000/api/admin/orders/${order.id}`, {
           method: 'DELETE',
-          headers: { 'Authorization': `Bearer ${token}` },
+          headers,
         });
         if (res.ok) deleted = true;
       } catch (_) {}

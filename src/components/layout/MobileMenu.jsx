@@ -44,9 +44,7 @@ export default function MobileMenu({ isOpen, onClose, customer, onOpenAuth, onLo
                     alt="Sync Screen Guard"
                     className="h-9 w-auto object-contain"
                   />
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-zinc-900 border border-zinc-800 text-[10px] font-black uppercase tracking-wider text-emerald-400">
-                    Screen Guard
-                  </span>
+             
                 </Link>
                 <button
                   onClick={onClose}
@@ -122,7 +120,8 @@ export default function MobileMenu({ isOpen, onClose, customer, onOpenAuth, onLo
                 {[
                   { to: '/', label: 'Home', icon: Home },
                   { to: '/products', label: 'All Products', icon: ShoppingBag },
-                  { to: '/tracking', label: 'Track Order', icon: Truck },
+                  { to: '/about', label: 'About Us', icon: Sparkles },
+                  { to: '/contact', label: 'Contact Us', icon: Phone },
                 ].map((item) => {
                   const Icon = item.icon;
                   return (

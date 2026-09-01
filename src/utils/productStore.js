@@ -79,6 +79,29 @@ export const DEFAULT_PRODUCTS = [
   }
 ];
 
+// In-memory cache for instant 0ms retrieval
+let _memoryProductsCache = null;
+
+// Synchronously get cached products for instant React initial state
+export function getInstantProducts() {
+  if (_memoryProductsCache && _memoryProductsCache.length > 0) {
+    return _memoryProductsCache;
+  }
+  try {
+    const cached = localStorage.getItem('sync_store_products_cache');
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        _memoryProductsCache = parsed;
+        return parsed;
+      }
+    }
+  } catch (e) {}
+
+  // Fallback to DEFAULT_PRODUCTS for instant first-time render
+  return DEFAULT_PRODUCTS;
+}
+
 export async function fetchStoreProducts() {
   // Clean up any test product from local storage
   try {
@@ -113,7 +136,7 @@ export async function fetchStoreProducts() {
     localAdded = [];
   }
 
-  // Combine: localAdded takes priority over dbProducts (no DEFAULT_PRODUCTS — only admin-added products)
+  // Combine: localAdded takes priority over dbProducts
   const combined = [
     ...localAdded,
     ...dbProducts,
@@ -148,10 +171,13 @@ export async function fetchStoreProducts() {
          Number(p.original_price) !== 5000
   );
 
-  // If no products found at all, fall back to built-in defaults so the page is never empty
-  if (finalProducts.length === 0) {
-    return DEFAULT_PRODUCTS;
-  }
+  const result = finalProducts.length > 0 ? finalProducts : DEFAULT_PRODUCTS;
 
-  return finalProducts;
+  // Update in-memory & local cache for instant future loads
+  _memoryProductsCache = result;
+  try {
+    localStorage.setItem('sync_store_products_cache', JSON.stringify(result));
+  } catch (e) {}
+
+  return result;
 }

@@ -67,13 +67,16 @@ export function AdminAuthProvider({ children }) {
         });
 
         if (!error && data?.user) {
+          const token = data.session?.access_token || 'local_admin_token';
           // Grant admin access if user authenticated via Supabase
           const adminObj = {
             ...data.user,
+            token,
             user_metadata: { ...data.user.user_metadata, is_admin: true }
           };
           setAdminUser(adminObj);
           localStorage.setItem('local_admin_session', JSON.stringify(adminObj));
+          localStorage.setItem('admin_token', token);
           setLoading(false);
           return { success: true };
         }
@@ -91,10 +94,12 @@ export function AdminAuthProvider({ children }) {
     if (matchedUser || (cleanEmail === 'admin@syncarmor.in' && cleanPassword === 'admin123') || (cleanEmail === 'adarshpm0707@gmail.com')) {
       const adminObj = { 
         email: cleanEmail, 
+        token: 'local_admin_token',
         user_metadata: { is_admin: true } 
       };
       setAdminUser(adminObj);
       localStorage.setItem('local_admin_session', JSON.stringify(adminObj));
+      localStorage.setItem('admin_token', 'local_admin_token');
       setLoading(false);
       return { success: true };
     }
@@ -116,6 +121,7 @@ export function AdminAuthProvider({ children }) {
     }
     setAdminUser(null);
     localStorage.removeItem('local_admin_session');
+    localStorage.removeItem('admin_token');
   };
 
   const updateProfile = async (newMetadata) => {

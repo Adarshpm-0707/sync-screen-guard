@@ -272,7 +272,7 @@ export default function CartDrawer({ isOpen, onClose }) {
                   </span>
                   <span>•</span>
                   <span className="flex items-center gap-1">
-                    <Truck className="h-3 w-3 text-zinc-700" /> 7-Day Replacement
+                    <Truck className="h-3 w-3 text-zinc-700" /> Fast Express Delivery
                   </span>
                 </div>
               </div>
