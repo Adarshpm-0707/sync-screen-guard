@@ -185,6 +185,16 @@ const MIGRATION_SQL = [
 )`
   },
 
+  {
+    label: 'Create categories table',
+    sql: `CREATE TABLE IF NOT EXISTS public.categories (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  description TEXT,
+  created_at TIMESTAMPTZ DEFAULT timezone('utc',now()) NOT NULL
+)`
+  },
+
   // Add missing columns (idempotent)
   { label: 'Add category column', sql: `ALTER TABLE public.products ADD COLUMN IF NOT EXISTS category TEXT DEFAULT 'glass'` },
   { label: 'Add theme_color column', sql: `ALTER TABLE public.products ADD COLUMN IF NOT EXISTS theme_color TEXT DEFAULT 'blue'` },
@@ -193,11 +203,18 @@ const MIGRATION_SQL = [
   { label: 'Add eta column to shipments', sql: `ALTER TABLE public.shipments ADD COLUMN IF NOT EXISTS eta TIMESTAMPTZ` },
 
   // Enable RLS
+  { label: 'Enable RLS: categories', sql: `ALTER TABLE public.categories ENABLE ROW LEVEL SECURITY` },
   { label: 'Enable RLS: products', sql: `ALTER TABLE public.products ENABLE ROW LEVEL SECURITY` },
   { label: 'Enable RLS: orders', sql: `ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY` },
   { label: 'Enable RLS: order_items', sql: `ALTER TABLE public.order_items ENABLE ROW LEVEL SECURITY` },
   { label: 'Enable RLS: payments', sql: `ALTER TABLE public.payments ENABLE ROW LEVEL SECURITY` },
   { label: 'Enable RLS: shipments', sql: `ALTER TABLE public.shipments ENABLE ROW LEVEL SECURITY` },
+
+  // Categories policies
+  { label: 'Policy: categories SELECT', sql: `DROP POLICY IF EXISTS "Allow public read access to categories" ON public.categories; CREATE POLICY "Allow public read access to categories" ON public.categories FOR SELECT USING (true)` },
+  { label: 'Policy: categories INSERT', sql: `DROP POLICY IF EXISTS "Allow public insert to categories" ON public.categories; CREATE POLICY "Allow public insert to categories" ON public.categories FOR INSERT WITH CHECK (true)` },
+  { label: 'Policy: categories UPDATE', sql: `DROP POLICY IF EXISTS "Allow public update to categories" ON public.categories; CREATE POLICY "Allow public update to categories" ON public.categories FOR UPDATE USING (true) WITH CHECK (true)` },
+  { label: 'Policy: categories DELETE', sql: `DROP POLICY IF EXISTS "Allow public delete from categories" ON public.categories; CREATE POLICY "Allow public delete from categories" ON public.categories FOR DELETE USING (true)` },
 
   // Products policies
   { label: 'Policy: products SELECT', sql: `DROP POLICY IF EXISTS "Allow public read access to products" ON public.products; CREATE POLICY "Allow public read access to products" ON public.products FOR SELECT USING (true)` },
@@ -230,6 +247,7 @@ const MIGRATION_SQL = [
   { label: 'Policy: shipments DELETE', sql: `DROP POLICY IF EXISTS "Allow delete shipments" ON public.shipments; CREATE POLICY "Allow delete shipments" ON public.shipments FOR DELETE USING (true)` },
 
   // Grants
+  { label: 'Grant: categories', sql: `GRANT SELECT,INSERT,UPDATE,DELETE ON public.categories TO anon,authenticated` },
   { label: 'Grant: products', sql: `GRANT SELECT,INSERT,UPDATE,DELETE ON public.products TO anon,authenticated` },
   { label: 'Grant: orders', sql: `GRANT SELECT,INSERT,UPDATE,DELETE ON public.orders TO anon,authenticated` },
   { label: 'Grant: order_items', sql: `GRANT SELECT,INSERT,UPDATE,DELETE ON public.order_items TO anon,authenticated` },

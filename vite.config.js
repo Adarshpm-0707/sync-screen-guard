@@ -79,7 +79,16 @@ export default defineConfig({
         },
         chunkFileNames: 'assets/js/[name]-[hash].js',
         entryFileNames: 'assets/js/[name]-[hash].js',
-        assetFileNames: 'assets/[ext]/[name]-[hash].[ext]'
+        assetFileNames: (assetInfo) => {
+          const info = assetInfo.name || '';
+          if (/\.(png|jpe?g|svg|gif|tiff|bmp|ico|webp)$/i.test(info)) {
+            return 'assets/images/[name]-[hash][extname]';
+          }
+          if (/\.css$/i.test(info)) {
+            return 'assets/css/[name]-[hash][extname]';
+          }
+          return 'assets/[name]-[hash][extname]';
+        }
       }
     },
     chunkSizeWarningLimit: 1000

@@ -6,7 +6,7 @@ import {
   ShieldCheck, ChevronRight, Sparkles, Phone, Mail, Lock
 } from 'lucide-react';
 import useCart from '../../hooks/useCart';
-import syncLogo from '../../assets/sync logo.PNG';
+import syncLogo from '../../assets/sync-logo.png';
 
 export default function MobileMenu({ isOpen, onClose, customer, onOpenAuth, onLogout }) {
   const { cartCount } = useCart();

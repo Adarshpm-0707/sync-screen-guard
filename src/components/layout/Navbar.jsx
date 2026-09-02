@@ -9,7 +9,7 @@ import useCustomerAuth from '../../hooks/useCustomerAuth';
 import MobileMenu from './MobileMenu';
 import CartDrawer from './CartDrawer';
 import SearchModal from './SearchModal';
-import syncLogo from '../../assets/sync logo.PNG';
+import syncLogo from '../../assets/sync-logo.png';
 
 export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);

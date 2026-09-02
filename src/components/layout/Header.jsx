@@ -1,6 +1,6 @@
 import React from 'react';
 import { ShoppingBag, Menu } from 'lucide-react';
-import syncLogo from '../../assets/sync logo.PNG';
+import syncLogo from '../../assets/sync-logo.png';
 
 export default function Header({ cartCount = 0, onCartClick }) {
   return (

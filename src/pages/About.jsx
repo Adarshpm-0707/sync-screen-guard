@@ -7,7 +7,7 @@ import {
   Cpu, ArrowRight, Star, ChevronRight, Phone, Mail,
   Smartphone, Lock, HelpCircle
 } from 'lucide-react';
-import syncLogo from '../assets/sync logo.PNG';
+import syncLogo from '../assets/sync-logo.png';
 
 export default function About() {
   const [activeTab, setActiveTab] = useState('all');

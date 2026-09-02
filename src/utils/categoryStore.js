@@ -51,6 +51,45 @@ export async function fetchCategories() {
   return DEFAULT_CATEGORIES;
 }
 
+const DEFAULT_CATEGORY_IDS = new Set(DEFAULT_CATEGORIES.map(c => c.id));
+
+/**
+ * Returns ONLY categories that an admin has explicitly created
+ * (Supabase or localStorage), excluding any system default categories.
+ * Used by the Footer so only real admin-added categories appear (max 4).
+ */
+export async function fetchAdminCategories() {
+  // 1. Try Supabase first
+  try {
+    const { data, error } = await supabase
+      .from('categories')
+      .select('*')
+      .order('created_at', { ascending: true });
+
+    if (!error && Array.isArray(data) && data.length > 0) {
+      // Filter out any default/seeded categories
+      const custom = data.filter(c => !DEFAULT_CATEGORY_IDS.has(c.id));
+      return custom;
+    }
+  } catch (e) {
+    console.warn('Supabase categories fetch error:', e);
+  }
+
+  // 2. Fall back to localStorage — filter out system defaults
+  try {
+    const stored = localStorage.getItem('admin_categories');
+    if (stored !== null) {
+      const parsed = JSON.parse(stored);
+      if (Array.isArray(parsed)) {
+        return parsed.filter(c => !DEFAULT_CATEGORY_IDS.has(c.id));
+      }
+    }
+  } catch (e) {}
+
+  // 3. No admin categories yet
+  return [];
+}
+
 export async function addCategory(categoryData) {
   const cleanId = (categoryData.id || categoryData.name || '')
     .toLowerCase()

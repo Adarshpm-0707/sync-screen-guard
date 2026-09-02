@@ -4,8 +4,8 @@ import {
   Mail, Phone, MessageSquare, ShieldCheck, Truck, RefreshCw, 
   Sparkles, Check, ArrowRight, Lock, ChevronDown, ChevronUp 
 } from 'lucide-react';
-import syncLogo from '../../assets/sync logo.PNG';
-import { fetchCategories } from '../../utils/categoryStore';
+import syncLogo from '../../assets/sync-logo.png';
+import { fetchAdminCategories } from '../../utils/categoryStore';
 
 export default function Footer() {
   const [email, setEmail] = useState('');
@@ -22,7 +22,7 @@ export default function Footer() {
   useEffect(() => {
     async function loadCategories() {
       try {
-        const cats = await fetchCategories();
+        const cats = await fetchAdminCategories();
         if (Array.isArray(cats)) {
           setCategories(cats);
         }
@@ -53,6 +53,8 @@ export default function Footer() {
       setTimeout(() => setSubscribed(false), 4000);
     }
   };
+
+  const displayCategories = categories.slice(0, 4);
 
   return (
     <footer className="bg-black text-zinc-300 border-t border-zinc-900 font-sans w-full overflow-hidden">
@@ -151,7 +153,7 @@ export default function Footer() {
                 </h3>
               </div>
               <ul className="space-y-3 text-xs text-zinc-400 font-medium">
-                {categories.slice(0, 4).map((cat) => (
+                {displayCategories.map((cat) => (
                   <li key={cat.id || cat.name}>
                     <Link
                       to={`/products?category=${encodeURIComponent(cat.id || cat.name)}`}
@@ -162,8 +164,8 @@ export default function Footer() {
                     </Link>
                   </li>
                 ))}
-                {categories.length === 0 && (
-                  <li className="text-zinc-500 italic">No categories loaded</li>
+                {displayCategories.length === 0 && (
+                  <li className="text-zinc-500 italic">No categories available</li>
                 )}
               </ul>
             </div>
@@ -279,7 +281,7 @@ export default function Footer() {
             </button>
             {mobileAccordions.shop && (
               <div className="px-4 pb-3.5 space-y-2 text-xs text-zinc-400 border-t border-zinc-800/60 pt-2.5">
-                {categories.slice(0, 4).map((cat) => (
+                {displayCategories.map((cat) => (
                   <Link
                     key={cat.id || cat.name}
                     to={`/products?category=${encodeURIComponent(cat.id || cat.name)}`}
@@ -288,6 +290,9 @@ export default function Footer() {
                     {cat.name}
                   </Link>
                 ))}
+                {displayCategories.length === 0 && (
+                  <p className="text-zinc-500 italic text-xs py-1">No categories available</p>
+                )}
               </div>
             )}
           </div>

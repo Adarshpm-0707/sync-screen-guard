@@ -5,8 +5,8 @@ import { ArrowRight, Smartphone, ChevronRight, ChevronDown, Star, ShieldCheck } 
 import useCart from '../hooks/useCart';
 import { fetchStoreProducts, getInstantProducts } from '../utils/productStore';
 import ProductCard from '../components/product/ProductCard';
-import heroBgImage from '../assets/bg image.png';
-import mobileHeroBgImage from '../assets/mobile view bg.png';
+import heroBgImage from '../assets/hero-bg.png';
+import mobileHeroBgImage from '../assets/hero-bg-mobile.png';
 
 export default function Home() {
   const navigate = useNavigate();
@@ -172,6 +172,13 @@ export default function Home() {
           <img
             src={heroBgImage}
             alt="Sync Screen Guard Precision Armor"
+            loading="eager"
+            fetchPriority="high"
+            decoding="async"
+            onError={(e) => {
+              e.currentTarget.onerror = null;
+              e.currentTarget.src = '/hero-bg.png';
+            }}
             className="w-full h-full object-cover object-center lg:object-[center_right] select-none scale-[1.01]"
           />
           {/* Refined gradient masks for laptop layout */}
@@ -184,10 +191,17 @@ export default function Home() {
           <img
             src={mobileHeroBgImage}
             alt="Sync Screen Guard Precision Armor"
+            loading="eager"
+            fetchPriority="high"
+            decoding="async"
+            onError={(e) => {
+              e.currentTarget.onerror = null;
+              e.currentTarget.src = '/hero-bg-mobile.png';
+            }}
             className="w-full h-full object-cover object-center select-none scale-100"
           />
           {/* Gradients to keep both top-left title and bottom action buttons legible */}
-          <div className="absolute inset-0 bg-gradient-to-b from-black/90 via-transparent to-black/95" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/85 via-transparent to-black/90" />
         </div>
 
         {/* Hero Content Stage: Mobile is Split (Title Top-Left, Buttons Bottom), Desktop is Centered Left */}
