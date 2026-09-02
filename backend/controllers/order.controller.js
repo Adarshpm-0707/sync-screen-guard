@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { supabaseAdmin } from '../supabase.js';
 import { mockOrders, mockOrderItems, mockShipments, isMockMode } from '../controllers/admin.controller.js';
 import {
@@ -32,6 +33,27 @@ export async function createOrder(req, res, next) {
       user_id
     } = req.body;
 
+    // Cryptographic validation for online Razorpay payments if signature is supplied
+    let verifiedPaymentStatus = paymentStatus || (paymentMethod === 'cod' ? 'pending' : 'success');
+    if (paymentMethod === 'online' && razorpay_order_id && razorpay_payment_id && razorpay_signature) {
+      const keySecret = process.env.RAZORPAY_KEY_SECRET;
+      if (keySecret && !keySecret.includes('placeholder')) {
+        const expectedSig = crypto
+          .createHmac('sha256', keySecret)
+          .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+          .digest('hex');
+
+        if (expectedSig !== razorpay_signature) {
+          console.warn('⚠️ [Security Warning] Razorpay payment signature mismatch detected for online order!');
+          return res.status(400).json({
+            success: false,
+            message: 'Payment verification failed: Signature mismatch detected.'
+          });
+        }
+        verifiedPaymentStatus = 'success';
+      }
+    }
+
     const guestFlag = isGuest !== undefined ? Boolean(isGuest) : (is_guest !== undefined ? Boolean(is_guest) : !(userId || user_id));
     const effectiveUserId = userId || user_id || null;
 
@@ -51,7 +73,7 @@ export async function createOrder(req, res, next) {
       pincode: pincode,
       status: 'pending',
       payment_type: paymentMethod || 'cod',
-      payment_status: paymentStatus || (paymentMethod === 'cod' ? 'pending' : 'success'),
+      payment_status: verifiedPaymentStatus,
       razorpay_payment_id: razorpay_payment_id || null,
       razorpay_order_id: razorpay_order_id || null,
       razorpay_signature: razorpay_signature || null,
@@ -114,7 +136,7 @@ export async function createOrder(req, res, next) {
         pincode: pincode,
         status: 'pending',
         payment_type: paymentMethod || 'cod',
-        payment_status: paymentStatus || (paymentMethod === 'cod' ? 'pending' : 'success'),
+        payment_status: verifiedPaymentStatus,
         razorpay_payment_id: razorpay_payment_id || null,
         razorpay_order_id: razorpay_order_id || null,
         razorpay_signature: razorpay_signature || null,
@@ -295,4 +317,48 @@ export async function createRazorpayOrder(req, res, next) {
   }
 }
 
+// Cryptographically verify Razorpay Payment Signature
+export async function verifyRazorpayPayment(req, res, next) {
+  try {
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+    const keySecret = process.env.RAZORPAY_KEY_SECRET;
 
+    if (!keySecret) {
+      return res.status(500).json({
+        success: false,
+        message: 'Razorpay secret key not configured on server.'
+      });
+    }
+
+    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required Razorpay verification parameters.'
+      });
+    }
+
+    const expectedSignature = crypto
+      .createHmac('sha256', keySecret)
+      .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+      .digest('hex');
+
+    const isValid = expectedSignature === razorpay_signature;
+
+    if (isValid) {
+      return res.status(200).json({
+        success: true,
+        verified: true,
+        message: 'Payment verified successfully.'
+      });
+    } else {
+      return res.status(400).json({
+        success: false,
+        verified: false,
+        message: 'Invalid payment signature. Verification failed.'
+      });
+    }
+  } catch (err) {
+    console.error('Error verifying Razorpay payment:', err);
+    next(err);
+  }
+}
