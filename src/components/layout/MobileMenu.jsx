@@ -1,18 +1,60 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   X, Home, ShoppingBag, Truck, User, LogOut, 
-  ShieldCheck, ChevronRight, Sparkles, Phone, Mail, Lock
+  ShieldCheck, ChevronRight, ChevronDown, Sparkles, Phone, Mail, Lock, Layers, ArrowRight
 } from 'lucide-react';
 import useCart from '../../hooks/useCart';
 import syncLogo from '../../assets/sync-logo.png';
+import { fetchCategories } from '../../utils/categoryStore';
+import { fetchStoreProducts, getInstantProducts } from '../../utils/productStore';
 
 export default function MobileMenu({ isOpen, onClose, customer, onOpenAuth, onLogout }) {
   const { cartCount } = useCart();
+  const navigate = useNavigate();
+  const [categories, setCategories] = useState([]);
+  const [products, setProducts] = useState(() => getInstantProducts());
+  const [expandedCat, setExpandedCat] = useState(null);
+
+  useEffect(() => {
+    async function loadData() {
+      const [cats, prods] = await Promise.all([
+        fetchCategories(),
+        fetchStoreProducts()
+      ]);
+      setCategories(cats || []);
+      setProducts(prods || []);
+    }
+    if (isOpen) {
+      loadData();
+    }
+  }, [isOpen]);
+
   const customerEmail = customer?.email || '';
   const customerInitial = customerEmail ? customerEmail.charAt(0).toUpperCase() : '';
   const customerDisplayName = customerEmail.includes('@') ? customerEmail.split('@')[0] : customerEmail;
+
+  const handleProductClick = (prod) => {
+    onClose();
+    navigate('/product', { state: { product: prod } });
+  };
+
+  const getCategoryProducts = (catId) => {
+    const cid = (catId || '').toLowerCase();
+    const matched = products.filter(p => {
+      const pCat = (p.category || 'glass').toLowerCase();
+      if (pCat === cid) return true;
+      if (cid === 'sparkle' && pCat === 'matte') return true;
+      if (cid === 'matte' && pCat === 'sparkle') return true;
+      const fullText = `${p.name || ''} ${p.description || ''}`.toLowerCase();
+      if (cid === 'camera' && fullText.includes('camera')) return true;
+      if (cid === 'watch' && (fullText.includes('watch') || fullText.includes('iwatch'))) return true;
+      if (cid === 'privacy' && fullText.includes('privacy')) return true;
+      return false;
+    });
+    return matched.length > 0 ? matched : products.slice(0, 3);
+  };
 
   return (
     <AnimatePresence>
@@ -120,8 +162,7 @@ export default function MobileMenu({ isOpen, onClose, customer, onOpenAuth, onLo
                 {[
                   { to: '/', label: 'Home', icon: Home },
                   { to: '/products', label: 'All Products', icon: ShoppingBag },
-                  { to: '/about', label: 'About Us', icon: Sparkles },
-                  { to: '/contact', label: 'Contact Us', icon: Phone },
+            
                 ].map((item) => {
                   const Icon = item.icon;
                   return (
@@ -141,25 +182,78 @@ export default function MobileMenu({ isOpen, onClose, customer, onOpenAuth, onLo
                 })}
               </nav>
 
-              {/* Category Quick Chips */}
+              {/* Browse by Category & Products */}
               <div className="space-y-2">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 px-2">Popular Categories</p>
-                <div className="grid grid-cols-2 gap-2">
-                  {[
-                    { label: 'iPhone Glass', query: 'iPhone' },
-                    { label: 'Privacy Armor', query: 'privacy' },
-                    { label: 'Matte Glass', query: 'matte' },
-                    { label: 'Samsung Series', query: 'Samsung' }
-                  ].map((cat) => (
-                    <Link
-                      key={cat.label}
-                      to={`/products?category=${encodeURIComponent(cat.query)}`}
-                      onClick={onClose}
-                      className="px-3 py-2 rounded-xl bg-zinc-900/70 border border-zinc-800 text-[11px] font-semibold text-zinc-300 hover:text-white hover:border-zinc-700 transition-colors text-center truncate"
-                    >
-                      {cat.label}
-                    </Link>
-                  ))}
+                <div className="flex items-center justify-between px-2">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Categories & Protectors</p>
+                  <span className="text-[9px] font-bold text-emerald-400">{categories.length} Categories</span>
+                </div>
+
+                <div className="space-y-1.5">
+                  {categories.map((cat) => {
+                    const isExpanded = expandedCat === cat.id;
+                    const catProds = getCategoryProducts(cat.id);
+
+                    return (
+                      <div key={cat.id} className="rounded-2xl bg-zinc-900/70 border border-zinc-800 overflow-hidden">
+                        <button
+                          type="button"
+                          onClick={() => setExpandedCat(isExpanded ? null : cat.id)}
+                          className="w-full flex items-center justify-between p-3 text-left cursor-pointer hover:bg-zinc-800/60 transition-colors"
+                        >
+                          <div className="min-w-0 flex items-center gap-2">
+                            <span className="text-xs font-bold text-zinc-200">{cat.name}</span>
+                            <span className="text-[9px] font-semibold text-zinc-500 bg-zinc-950 px-1.5 py-0.2 rounded-md">
+                              {catProds.length}
+                            </span>
+                          </div>
+                          <ChevronDown className={`h-3.5 w-3.5 text-zinc-400 transition-transform ${isExpanded ? 'rotate-180 text-emerald-400' : ''}`} />
+                        </button>
+
+                        {/* Expandable Product List */}
+                        {isExpanded && (
+                          <div className="p-2.5 bg-zinc-950/80 border-t border-zinc-800/80 space-y-2">
+                            {catProds.slice(0, 4).map((p) => {
+                              const pPrice = Number(p.price) || 640;
+                              return (
+                                <div
+                                  key={p.id}
+                                  onClick={() => handleProductClick(p)}
+                                  className="flex items-center gap-2.5 p-2 rounded-xl bg-zinc-900/60 hover:bg-zinc-800/80 border border-zinc-800/60 cursor-pointer group"
+                                >
+                                  <div className="h-10 w-10 rounded-lg bg-zinc-950 p-1 flex items-center justify-center shrink-0">
+                                    <img
+                                      src={p.images?.[0] || 'https://images.unsplash.com/photo-1611532736597-de2d4265fba3?auto=format&fit=crop&q=80&w=100'}
+                                      alt={p.name}
+                                      className="h-full w-full object-contain"
+                                    />
+                                  </div>
+                                  <div className="min-w-0 flex-1">
+                                    <p className="text-[11px] font-bold text-zinc-200 group-hover:text-white truncate">
+                                      {p.name}
+                                    </p>
+                                    <p className="text-[10px] font-black text-emerald-400 mt-0.5">
+                                      ₹{pPrice.toLocaleString()}
+                                    </p>
+                                  </div>
+                                  <ChevronRight className="h-3.5 w-3.5 text-zinc-600 group-hover:text-zinc-300 shrink-0" />
+                                </div>
+                              );
+                            })}
+
+                            <Link
+                              to={`/products?category=${encodeURIComponent(cat.id)}`}
+                              onClick={onClose}
+                              className="w-full flex items-center justify-center gap-1 py-2 text-[10px] font-bold uppercase tracking-wider text-emerald-400 hover:text-emerald-300 bg-emerald-950/30 rounded-xl border border-emerald-900/40"
+                            >
+                              <span>View All {cat.name}</span>
+                              <ArrowRight className="h-3 w-3" />
+                            </Link>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>

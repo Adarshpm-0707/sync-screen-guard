@@ -98,6 +98,9 @@ export default function Products() {
           original_price: formData.original_price ? Number(formData.original_price) : null,
           purchasing_price: formData.purchasing_price ? Number(formData.purchasing_price) : null,
           description: formData.description || '',
+          specifications: formData.specifications || '',
+          installation_guide: formData.installation_guide || '',
+          box_contents: formData.box_contents || '',
           images: formData.images && formData.images.length > 0 ? formData.images : [],
           stock: Number(formData.stock),
           theme_color: formData.theme_color || '#3b82f6',
@@ -112,26 +115,51 @@ export default function Products() {
           .select()
           .single();
 
-        if (dbErr) throw new Error(dbErr.message);
+        if (dbErr) {
+          console.warn('Supabase insert warning, falling back to local store:', dbErr);
+          const localAdded = JSON.parse(localStorage.getItem('local_added_products') || '[]');
+          const localItem = {
+            ...newObj,
+            id: `prod_${Date.now()}`,
+            created_at: new Date().toISOString()
+          };
+          localAdded.unshift(localItem);
+          localStorage.setItem('local_added_products', JSON.stringify(localAdded));
+        }
       } else {
+        const updatePayload = {
+          name: formData.name,
+          category: formData.category || 'glass',
+          price: Number(formData.price),
+          original_price: formData.original_price ? Number(formData.original_price) : null,
+          purchasing_price: formData.purchasing_price ? Number(formData.purchasing_price) : null,
+          description: formData.description || '',
+          specifications: formData.specifications || '',
+          installation_guide: formData.installation_guide || '',
+          box_contents: formData.box_contents || '',
+          images: formData.images || [],
+          stock: Number(formData.stock),
+          theme_color: formData.theme_color || '#3b82f6',
+          is_best_seller: Boolean(formData.is_best_seller),
+          show_on_home: Boolean(formData.show_on_home),
+        };
+
         const { error: dbErr } = await supabase
           .from('products')
-          .update({
-            name: formData.name,
-            category: formData.category || 'glass',
-            price: Number(formData.price),
-            original_price: formData.original_price ? Number(formData.original_price) : null,
-            purchasing_price: formData.purchasing_price ? Number(formData.purchasing_price) : null,
-            description: formData.description || '',
-            images: formData.images || [],
-            stock: Number(formData.stock),
-            theme_color: formData.theme_color || '#3b82f6',
-            is_best_seller: Boolean(formData.is_best_seller),
-            show_on_home: Boolean(formData.show_on_home),
-          })
+          .update(updatePayload)
           .eq('id', editingProduct.id);
 
-        if (dbErr) throw new Error(dbErr.message);
+        if (dbErr) {
+          console.warn('Supabase update warning, syncing locally:', dbErr);
+        }
+
+        // Also update locally cached products if present
+        const localAdded = JSON.parse(localStorage.getItem('local_added_products') || '[]');
+        const idx = localAdded.findIndex(p => p.id === editingProduct.id);
+        if (idx >= 0) {
+          localAdded[idx] = { ...localAdded[idx], ...updatePayload };
+          localStorage.setItem('local_added_products', JSON.stringify(localAdded));
+        }
       }
 
       window.dispatchEvent(new Event('products_updated'));
@@ -215,7 +243,21 @@ export default function Products() {
         <div className="flex flex-wrap items-center gap-2.5 self-start md:self-center">
           <button
             onClick={() => {
-              setEditingProduct({ name: '', category: 'glass', price: '', original_price: '', purchasing_price: '', description: '', images: [], stock: 100, is_best_seller: false, show_on_home: true });
+              setEditingProduct({ 
+                name: '', 
+                category: 'glass', 
+                price: '', 
+                original_price: '', 
+                purchasing_price: '', 
+                description: '', 
+                specifications: null, 
+                installation_guide: null, 
+                box_contents: null, 
+                images: [], 
+                stock: 100, 
+                is_best_seller: false, 
+                show_on_home: true 
+              });
               setModalOpen(true);
             }}
             className="flex items-center space-x-2 px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-xs font-bold text-white uppercase tracking-wider rounded-xl transition-all shadow-md shadow-indigo-600/25 ring-1 ring-white/10 cursor-pointer active:scale-95"

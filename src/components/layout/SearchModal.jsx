@@ -134,6 +134,11 @@ export default function SearchModal({ isOpen, onClose }) {
                             <h4 className="text-xs font-bold text-zinc-900 truncate group-hover:text-zinc-900">
                               {product.name}
                             </h4>
+                            {product.description && (
+                              <p className="text-[10px] text-zinc-500 line-clamp-1 mt-0.5">
+                                {product.description}
+                              </p>
+                            )}
                             <div className="flex items-center gap-2 mt-1">
                               <span className="text-xs font-bold text-zinc-900">
                                 ₹{product.price}

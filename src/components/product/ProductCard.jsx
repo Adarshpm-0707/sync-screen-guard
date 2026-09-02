@@ -63,11 +63,16 @@ export default function ProductCard({ product, onAddToCart, isAdded }) {
           />
         </div>
 
-        {/* ── PRODUCT TITLE ── */}
-        <div className="mb-2">
-          <h3 className="text-xs sm:text-sm font-bold text-zinc-900 tracking-tight leading-snug line-clamp-2 min-h-[2rem] group-hover:text-zinc-600 transition-colors">
+        {/* ── PRODUCT TITLE & DESCRIPTION ── */}
+        <div className="mb-2 space-y-1">
+          <h3 className="text-xs sm:text-sm font-bold text-zinc-900 tracking-tight leading-snug line-clamp-2 group-hover:text-zinc-600 transition-colors">
             {product.name}
           </h3>
+          {product.description && (
+            <p className="text-[11px] sm:text-xs text-zinc-500 font-normal leading-relaxed line-clamp-2">
+              {product.description}
+            </p>
+          )}
         </div>
       </div>
 

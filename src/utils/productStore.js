@@ -1,5 +1,22 @@
 import { supabase } from '../supabaseClient';
 
+export const DEFAULT_SPECIFICATIONS = `Material: High-Aluminosilicate 9H Double Tempered Glass
+Thickness: 0.33mm ultra-slim responsive glass
+Coating: Double electroplated oleophobic oil-repellent layer
+Clarity: 99.9% optical transparency, zero color distortion
+Adhesive: Optical grade nano-silicone (bubble-free auto dispersion)`;
+
+export const DEFAULT_INSTALLATION_GUIDE = `1. Wipe screen with the included wet alcohol wipe and microfiber cloth.
+2. Place the Sync auto-alignment box directly over your phone.
+3. Pull the arrowed dust-extraction tab until removed.
+4. Slide finger across center arrow for 5 seconds and lift off box!`;
+
+export const DEFAULT_BOX_CONTENTS = `• 1x 9H Tempered Glass inside Auto-Alignment Box
+• 1x Wet Alcohol Prep Wipe
+• 1x Microfiber Polishing Cloth
+• 1x Dust Absorber Sticker & Guide Tabs
+• 1x Squeegee Card`;
+
 export const DEFAULT_PRODUCTS = [
   {
     id: 'sync-ez-fit-iphone-15-pro-max',
@@ -15,7 +32,10 @@ export const DEFAULT_PRODUCTS = [
     stock: 150,
     is_best_seller: true,
     show_on_home: true,
-    description: 'Flagship 9H tempered glass featuring revolutionary auto-alignment box applicator. Dust-free, bubble-free 10-second installation with oleophobic anti-fingerprint coating.'
+    description: 'Flagship 9H tempered glass featuring revolutionary auto-alignment box applicator. Dust-free, bubble-free 10-second installation with oleophobic anti-fingerprint coating.',
+    specifications: DEFAULT_SPECIFICATIONS,
+    installation_guide: DEFAULT_INSTALLATION_GUIDE,
+    box_contents: DEFAULT_BOX_CONTENTS
   },
   {
     id: 'sync-privacy-armor-iphone-series',
@@ -30,7 +50,10 @@ export const DEFAULT_PRODUCTS = [
     stock: 90,
     is_best_seller: true,
     show_on_home: true,
-    description: '28-degree narrow-angle anti-spy privacy screen protector. Prevents side viewing while retaining HD visual clarity and touch response.'
+    description: '28-degree narrow-angle anti-spy privacy screen protector. Prevents side viewing while retaining HD visual clarity and touch response.',
+    specifications: `Material: 28° Anti-Spy Polarized 9H Tempered Glass\nThickness: 0.33mm responsive privacy glass\nCoating: Micro-louver optical privacy filter & oleophobic coating\nClarity: HD frontal clarity, blacked out from 28-degree side angles\nAdhesive: Bubble-free instant auto-align dispersion silicone`,
+    installation_guide: DEFAULT_INSTALLATION_GUIDE,
+    box_contents: DEFAULT_BOX_CONTENTS
   },
   {
     id: 'sync-ez-fit-samsung-s24-ultra',
@@ -45,7 +68,10 @@ export const DEFAULT_PRODUCTS = [
     stock: 120,
     is_best_seller: true,
     show_on_home: true,
-    description: 'Curved edge 9H glass engineered specifically for Samsung Galaxy flagships. Includes 10-second alignment applicator.'
+    description: 'Curved edge 9H glass engineered specifically for Samsung Galaxy flagships. Includes 10-second alignment applicator.',
+    specifications: `Material: 3D Curved Edge 9H Aluminosilicate Glass\nThickness: 0.28mm ultrasonic fingerprint compatible\nCoating: Plasma vapor oleophobic coating\nClarity: 99.9% Dynamic AMOLED color passthrough\nAdhesive: Ultrasonic sensor optimized optical silicone`,
+    installation_guide: DEFAULT_INSTALLATION_GUIDE,
+    box_contents: DEFAULT_BOX_CONTENTS
   },
   {
     id: 'sync-matte-anti-glare-shield',
@@ -60,7 +86,10 @@ export const DEFAULT_PRODUCTS = [
     stock: 80,
     is_best_seller: false,
     show_on_home: true,
-    description: 'Smooth silk-finish anti-glare glass designed for gaming and outdoor usage. Eliminates reflections and smudges effortlessly.'
+    description: 'Smooth silk-finish anti-glare glass designed for gaming and outdoor usage. Eliminates reflections and smudges effortlessly.',
+    specifications: `Material: Silk Etched Matte Anti-Glare 9H Glass\nThickness: 0.33mm ultra-glide gaming glass\nCoating: Micro-textured reflection-canceling matte armor\nClarity: Diffused ambient light reduction with crisp contrast\nAdhesive: Nano electrostatic bubble-free silicone`,
+    installation_guide: DEFAULT_INSTALLATION_GUIDE,
+    box_contents: DEFAULT_BOX_CONTENTS
   },
   {
     id: 'sync-ez-fit-oneplus-12-11',
@@ -75,7 +104,10 @@ export const DEFAULT_PRODUCTS = [
     stock: 110,
     is_best_seller: false,
     show_on_home: true,
-    description: 'High-impact glass protector with electroplated oleophobic coating and custom alignment tray for OnePlus smartphones.'
+    description: 'High-impact glass protector with electroplated oleophobic coating and custom alignment tray for OnePlus smartphones.',
+    specifications: DEFAULT_SPECIFICATIONS,
+    installation_guide: DEFAULT_INSTALLATION_GUIDE,
+    box_contents: DEFAULT_BOX_CONTENTS
   }
 ];
 
@@ -152,6 +184,10 @@ export async function fetchStoreProducts() {
         images: imagesArr.length > 0 ? imagesArr : ['https://images.unsplash.com/photo-1611532736597-de2d4265fba3?auto=format&fit=crop&q=80&w=600'],
         category: p.category || 'glass',
         price: Number(p.price) || 640,
+        description: p.description || 'High-precision 9H tempered glass screen guard with dust-free 10-second alignment applicator.',
+        specifications: p.specifications || DEFAULT_SPECIFICATIONS,
+        installation_guide: p.installation_guide || DEFAULT_INSTALLATION_GUIDE,
+        box_contents: p.box_contents || DEFAULT_BOX_CONTENTS,
         is_best_seller: Boolean(p.is_best_seller),
         show_on_home: p.show_on_home !== false,
       });

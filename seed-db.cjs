@@ -5,7 +5,7 @@ const config = {
   port: 5432,
   database: 'postgres',
   user: 'postgres.homjibmcpficbooybizb',
-  password: 'sYNCFYP@007',
+  password: process.env.DB_PASSWORD || 'Syncforall@007',
   ssl: { rejectUnauthorized: false },
 };
 
@@ -18,13 +18,29 @@ CREATE TABLE IF NOT EXISTS public.products (
     name TEXT NOT NULL,
     price NUMERIC(10, 2) NOT NULL DEFAULT 640.00,
     original_price NUMERIC(10, 2),
+    purchasing_price NUMERIC(10, 2),
     images TEXT[] NOT NULL DEFAULT '{}',
     stock INTEGER NOT NULL DEFAULT 0,
     description TEXT,
+    specifications TEXT,
+    installation_guide TEXT,
+    box_contents TEXT,
     theme_color TEXT DEFAULT 'blue',
     category TEXT DEFAULT 'glass',
+    is_best_seller BOOLEAN DEFAULT false,
+    show_on_home BOOLEAN DEFAULT true,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
+
+-- Ensure all columns exist if table was created previously
+ALTER TABLE public.products 
+ADD COLUMN IF NOT EXISTS purchasing_price NUMERIC(10, 2),
+ADD COLUMN IF NOT EXISTS is_best_seller BOOLEAN DEFAULT false,
+ADD COLUMN IF NOT EXISTS show_on_home BOOLEAN DEFAULT true,
+ADD COLUMN IF NOT EXISTS specifications TEXT,
+ADD COLUMN IF NOT EXISTS installation_guide TEXT,
+ADD COLUMN IF NOT EXISTS box_contents TEXT;
+
 
 -- 2. Orders table
 CREATE TABLE IF NOT EXISTS public.orders (

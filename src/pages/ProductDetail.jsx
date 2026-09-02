@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import ProductGallery from '../components/product/ProductGallery';
@@ -11,7 +11,13 @@ import {
 import useCart from '../hooks/useCart';
 import useCustomerAuth from '../hooks/useCustomerAuth';
 import useStoreSettings from '../hooks/useStoreSettings';
-import { fetchStoreProducts, getInstantProducts } from '../utils/productStore';
+import { 
+  fetchStoreProducts, 
+  getInstantProducts,
+  DEFAULT_SPECIFICATIONS,
+  DEFAULT_INSTALLATION_GUIDE,
+  DEFAULT_BOX_CONTENTS
+} from '../utils/productStore';
 
 export default function ProductDetail({ product: propProduct }) {
   const { addToCart } = useCart();
@@ -30,7 +36,50 @@ export default function ProductDetail({ product: propProduct }) {
   const [pincodeResult, setPincodeResult] = useState(null);
 
   // Accordion open/close state
-  const [openAccordion, setOpenAccordion] = useState('specs');
+  const [openAccordion, setOpenAccordion] = useState('desc');
+
+  // Parsers for custom accordion content
+  const parsedSpecs = useMemo(() => {
+    const raw = product?.specifications || DEFAULT_SPECIFICATIONS;
+    if (!raw) return [];
+    return raw
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean)
+      .map((line) => {
+        const colonIdx = line.indexOf(':');
+        if (colonIdx !== -1) {
+          return {
+            label: line.substring(0, colonIdx).trim(),
+            value: line.substring(colonIdx + 1).trim(),
+          };
+        }
+        return { label: null, value: line.replace(/^[•\-\*]\s*/, '').trim() };
+      });
+  }, [product?.specifications]);
+
+  const parsedSteps = useMemo(() => {
+    const raw = product?.installation_guide || DEFAULT_INSTALLATION_GUIDE;
+    if (!raw) return [];
+    return raw
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean)
+      .map((line, idx) => {
+        const clean = line.replace(/^\d+[\.\)\-]\s*/, '').trim();
+        return { num: idx + 1, text: clean || line };
+      });
+  }, [product?.installation_guide]);
+
+  const parsedBoxItems = useMemo(() => {
+    const raw = product?.box_contents || DEFAULT_BOX_CONTENTS;
+    if (!raw) return [];
+    return raw
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean)
+      .map((line) => line.replace(/^[•\-\*]\s*/, '').trim());
+  }, [product?.box_contents]);
 
   useEffect(() => {
     fetchStoreProducts().then(items => {
@@ -187,6 +236,18 @@ export default function ProductDetail({ product: propProduct }) {
                 )}
               </div>
               <p className="text-[10px] sm:text-[11px] text-zinc-500 font-medium">Inclusive of all taxes. Free shipping on prepaid orders.</p>
+
+              {/* Product Description */}
+              {product.description && (
+                <div className="pt-3.5 border-t border-zinc-200/70">
+                  <h3 className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-zinc-400 mb-1.5">
+                    Product Description
+                  </h3>
+                  <p className="text-xs sm:text-sm text-zinc-600 leading-relaxed font-medium">
+                    {product.description}
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Quantity Controller & CTA Buttons */}
@@ -289,6 +350,22 @@ export default function ProductDetail({ product: propProduct }) {
             {/* ── 3. Expandable Spec & Installation Accordions ── */}
             <div className="border-t border-zinc-200/80 pt-4 sm:pt-6 space-y-2.5 sm:space-y-3">
               
+              {/* Accordion 0: Overview & Highlights */}
+              <div className="rounded-2xl border border-zinc-200 bg-white overflow-hidden">
+                <button
+                  onClick={() => setOpenAccordion(openAccordion === 'desc' ? null : 'desc')}
+                  className="w-full flex items-center justify-between p-3.5 sm:p-4 text-xs font-bold uppercase tracking-wider text-zinc-900 cursor-pointer"
+                >
+                  <span>Overview & Key Highlights</span>
+                  {openAccordion === 'desc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                </button>
+                {openAccordion === 'desc' && (
+                  <div className="px-3.5 sm:px-4 pb-4 text-xs sm:text-sm text-zinc-600 border-t border-zinc-100 pt-3 leading-relaxed whitespace-pre-line">
+                    <p>{product.description || 'Flagship 9H tempered glass featuring revolutionary auto-alignment box applicator. Dust-free, bubble-free 10-second installation with oleophobic anti-fingerprint coating.'}</p>
+                  </div>
+                )}
+              </div>
+
               {/* Accordion 1: Specifications */}
               <div className="rounded-2xl border border-zinc-200 bg-white overflow-hidden">
                 <button
@@ -299,12 +376,22 @@ export default function ProductDetail({ product: propProduct }) {
                   {openAccordion === 'specs' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                 </button>
                 {openAccordion === 'specs' && (
-                  <div className="px-3.5 sm:px-4 pb-4 text-xs text-zinc-600 space-y-1.5 border-t border-zinc-100 pt-3">
-                    <p><strong>Material:</strong> High-Aluminosilicate 9H Double Tempered Glass</p>
-                    <p><strong>Thickness:</strong> 0.33mm ultra-slim responsive glass</p>
-                    <p><strong>Coating:</strong> Double electroplated oleophobic oil-repellent layer</p>
-                    <p><strong>Clarity:</strong> 99.9% optical transparency, zero color distortion</p>
-                    <p><strong>Adhesive:</strong> Optical grade nano-silicone (bubble-free auto dispersion)</p>
+                  <div className="px-3.5 sm:px-4 pb-4 text-xs text-zinc-600 space-y-2 border-t border-zinc-100 pt-3">
+                    {parsedSpecs.map((item, idx) => (
+                      <div key={idx} className="flex flex-col sm:flex-row sm:items-baseline gap-0.5 sm:gap-2">
+                        {item.label ? (
+                          <>
+                            <span className="font-bold text-zinc-800 shrink-0">{item.label}:</span>
+                            <span className="text-zinc-600">{item.value}</span>
+                          </>
+                        ) : (
+                          <div className="flex items-center gap-1.5">
+                            <span className="h-1.5 w-1.5 rounded-full bg-zinc-400 shrink-0" />
+                            <span>{item.value}</span>
+                          </div>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
@@ -319,23 +406,15 @@ export default function ProductDetail({ product: propProduct }) {
                   {openAccordion === 'install' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                 </button>
                 {openAccordion === 'install' && (
-                  <div className="px-3.5 sm:px-4 pb-4 text-xs text-zinc-600 space-y-2 border-t border-zinc-100 pt-3">
-                    <div className="flex gap-2">
-                      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-zinc-900 text-white text-[10px] font-bold shrink-0">1</span>
-                      <p>Wipe screen with the included wet alcohol wipe and microfiber cloth.</p>
-                    </div>
-                    <div className="flex gap-2">
-                      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-zinc-900 text-white text-[10px] font-bold shrink-0">2</span>
-                      <p>Place the Sync auto-alignment box directly over your phone.</p>
-                    </div>
-                    <div className="flex gap-2">
-                      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-zinc-900 text-white text-[10px] font-bold shrink-0">3</span>
-                      <p>Pull the arrowed dust-extraction tab until removed.</p>
-                    </div>
-                    <div className="flex gap-2">
-                      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-zinc-900 text-white text-[10px] font-bold shrink-0">4</span>
-                      <p>Slide finger across center arrow for 5 seconds and lift off box!</p>
-                    </div>
+                  <div className="px-3.5 sm:px-4 pb-4 text-xs text-zinc-600 space-y-2.5 border-t border-zinc-100 pt-3">
+                    {parsedSteps.map((step) => (
+                      <div key={step.num} className="flex items-start gap-2.5">
+                        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-zinc-900 text-white text-[10px] font-bold shrink-0 mt-0.5">
+                          {step.num}
+                        </span>
+                        <p className="leading-relaxed flex-1">{step.text}</p>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
@@ -350,12 +429,13 @@ export default function ProductDetail({ product: propProduct }) {
                   {openAccordion === 'box' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                 </button>
                 {openAccordion === 'box' && (
-                  <div className="px-3.5 sm:px-4 pb-4 text-xs text-zinc-600 space-y-1 border-t border-zinc-100 pt-3">
-                    <p>• 1x 9H Tempered Glass inside Auto-Alignment Box</p>
-                    <p>• 1x Wet Alcohol Prep Wipe</p>
-                    <p>• 1x Microfiber Polishing Cloth</p>
-                    <p>• 1x Dust Absorber Sticker & Guide Tabs</p>
-                    <p>• 1x Squeegee Card</p>
+                  <div className="px-3.5 sm:px-4 pb-4 text-xs text-zinc-600 space-y-2 border-t border-zinc-100 pt-3">
+                    {parsedBoxItems.map((item, idx) => (
+                      <div key={idx} className="flex items-center gap-2">
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" />
+                        <p className="font-medium text-zinc-700">{item}</p>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>

@@ -258,6 +258,11 @@ export default function ProductCarousel({ products = [] }) {
                     <h3 className="text-xs sm:text-sm font-bold text-white tracking-tight leading-tight line-clamp-1 group-hover:text-emerald-400 transition-colors">
                       {product.name}
                     </h3>
+                    {product.description && (
+                      <p className="text-[10px] text-zinc-400 line-clamp-1 mt-0.5 font-normal">
+                        {product.description}
+                      </p>
+                    )}
                     
                     <div className="flex items-center justify-between mt-1.5 pt-0.5">
                       <div className="flex items-baseline gap-1.5">

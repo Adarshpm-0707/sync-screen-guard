@@ -9,7 +9,10 @@ import useCustomerAuth from '../../hooks/useCustomerAuth';
 import MobileMenu from './MobileMenu';
 import CartDrawer from './CartDrawer';
 import SearchModal from './SearchModal';
+import ProductsMegaMenu from './ProductsMegaMenu';
 import syncLogo from '../../assets/sync-logo.png';
+import { fetchCategories } from '../../utils/categoryStore';
+import { fetchStoreProducts, getInstantProducts } from '../../utils/productStore';
 
 export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -18,10 +21,53 @@ export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
   const [searchModalOpen, setSearchModalOpen] = useState(false);
+  const [megaMenuOpen, setMegaMenuOpen] = useState(false);
+  const [categories, setCategories] = useState([]);
+  const [products, setProducts] = useState(() => getInstantProducts());
+  const megaMenuTimeoutRef = useRef(null);
   const profileRef = useRef(null);
   const { cartCount } = useCart();
   const location = useLocation();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    async function loadNavData() {
+      const [cats, prods] = await Promise.all([
+        fetchCategories(),
+        fetchStoreProducts()
+      ]);
+      setCategories(cats || []);
+      setProducts(prods || []);
+    }
+    loadNavData();
+
+    window.addEventListener('categories_updated', loadNavData);
+    window.addEventListener('products_updated', loadNavData);
+    window.addEventListener('storage', loadNavData);
+    return () => {
+      window.removeEventListener('categories_updated', loadNavData);
+      window.removeEventListener('products_updated', loadNavData);
+      window.removeEventListener('storage', loadNavData);
+    };
+  }, []);
+
+  useEffect(() => {
+    // Close mega menu on route change
+    setMegaMenuOpen(false);
+  }, [location.pathname]);
+
+  const handleMouseEnterProducts = () => {
+    if (megaMenuTimeoutRef.current) {
+      clearTimeout(megaMenuTimeoutRef.current);
+    }
+    setMegaMenuOpen(true);
+  };
+
+  const handleMouseLeaveProducts = () => {
+    megaMenuTimeoutRef.current = setTimeout(() => {
+      setMegaMenuOpen(false);
+    }, 180);
+  };
 
   useEffect(() => {
     const handleScroll = () => {
@@ -92,24 +138,43 @@ export default function Navbar() {
 
             {/* Desktop Navigation Links */}
             <nav className="hidden md:flex items-center space-x-1 lg:space-x-2">
-              {[
-                { path: '/', label: 'HOME' },
-                { path: '/products', label: 'ALL PRODUCTS' },
-                { path: '/about', label: 'ABOUT US' },
-                { path: '/contact', label: 'CONTACT' },
-              ].map((link) => (
+              <Link
+                to="/"
+                className={`px-3.5 py-2 text-xs font-bold tracking-wider transition-colors rounded-full ${
+                  isActive('/')
+                    ? 'text-white bg-zinc-800 font-extrabold border border-zinc-700'
+                    : 'text-zinc-300 hover:text-white hover:bg-zinc-900'
+                }`}
+              >
+                HOME
+              </Link>
+
+              {/* All Products with Mega Menu on Hover */}
+              <div
+                className="relative"
+                onMouseEnter={handleMouseEnterProducts}
+                onMouseLeave={handleMouseLeaveProducts}
+              >
                 <Link
-                  key={link.path}
-                  to={link.path}
-                  className={`px-3.5 py-2 text-xs font-bold tracking-wider transition-colors rounded-full ${
-                    isActive(link.path)
+                  to="/products"
+                  className={`inline-flex items-center gap-1 px-3.5 py-2 text-xs font-bold tracking-wider transition-colors rounded-full ${
+                    isActive('/products') || megaMenuOpen
                       ? 'text-white bg-zinc-800 font-extrabold border border-zinc-700'
                       : 'text-zinc-300 hover:text-white hover:bg-zinc-900'
                   }`}
                 >
-                  {link.label}
+                  <span>ALL PRODUCTS</span>
+                  <ChevronDown className={`h-3 w-3 text-zinc-400 transition-transform duration-200 ${megaMenuOpen ? 'rotate-180 text-emerald-400' : ''}`} />
                 </Link>
-              ))}
+
+                {/* Dropdown Mega Menu */}
+                <ProductsMegaMenu
+                  isOpen={megaMenuOpen}
+                  onClose={() => setMegaMenuOpen(false)}
+                  categories={categories}
+                  products={products}
+                />
+              </div>
             </nav>
 
             {/* Right Utilities: Search, Bag (Desktop also includes Profile) */}
