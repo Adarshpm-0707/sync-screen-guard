@@ -5,79 +5,77 @@ import {
   ShieldCheck, Sparkles, Layers, Zap, CheckCircle2, 
   Award, RefreshCw, Truck, HeartHandshake, Eye, 
   Cpu, ArrowRight, Star, ChevronRight, Phone, Mail,
-  Smartphone, Lock, HelpCircle
+  Smartphone, Lock, HelpCircle, Radio, BatteryCharging
 } from 'lucide-react';
 import syncLogo from '../assets/sync-logo.png';
 
 export default function About() {
-  const [activeTab, setActiveTab] = useState('all');
-
   const stats = [
-    { value: '150K+', label: 'Screens Protected', sub: 'Across India' },
-    { value: '99.8%', label: 'Fit Accuracy', sub: '0.01mm Precision' },
-    { value: '10-Sec', label: 'Fast Auto-Align', sub: 'Zero Dust & Bubbles' },
-    { value: '4.9★', label: 'Customer Rating', sub: 'From 12,000+ Reviews' },
+    { value: '50K+', label: 'Happy Customers', sub: 'Across India' },
+    { value: '500+', label: 'Products Listed', sub: 'Electronics & Gadgets' },
+    { value: '100%', label: 'Genuine Products', sub: 'Direct Brand Warranty' },
+    { value: '4.9★', label: 'Customer Rating', sub: 'From 8,000+ Reviews' },
   ];
 
   const pillars = [
     {
-      id: 'tray',
-      icon: Sparkles,
-      title: '10-Second Auto Alignment Box',
-      tag: 'Patented Technology',
+      id: 'performance',
+      icon: Cpu,
+      title: 'Next-Gen Performance & Chipsets',
+      tag: 'Smart Architecture',
       badgeColor: 'emerald',
-      description: 'Never struggle with crooked glass or trapped dust specks again. Our custom-molded applicator box snaps onto your phone, auto-cleans static particles, and seals the protector in under 10 seconds.',
-      features: ['Automated dust removal pull-strip', 'Zero-misalignment guaranteed', 'Pre-cut speaker mesh alignment']
+      description: 'Engineered with advanced circuitry, high-efficiency power management, and optimized processing components to deliver lightning-fast response and dependable reliability.',
+      features: ['Intelligent surge & thermal protection', 'Low-latency connectivity', 'Optimized energy efficiency']
     },
     {
-      id: 'hardness',
+      id: 'durability',
       icon: ShieldCheck,
-      title: '9H Diamond Aluminosilicate Glass',
-      tag: 'Military-Grade Armor',
+      title: 'Military-Grade Durability & Materials',
+      tag: 'Built to Last',
       badgeColor: 'indigo',
-      description: 'Engineered through a 4-hour thermal ion-exchange tempering bath at 400°C. Delivers 5x higher impact resistance than standard soda-lime tempered glass to withstand extreme drops and keys scratches.',
-      features: ['9H scratch-resistance rating', 'Multi-layer shatterproof dispersion', 'Absorbs up to 50kg impact force']
+      description: 'Crafted from high-grade aerospace alloys, reinforced polymer housings, and shatterproof tempered composite elements that endure intense daily use and demanding conditions.',
+      features: ['Impact & drop tested build', 'Corrosion-resistant gold/nickel plating', 'Reinforced strain-relief joints']
     },
     {
-      id: 'coating',
-      icon: Layers,
-      title: 'Electroplated Oleophobic Nano-Layer',
-      tag: 'Ultra-Smooth Touch',
+      id: 'design',
+      icon: Sparkles,
+      title: 'Minimalist & Ergonomic Aesthetics',
+      tag: 'Modern Craftsmanship',
       badgeColor: 'amber',
-      description: 'Vacuum plasma deposition infuses high-density oleophobic molecules directly into the glass surface, repelling fingerprint oils, moisture, and grime while maintaining silky glide responsiveness.',
-      features: ['Anti-fingerprint & smudge resistant', 'Silky gaming-grade touch response', 'Long-lasting nano-bonded coating']
+      description: 'Designed to blend seamlessly into your daily workspace and mobile life. Sleek matte textures, clean geometric silhouettes, and intuitive tactile feedback in every product.',
+      features: ['Ultra-compact pocket-ready form factor', 'Anti-slip tactile matte finishes', 'Precision CNC chamfered borders']
     },
     {
-      id: 'clarity',
-      icon: Eye,
-      title: '99.99% Optical Retina Clarity',
-      tag: 'HD Visual Transparency',
+      id: 'ecosystem',
+      icon: Radio,
+      title: 'Universal Device Compatibility',
+      tag: 'Seamless Integration',
       badgeColor: 'cyan',
-      description: 'Ultra-pure optical crystal glass delivers lossless display brightness, vivid HDR color reproduction, and seamless Dynamic Island and Face ID sensor recognition with zero camera glare.',
-      features: ['True HDR & 120Hz display fidelity', 'Zero Face ID / front camera interference', 'Anti-reflective optical coating']
+      description: 'Designed with open standards to work flawlessly across iOS, Android, Windows, and macOS ecosystems without awkward adapters or compatibility bottlenecks.',
+      features: ['Multi-protocol fast charging support', 'Cross-platform wireless sync', 'Universal accessory fit']
     }
   ];
 
   const steps = [
     {
       step: '01',
-      title: 'Precision CNC Laser Milling',
-      description: 'Every protector is mapped from real smartphone CAD schematics and precision-cut with 0.01mm edge curvature tolerances for 100% case compatibility.'
+      title: 'Precision CAD & Ergonomic Modeling',
+      description: 'Every product begins with meticulous 3D CAD blueprints designed around human ergonomics, thermal airflow, and everyday portability.'
     },
     {
       step: '02',
-      title: 'Thermal Ion-Exchange Tempering',
-      description: 'Glass blanks undergo a rigorous 400°C molten potassium salt bath where smaller sodium ions are replaced by larger potassium ions, creating compressive surface armor.'
+      title: 'Tier-1 Component & Material Sourcing',
+      description: 'We source high-purity copper, aerospace aluminum, Grade-A silicon chipsets, and optical-grade glass blanks from certified suppliers.'
     },
     {
       step: '03',
-      title: 'Plasma Vacuum Oleophobic Coating',
-      description: 'Advanced automated vacuum chambers vaporize hydrophobic & oleophobic nano-polymers to chemically bond a microscopic frictionless surface layer.'
+      title: 'Thermal & Stress Benchmarking',
+      description: 'Prototypes endure extreme bend tests, thermal heat chambers, drop simulations, and electrical cycle testing before passing to production.'
     },
     {
       step: '04',
-      title: '100% Micro-Inspection & Clean Room Boxing',
-      description: 'Every finished unit is inspected under polarized light for optical distortions and sealed in static-free cleanrooms inside the auto-alignment applicator tray.'
+      title: '100% Quality Inspection & Clean Packaging',
+      description: 'Every finished gadget and accessory undergoes multi-point optical & functional checks before being sealed in premium protective packaging.'
     }
   ];
 
@@ -85,22 +83,22 @@ export default function About() {
     {
       icon: Award,
       title: 'Zero Compromise on Quality',
-      description: 'We test our glass against real-world drop scenarios, keys, coins, and everyday abrasions before any product design gets approved.'
+      description: 'We rigorously test every gadget and accessory against real-world usage conditions before releasing any product to market.'
     },
     {
       icon: RefreshCw,
-      title: '100% Quality & Protection Guarantee',
-      description: 'Every screen guard is crafted to military-grade standards for ultimate clarity, flawless touch response, and total impact resistance.'
+      title: '100% Genuine Brand Guarantee',
+      description: 'All items are 100% authentic Sync products backed by our hassle-free replacement policy and direct brand warranty.'
     },
     {
       icon: Truck,
       title: 'Fast Express Delivery',
-      description: 'Direct dispatch across India within 24–48 hours with real-time courier tracking right to your doorstep.'
+      description: 'Orders are processed within 24–48 hours with real-time courier tracking right to your doorstep across India.'
     },
     {
       icon: HeartHandshake,
       title: 'Customer-First Support',
-      description: 'Our dedicated support team is available via email and phone helpline (Mon–Sat) to assist with model queries and order tracking.'
+      description: 'Our dedicated support team is available via email, phone helpline, and WhatsApp (Mon–Sat) for instant product assistance.'
     }
   ];
 
@@ -124,15 +122,15 @@ export default function About() {
 
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-zinc-900/90 border border-zinc-800 text-[11px] font-bold tracking-wider text-emerald-400 uppercase">
             <Sparkles className="h-3.5 w-3.5" />
-            <span>The Sync Story & Engineering</span>
+            <span>The Sync Story & Philosophy</span>
           </div>
 
           <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black uppercase tracking-tight text-white max-w-4xl mx-auto leading-[1.1]">
-            Engineered for <span className="bg-gradient-to-r from-emerald-400 via-teal-300 to-indigo-400 bg-clip-text text-transparent">Uncompromising</span> Screen Defense
+            Empowering Modern Life with <span className="bg-gradient-to-r from-emerald-400 via-teal-300 to-indigo-400 bg-clip-text text-transparent">Smart Innovation</span>
           </h1>
 
           <p className="text-sm sm:text-base lg:text-lg text-zinc-400 max-w-2xl mx-auto font-normal leading-relaxed">
-            Sync Screen Guard was born to end the frustration of crooked installations, trapped air bubbles, and brittle glass. We combine aerospace-grade aluminosilicate materials with effortless 10-second auto-alignment applicators.
+            Sync is a consumer electronics, accessories, and gadgets brand built to bring cutting-edge technology and smart innovations directly to your everyday digital life.
           </p>
 
           {/* Quick CTA Buttons in Hero */}
@@ -148,7 +146,7 @@ export default function About() {
               href="#engineering"
               className="inline-flex items-center gap-2 px-6 py-3.5 rounded-full bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-zinc-800 font-bold text-xs uppercase tracking-wider transition-all cursor-pointer"
             >
-              <span>Our Technology</span>
+              <span>Our Innovation</span>
             </a>
           </div>
 
@@ -178,30 +176,30 @@ export default function About() {
             <div className="lg:col-span-7 space-y-6">
               <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
                 <ShieldCheck className="h-4 w-4" />
-                <span>Our Origin Story</span>
+                <span>Our Brand Story</span>
               </div>
               <h2 className="text-2xl sm:text-4xl font-black uppercase tracking-tight text-zinc-900 leading-snug">
-                Why We Built <span className="text-emerald-600">Sync Screen Guard</span>
+                Why We Created <span className="text-emerald-600">Sync</span>
               </h2>
               <div className="space-y-4 text-xs sm:text-sm text-zinc-600 leading-relaxed font-normal">
                 <p>
-                  Like millions of smartphone owners, we were exhausted by conventional screen protectors. Traditional glass guards required surgical precision to apply, easily trapped dust particles, lifted at the curved borders, and cracked upon the slightest everyday tap.
+                  In a market full of overpriced electronics and low-quality accessories, finding products that balance performance, build quality, and value is a real challenge.
                 </p>
                 <p>
-                  We believed protecting an expensive flagship smartphone should be <strong>foolproof, durable, and crystal-clear</strong>. That drove us to develop Sync Screen Guard — an integrated protection ecosystem combining military-grade 9H aluminosilicate glass with our patented 10-second auto-alignment applicator box.
+                  We built <strong>Sync</strong> to solve that. We curate, source, and deliver premium consumer electronics, smart gadgets, and must-have accessories — bringing you genuine products with honest pricing, direct brand warranty, and fast doorstep delivery across India.
                 </p>
                 <p>
-                  Today, thousands of customers across India trust Sync to safeguard their devices with zero installation stress and 100% optical fidelity.
+                  From cutting-edge earbuds and fast-charging gear to smart home devices and precision-crafted accessories, every Sync product is designed to keep you connected and ahead.
                 </p>
               </div>
 
               {/* Checkmarks list */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
                 {[
-                  'Patented Auto-Align Applicator Tray',
-                  'High-Purity 9H Aluminosilicate Glass',
-                  'Electroplated Oleophobic Shield',
-                  'Edge-to-Edge Case-Friendly Fit'
+                  'Consumer Electronics & Smart Devices',
+                  'Premium Gadgets & Tech Accessories',
+                  'Fast Charging & Audio Solutions',
+                  'Direct Brand Warranty & Fast Support'
                 ].map((item, idx) => (
                   <div key={idx} className="flex items-center space-x-2.5 text-xs font-semibold text-zinc-800">
                     <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
@@ -221,7 +219,7 @@ export default function About() {
                 </div>
                 <h3 className="text-base sm:text-lg font-bold text-zinc-900 uppercase tracking-tight">Our Mission</h3>
                 <p className="text-xs sm:text-sm text-zinc-600 leading-relaxed">
-                  To democratize precision smartphone defense by eliminating installation failures and delivering aerospace-grade impact resistance at transparent, honest prices.
+                  To democratize next-generation electronics and smart accessories by delivering sleek, ultra-reliable, and high-performance tech at honest, transparent prices.
                 </p>
               </div>
 
@@ -232,7 +230,7 @@ export default function About() {
                 </div>
                 <h3 className="text-base sm:text-lg font-bold text-white uppercase tracking-tight">Our Vision</h3>
                 <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed">
-                  A world where cracked phone displays and bubble-filled protectors are obsolete, with every device enjoying flawless touch sensitivity and pure optical clarity.
+                  To become India’s most trusted lifestyle tech brand, empowering modern device owners with seamless, dependable, and aesthetically stunning electronics.
                 </p>
               </div>
 
@@ -243,20 +241,20 @@ export default function About() {
         </div>
       </section>
 
-      {/* ── 3. Engineering & Technology (The 4 Pillars) ── */}
+      {/* ── 3. Innovation & Engineering (The 4 Pillars) ── */}
       <section id="engineering" className="py-14 sm:py-20 bg-white border-y border-zinc-200">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 space-y-12">
           
           <div className="text-center max-w-2xl mx-auto space-y-3">
             <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
               <Cpu className="h-4 w-4" />
-              <span>Engineering Excellence</span>
+              <span>Core Technology</span>
             </div>
             <h2 className="text-2xl sm:text-4xl font-black uppercase tracking-tight text-zinc-900">
-              The 4 Pillars of Sync Glass
+              The 4 Pillars of Sync Innovation
             </h2>
             <p className="text-xs sm:text-sm text-zinc-500 font-normal">
-              Every Sync Screen Guard incorporates cutting-edge material science and manufacturing precision.
+              Every Sync device and accessory incorporates cutting-edge technology and rigorous manufacturing precision.
             </p>
           </div>
 
@@ -302,20 +300,20 @@ export default function About() {
         </div>
       </section>
 
-      {/* ── 4. Precision Manufacturing Process ── */}
+      {/* ── 4. Precision Crafting Process ── */}
       <section className="py-14 sm:py-20">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 space-y-12">
           
           <div className="text-center max-w-2xl mx-auto space-y-3">
             <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
               <Layers className="h-4 w-4" />
-              <span>How It’s Made</span>
+              <span>Quality Assurance</span>
             </div>
             <h2 className="text-2xl sm:text-4xl font-black uppercase tracking-tight text-zinc-900">
-              4-Step Precision Crafting
+              4-Step Quality & Crafting Process
             </h2>
             <p className="text-xs sm:text-sm text-zinc-500 font-normal">
-              From raw glass blanks to your smartphone screen, here is our rigorous manufacturing workflow.
+              From initial architectural concept to the product in your hands, our workflow guarantees uncompromising standards.
             </p>
           </div>
 
@@ -353,10 +351,10 @@ export default function About() {
               <span>Customer Promises</span>
             </div>
             <h2 className="text-2xl sm:text-4xl font-black uppercase tracking-tight text-white">
-              The Sync Customer Commitment
+              The Sync Brand Commitment
             </h2>
             <p className="text-xs sm:text-sm text-zinc-400 font-normal">
-              When you choose Sync Screen Guard, you receive complete peace of mind with our dedicated support and guarantees.
+              When you choose Sync, you receive complete peace of mind with our dedicated support, quality guarantee, and warranty coverage.
             </p>
           </div>
 
@@ -396,13 +394,13 @@ export default function About() {
 
             <div className="relative space-y-4 max-w-2xl mx-auto">
               <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold uppercase tracking-wider">
-                <ShieldCheck className="h-3.5 w-3.5" /> 100% Screen Protection
+                <Sparkles className="h-3.5 w-3.5" /> Next-Gen Technology
               </span>
               <h2 className="text-2xl sm:text-4xl font-black uppercase tracking-tight text-white">
-                Ready to Upgrade Your Screen Protection?
+                Ready to Upgrade Your Tech Lifestyle?
               </h2>
               <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed font-normal">
-                Find the tailored 10-second auto-align tempered glass protector for your specific iPhone, Samsung, or flagship smartphone model.
+                Explore our catalog of premium electronics, smart gadgets, and high-performance device accessories.
               </p>
             </div>
 
@@ -412,7 +410,7 @@ export default function About() {
                 className="inline-flex items-center gap-2 px-7 py-3.5 rounded-full bg-white hover:bg-zinc-200 text-zinc-950 font-bold text-xs uppercase tracking-wider transition-all shadow-lg hover:scale-102 cursor-pointer"
               >
                 <Smartphone className="h-4 w-4 text-emerald-600" />
-                <span>Shop All Protectors</span>
+                <span>Shop All Products</span>
                 <ArrowRight className="h-4 w-4" />
               </Link>
               <Link

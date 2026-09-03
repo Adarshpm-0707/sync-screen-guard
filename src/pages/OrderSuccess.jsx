@@ -51,9 +51,9 @@ export default function OrderSuccess() {
       ? orderInfo.items 
       : [
           {
-            name: 'Sync 9H Privacy Armor Screen Guard',
-            model: 'iPhone 16 Pro Max',
-            finish: 'Matte Privacy 9H',
+            name: 'Sync Premium Tech Accessory',
+            model: 'Universal',
+            finish: 'Matte Finish',
             quantity: 1,
             price: state?.amount || 499
           },
@@ -284,7 +284,7 @@ export default function OrderSuccess() {
                 {/* 1. Official Store Header */}
                 <div className="text-center space-y-1 border-b-2 border-dashed border-zinc-300 pb-3 sm:pb-4">
                   <div className="font-display font-black text-lg sm:text-2xl tracking-tight text-black uppercase">
-                    SYNC SCREEN GUARD
+                    SYNC
                   </div>
                   <div className="text-[9px] sm:text-[10px] text-zinc-700 uppercase tracking-widest font-bold">
                     Official Tax Invoice & Warranty Slip
@@ -293,10 +293,10 @@ export default function OrderSuccess() {
                     GSTIN: 32AABCS1429K1Z5 • REG NO: SYN-2026-9941
                   </div>
                   <div className="text-[8px] sm:text-[9px] text-zinc-500">
-                    www.syncscreenguard.com • support@syncguard.in
+                    https://syncforall.com • syncallfyp@gmail.com
                   </div>
                   <div className="inline-block mt-1 px-2 py-0.5 rounded bg-zinc-900 text-white text-[8px] sm:text-[9px] font-bold tracking-widest uppercase">
-                    ★ ORIGINAL 9H ARMOR GLASS ★
+                    ★ 100% GENUINE SYNC PRODUCT ★
                   </div>
                 </div>
 
@@ -446,7 +446,7 @@ export default function OrderSuccess() {
                     *{orderData.orderId}*
                   </div>
                   <div className="text-[8px] sm:text-[9px] text-zinc-500 uppercase tracking-widest">
-                    THANK YOU FOR CHOOSING SYNC SCREEN GUARD
+                    THANK YOU FOR CHOOSING SYNC
                   </div>
                 </div>
 

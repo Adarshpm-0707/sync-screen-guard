@@ -121,7 +121,7 @@ export default function CartDrawer({ isOpen, onClose }) {
                   </div>
                   <h3 className="font-display text-lg font-bold text-zinc-900 mb-1">Your bag is empty</h3>
                   <p className="text-xs text-zinc-500 max-w-xs mb-6">
-                    Looks like you haven't added any screen protectors or armor glass yet.
+                    Looks like you haven't added any electronics, smart gadgets, or accessories yet.
                   </p>
                   <button
                     onClick={() => { onClose(); navigate('/products'); }}

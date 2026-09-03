@@ -24,9 +24,9 @@ export async function sendOrderNotificationEmails(orderData) {
 
   const itemsSummaryPlainText = Array.isArray(items) && items.length > 0
     ? items.map((it, idx) =>
-        `${idx + 1}. ${it.name || it.product_name || 'Screen Guard'} (Qty: ${it.quantity || 1}) — ₹${(it.price || 0) * (it.quantity || 1)}`
+        `${idx + 1}. ${it.name || it.product_name || 'Sync Product'} (Qty: ${it.quantity || 1}) — ₹${(it.price || 0) * (it.quantity || 1)}`
       ).join('\n')
-    : `1. Sync 9H Diamond Tempered Glass (Qty: 1) — ₹${total}`;
+    : `1. Sync Premium Product (Qty: 1) — ₹${total}`;
 
   const shippingAddress = [address, city, state, pincode].filter(Boolean).join(', ') || 'Not Provided';
   const paymentMethodDisplay = payment_type === 'cod'
@@ -63,7 +63,7 @@ export async function sendOrderNotificationEmails(orderData) {
         '🛒 Items Purchased': itemsSummaryPlainText,
         '📅 Placed At': dateStr,
         '⚡ Fulfillment Status': 'NEW ORDER — Awaiting Packing & Dispatch',
-        '🛡️ Store Channel': 'Sync Screen Guard Store'
+        '🛡️ Store Channel': 'Sync Store'
       })
     });
   } catch (err) {
@@ -82,7 +82,7 @@ export async function sendOrderNotificationEmails(orderData) {
           'Accept': 'application/json'
         },
         body: JSON.stringify({
-          _subject: `🎉 Order Confirmed! #${orderId} | Sync Screen Guard`,
+          _subject: `🎉 Order Confirmed! #${orderId} | Sync`,
           _template: 'box',
           _captcha: 'false',
           _replyto: 'syncallfyp@gmail.com',
@@ -122,9 +122,9 @@ export async function sendOrderCancellationEmails(orderData) {
 
   const itemsSummaryPlainText = Array.isArray(items) && items.length > 0
     ? items.map((it, idx) =>
-        `${idx + 1}. ${it.name || it.product_name || 'Screen Guard'} (Qty: ${it.quantity || 1}) — ₹${(it.price || 0) * (it.quantity || 1)}`
+        `${idx + 1}. ${it.name || it.product_name || 'Sync Product'} (Qty: ${it.quantity || 1}) — ₹${(it.price || 0) * (it.quantity || 1)}`
       ).join('\n')
-    : `1. Sync 9H Diamond Tempered Glass (Qty: 1) — ₹${total}`;
+    : `1. Sync Premium Product (Qty: 1) — ₹${total}`;
 
   const shippingAddress = [address, city, state, pincode].filter(Boolean).join(', ') || 'Not Provided';
   const paymentMethodDisplay = payment_type === 'cod'
@@ -180,7 +180,7 @@ export async function sendOrderCancellationEmails(orderData) {
           'Accept': 'application/json'
         },
         body: JSON.stringify({
-          _subject: `🚫 Order Cancellation Confirmed — #${orderId} | Sync Screen Guard`,
+          _subject: `🚫 Order Cancellation Confirmed — #${orderId} | Sync`,
           _template: 'box',
           _captcha: 'false',
           _replyto: 'syncallfyp@gmail.com',

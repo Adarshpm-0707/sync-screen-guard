@@ -3,6 +3,8 @@ import { supabase } from '../../supabaseClient';
 
 const AdminAuthContext = createContext(null);
 
+const SUPERADMIN_EMAILS = ['syncallfyp@gmail.com', 'admin@syncarmor.in', 'adarshpm0707@gmail.com'];
+
 export function AdminAuthProvider({ children }) {
   const [adminUser, setAdminUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -30,9 +32,15 @@ export function AdminAuthProvider({ children }) {
     // 2. Check active session on mount via Supabase
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
-        const isAdmin = session.user.app_metadata?.is_admin || session.user.user_metadata?.is_admin;
+        const userEmail = (session.user.email || '').toLowerCase().trim();
+        const isAdmin = session.user.app_metadata?.is_admin || 
+                        session.user.user_metadata?.is_admin || 
+                        SUPERADMIN_EMAILS.includes(userEmail);
         if (isAdmin) {
-          setAdminUser(session.user);
+          setAdminUser({
+            ...session.user,
+            user_metadata: { ...session.user.user_metadata, is_admin: true }
+          });
         }
       }
       setLoading(false);
@@ -43,9 +51,15 @@ export function AdminAuthProvider({ children }) {
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session?.user) {
-        const isAdmin = session.user.app_metadata?.is_admin || session.user.user_metadata?.is_admin;
+        const userEmail = (session.user.email || '').toLowerCase().trim();
+        const isAdmin = session.user.app_metadata?.is_admin || 
+                        session.user.user_metadata?.is_admin || 
+                        SUPERADMIN_EMAILS.includes(userEmail);
         if (isAdmin) {
-          setAdminUser(session.user);
+          setAdminUser({
+            ...session.user,
+            user_metadata: { ...session.user.user_metadata, is_admin: true }
+          });
         }
       }
       setLoading(false);
@@ -67,35 +81,55 @@ export function AdminAuthProvider({ children }) {
         });
 
         if (!error && data?.user) {
-          const token = data.session?.access_token || 'local_admin_token';
-          // Grant admin access if user authenticated via Supabase
-          const adminObj = {
-            ...data.user,
-            token,
-            user_metadata: { ...data.user.user_metadata, is_admin: true }
-          };
-          setAdminUser(adminObj);
-          localStorage.setItem('local_admin_session', JSON.stringify(adminObj));
-          localStorage.setItem('admin_token', token);
-          setLoading(false);
-          return { success: true };
+          const isMaster = SUPERADMIN_EMAILS.includes(cleanEmail);
+          const isUserAdmin = data.user.app_metadata?.is_admin || 
+                              data.user.user_metadata?.is_admin || 
+                              isMaster;
+
+          if (isUserAdmin) {
+            const token = data.session?.access_token || 'local_admin_token';
+            const adminObj = {
+              ...data.user,
+              token,
+              user_metadata: { 
+                ...data.user.user_metadata, 
+                is_admin: true,
+                role: isMaster ? 'superadmin' : (data.user.user_metadata?.role || 'admin')
+              }
+            };
+            setAdminUser(adminObj);
+            localStorage.setItem('local_admin_session', JSON.stringify(adminObj));
+            localStorage.setItem('admin_token', token);
+            setLoading(false);
+            return { success: true };
+          }
         }
       }
     } catch (err) {
       // Continue to local verification if Supabase auth errors or fails
     }
 
-    // Fallback to local admin user database simulation / local storage
+    // Fallback to local admin user database simulation / master credentials
     const localUsers = JSON.parse(localStorage.getItem('local_admin_users') || '[]');
     const matchedUser = localUsers.find(
       u => u.email.toLowerCase() === cleanEmail && u.password === cleanPassword
     );
 
-    if (matchedUser || (cleanEmail === 'admin@syncarmor.in' && cleanPassword === 'admin123') || (cleanEmail === 'adarshpm0707@gmail.com')) {
+    const isMasterCredential = 
+      (cleanEmail === 'syncallfyp@gmail.com' && (cleanPassword === 'admin@sync' || cleanPassword === 'admin123')) ||
+      (cleanEmail === 'admin@syncarmor.in' && (cleanPassword === 'admin123' || cleanPassword === 'admin@sync')) ||
+      (cleanEmail === 'adarshpm0707@gmail.com');
+
+    if (matchedUser || isMasterCredential) {
       const adminObj = { 
+        id: matchedUser?.id || `admin-${cleanEmail}`,
         email: cleanEmail, 
         token: 'local_admin_token',
-        user_metadata: { is_admin: true } 
+        user_metadata: { 
+          is_admin: true,
+          name: cleanEmail === 'syncallfyp@gmail.com' ? 'Sync Admin' : (cleanEmail === 'adarshpm0707@gmail.com' ? 'Adarsh P M' : 'Sync Superadmin'),
+          role: 'superadmin'
+        } 
       };
       setAdminUser(adminObj);
       localStorage.setItem('local_admin_session', JSON.stringify(adminObj));
@@ -107,7 +141,7 @@ export function AdminAuthProvider({ children }) {
     setLoading(false);
     return { 
       success: false, 
-      error: 'Invalid login credentials. Please check your email and password or register an admin account.' 
+      error: 'Invalid login credentials. Please check your email and password.' 
     };
   };
 

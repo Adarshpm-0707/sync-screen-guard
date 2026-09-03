@@ -43,10 +43,16 @@ export default function ProductForm({ product, onSubmit, isSaving }) {
   useEffect(() => {
     async function loadCats() {
       const list = await fetchCategories();
-      setCategoriesList(list);
+      setCategoriesList(list || []);
+      if (!product && list && list.length > 0) {
+        setFormData(prev => ({
+          ...prev,
+          category: prev.category === 'glass' ? list[0].id : prev.category
+        }));
+      }
     }
     loadCats();
-  }, []);
+  }, [product]);
 
   useEffect(() => {
     if (product) {
@@ -57,7 +63,7 @@ export default function ProductForm({ product, onSubmit, isSaving }) {
       };
       setFormData({
         name: product.name || '',
-        category: product.category || 'glass',
+        category: product.category || (categoriesList[0]?.id || 'glass'),
         price: product.price || '',
         original_price: product.original_price || '',
         purchasing_price: product.purchasing_price || '',
@@ -72,7 +78,7 @@ export default function ProductForm({ product, onSubmit, isSaving }) {
         show_on_home: product.show_on_home !== false,
       });
     }
-  }, [product]);
+  }, [product, categoriesList]);
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;

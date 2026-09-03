@@ -80,10 +80,10 @@ export default function MobileMenu({ isOpen, onClose, customer, onOpenAuth, onLo
             <div className="space-y-5">
               {/* Top Header */}
               <div className="flex items-center justify-between pb-4 border-b border-zinc-800/80">
-                <Link to="/" onClick={onClose} title="Sync Screen Guard" aria-label="Sync Screen Guard" className="flex items-center space-x-2">
+                <Link to="/" onClick={onClose} title="Sync" aria-label="Sync" className="flex items-center space-x-2">
                   <img
                     src={syncLogo}
-                    alt="Sync Screen Guard"
+                    alt="Sync"
                     className="h-9 w-auto object-contain"
                   />
              
@@ -185,7 +185,7 @@ export default function MobileMenu({ isOpen, onClose, customer, onOpenAuth, onLo
               {/* Browse by Category & Products */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between px-2">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Categories & Protectors</p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Categories & Products</p>
                   <span className="text-[9px] font-bold text-emerald-400">{categories.length} Categories</span>
                 </div>
 

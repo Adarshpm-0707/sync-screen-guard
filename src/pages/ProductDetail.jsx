@@ -3,10 +3,11 @@ import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import ProductGallery from '../components/product/ProductGallery';
 import ProductCard from '../components/product/ProductCard';
+import ProductReviewsSection from '../components/product/ProductReviewsSection';
 import { 
   Check, ShieldCheck, Star, ChevronRight, ShoppingBag, 
   Zap, ArrowLeft, Truck, Smartphone, Sparkles, RefreshCw, 
-  Layers, Lock, MapPin, ChevronDown, ChevronUp, PackageCheck 
+  Layers, Lock, MapPin, ChevronDown, ChevronUp, PackageCheck, MessageSquare
 } from 'lucide-react';
 import useCart from '../hooks/useCart';
 import useCustomerAuth from '../hooks/useCustomerAuth';
@@ -18,25 +19,73 @@ import {
   DEFAULT_INSTALLATION_GUIDE,
   DEFAULT_BOX_CONTENTS
 } from '../utils/productStore';
+import { fetchGroupedModels, getInstantGroupedModels } from '../utils/deviceModelStore';
+import { isCategoryMatch, isProductMatch } from '../utils/searchHelper';
+import { getInstantReviews, calculateReviewStats, fetchProductReviews } from '../utils/reviewStore';
 
 export default function ProductDetail({ product: propProduct }) {
   const { addToCart } = useCart();
-  const { isLoggedIn, openAuthModal } = useCustomerAuth();
+  const { isLoggedIn } = useCustomerAuth();
   const { settings: storeSettings } = useStoreSettings();
   const navigate = useNavigate();
   const location = useLocation();
-  const [product, setProduct] = useState(() => {
-    return location.state?.product || propProduct || getInstantProducts()[0] || null;
-  });
+
   const [allProducts, setAllProducts] = useState(() => getInstantProducts());
+  const [product, setProduct] = useState(() => {
+    const initial = location.state?.product || propProduct;
+    if (initial && initial.id) {
+      // Ensure it's not a deleted product
+      const deletedIds = new Set(JSON.parse(localStorage.getItem('deleted_product_ids') || '[]'));
+      if (!deletedIds.has(initial.id)) return initial;
+    }
+    const cached = getInstantProducts();
+    return cached && cached.length > 0 ? cached[0] : null;
+  });
 
   const [quantity, setQuantity] = useState(1);
   const [isAdded, setIsAdded] = useState(false);
   const [pincode, setPincode] = useState('');
   const [pincodeResult, setPincodeResult] = useState(null);
-
-  // Accordion open/close state
   const [openAccordion, setOpenAccordion] = useState('desc');
+  const [reviewStats, setReviewStats] = useState(() => {
+    const prodId = product?.id;
+    return calculateReviewStats(getInstantReviews(prodId));
+  });
+
+  // PDP Device Compatibility Finder state
+  const [deviceModelsByBrand, setDeviceModelsByBrand] = useState(() => getInstantGroupedModels());
+  const [selectedBrand, setSelectedBrand] = useState(() => {
+    const brands = Object.keys(getInstantGroupedModels());
+    return brands[0] || 'iPhone';
+  });
+  const [selectedModel, setSelectedModel] = useState(() => {
+    const grouped = getInstantGroupedModels();
+    const brands = Object.keys(grouped);
+    const firstBrand = brands[0] || 'iPhone';
+    return grouped[firstBrand]?.[0] || '';
+  });
+
+  useEffect(() => {
+    fetchGroupedModels().then(grouped => {
+      if (grouped && Object.keys(grouped).length > 0) {
+        setDeviceModelsByBrand(grouped);
+      }
+    });
+  }, []);
+
+  // Ensure selected model is valid when brand changes
+  useEffect(() => {
+    if (deviceModelsByBrand[selectedBrand]) {
+      if (!deviceModelsByBrand[selectedBrand].includes(selectedModel)) {
+        setSelectedModel(deviceModelsByBrand[selectedBrand]?.[0] || '');
+      }
+    }
+  }, [selectedBrand, deviceModelsByBrand]);
+
+  const isModelMatched = useMemo(() => {
+    if (!selectedModel || !product) return false;
+    return isProductMatch(product, selectedModel);
+  }, [product, selectedModel]);
 
   // Parsers for custom accordion content
   const parsedSpecs = useMemo(() => {
@@ -81,30 +130,70 @@ export default function ProductDetail({ product: propProduct }) {
       .map((line) => line.replace(/^[•\-\*]\s*/, '').trim());
   }, [product?.box_contents]);
 
+  // Load and sync store products
   useEffect(() => {
     fetchStoreProducts().then(items => {
-      setAllProducts(items || []);
-      if (!product && items && items.length > 0) {
-        setProduct(items[0]);
+      const deletedIds = new Set(JSON.parse(localStorage.getItem('deleted_product_ids') || '[]'));
+      const validItems = (items || []).filter(p => p && p.id && !deletedIds.has(p.id));
+      setAllProducts(validItems);
+
+      if (product) {
+        // If current product is deleted, pick first valid
+        if (deletedIds.has(product.id)) {
+          setProduct(validItems.length > 0 ? validItems[0] : null);
+        } else {
+          // Update product data if present
+          const currentFresh = validItems.find(p => p.id === product.id);
+          if (currentFresh) {
+            setProduct(currentFresh);
+          }
+        }
+      } else if (validItems.length > 0) {
+        setProduct(validItems[0]);
       }
     });
-  }, [product]);
+  }, []);
 
   // Update selected product when route state changes
   useEffect(() => {
     if (location.state?.product) {
-      setProduct(location.state.product);
-      window.scrollTo(0, 0);
+      const deletedIds = new Set(JSON.parse(localStorage.getItem('deleted_product_ids') || '[]'));
+      if (!deletedIds.has(location.state.product.id)) {
+        setProduct(location.state.product);
+        window.scrollTo(0, 0);
+      }
     }
   }, [location.state]);
+
+  // Sync reviews stats when product changes or reviews update
+  useEffect(() => {
+    if (product?.id) {
+      fetchProductReviews(product.id).then(revs => {
+        setReviewStats(calculateReviewStats(revs));
+      });
+    }
+
+    const handleReviewsUpdated = (e) => {
+      if (product?.id && (!e.detail?.productId || e.detail.productId === String(product.id))) {
+        fetchProductReviews(product.id).then(revs => {
+          setReviewStats(calculateReviewStats(revs));
+        });
+      }
+    };
+
+    window.addEventListener('reviews_updated', handleReviewsUpdated);
+    return () => {
+      window.removeEventListener('reviews_updated', handleReviewsUpdated);
+    };
+  }, [product?.id]);
 
   if (!product) {
     return (
       <div className="min-h-screen py-24 flex items-center justify-center bg-[#FAFAFA] px-4 text-center">
         <div className="bg-white border border-zinc-200 rounded-3xl p-8 sm:p-12 max-w-md w-full space-y-4 shadow-sm">
           <ShieldCheck className="h-10 w-10 text-zinc-400 mx-auto" />
-          <h2 className="text-lg sm:text-xl font-bold text-zinc-900 uppercase">Product Not Found</h2>
-          <p className="text-xs text-zinc-500 font-medium">Please browse our collection to select a screen protector.</p>
+          <h2 className="text-lg sm:text-xl font-bold text-zinc-900 uppercase">Product Not Available</h2>
+          <p className="text-xs text-zinc-500 font-medium">Please browse our live catalog to select an existing product.</p>
           <button
             onClick={() => navigate('/products')}
             className="px-6 py-2.5 bg-zinc-900 text-white rounded-full text-xs font-bold uppercase tracking-wider hover:bg-zinc-800 transition-colors cursor-pointer"
@@ -151,6 +240,12 @@ export default function ProductDetail({ product: propProduct }) {
     }
   };
 
+  const scrollToReviews = () => {
+    const el = document.getElementById('customer-reviews-section');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
 
   const price = Number(product.price) || 640;
   const originalPrice = Number(product.original_price) || Math.round(price * 1.8);
@@ -158,7 +253,17 @@ export default function ProductDetail({ product: propProduct }) {
     ? Math.round(((originalPrice - price) / originalPrice) * 100) 
     : 0;
 
-  const relatedProducts = allProducts.filter(p => p.id !== product.id).slice(0, 4);
+  // Filter out current product and any deleted products for related items using smart category & relevance match
+  const relatedProducts = useMemo(() => {
+    const deletedIds = new Set(JSON.parse(localStorage.getItem('deleted_product_ids') || '[]'));
+    const candidates = allProducts.filter(p => p && p.id && p.id !== product?.id && !deletedIds.has(p.id));
+    
+    // Prioritize same category items
+    const matchingCategory = candidates.filter(p => isCategoryMatch(p, product?.category));
+    const others = candidates.filter(p => !isCategoryMatch(p, product?.category));
+    
+    return [...matchingCategory, ...others].slice(0, 4);
+  }, [allProducts, product]);
 
   return (
     <div className="min-h-screen bg-[#FAFAFA] text-zinc-900 pb-24 font-sans w-full">
@@ -197,10 +302,10 @@ export default function ProductDetail({ product: propProduct }) {
                   </span>
                 )}
                 <span className="rounded bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 text-[9px] sm:text-[10px] font-extrabold uppercase tracking-wider">
-                  9H Tempered Glass
+                  Genuine Sync Product
                 </span>
                 <span className="rounded bg-zinc-100 text-zinc-700 px-2 py-0.5 text-[9px] sm:text-[10px] font-bold uppercase tracking-wider">
-                  Auto-Align Tray Included
+                  Direct Brand Warranty
                 </span>
               </div>
 
@@ -208,16 +313,20 @@ export default function ProductDetail({ product: propProduct }) {
                 {product.name}
               </h1>
 
-              {/* Rating */}
-              <div className="flex items-center gap-2 text-xs font-semibold text-zinc-700">
+              {/* Dynamic Interactive Rating Header */}
+              <button 
+                type="button"
+                onClick={scrollToReviews}
+                className="flex items-center gap-2 text-xs font-semibold text-zinc-700 hover:text-zinc-900 transition-colors cursor-pointer group text-left"
+              >
                 <div className="flex items-center text-amber-400">
                   {[...Array(5)].map((_, i) => (
                     <Star key={i} className="h-3.5 w-3.5 fill-amber-400" />
                   ))}
                 </div>
-                <span className="font-bold text-zinc-900">4.9</span>
-                <span className="text-zinc-400">(240+ Reviews)</span>
-              </div>
+                <span className="font-bold text-zinc-900">{reviewStats.averageRating}</span>
+                <span className="text-zinc-400 group-hover:underline">({reviewStats.totalReviews} Reviews & Comments)</span>
+              </button>
 
               {/* Pricing Section */}
               <div className="flex items-baseline gap-2.5 sm:gap-3 pt-1 flex-wrap">
@@ -347,6 +456,66 @@ export default function ProductDetail({ product: propProduct }) {
               </div>
             </div>
 
+            {/* Device Compatibility & Model Finder */}
+            {Object.keys(deviceModelsByBrand).length > 0 && (
+              <div className="p-4 rounded-2xl bg-zinc-900 text-white border border-zinc-800 space-y-3 shadow-md">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-emerald-400">
+                    <Smartphone className="h-3.5 w-3.5" />
+                    <span>Device Compatibility Checker</span>
+                  </div>
+                  {isModelMatched && (
+                    <span className="text-[9px] font-extrabold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-2 py-0.5 rounded-full">
+                      ✓ Fits {selectedModel}
+                    </span>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[9px] font-bold uppercase tracking-wider text-zinc-400 block mb-1">Brand</label>
+                    <select
+                      value={selectedBrand}
+                      onChange={(e) => setSelectedBrand(e.target.value)}
+                      className="w-full rounded-xl border border-zinc-700 bg-zinc-800 px-2.5 py-2 text-xs font-semibold text-white focus:border-white focus:outline-none cursor-pointer"
+                    >
+                      {Object.keys(deviceModelsByBrand).map((b) => (
+                        <option key={b} value={b}>{b}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-[9px] font-bold uppercase tracking-wider text-zinc-400 block mb-1">Exact Model</label>
+                    <select
+                      value={selectedModel}
+                      onChange={(e) => setSelectedModel(e.target.value)}
+                      className="w-full rounded-xl border border-zinc-700 bg-zinc-800 px-2.5 py-2 text-xs font-semibold text-white focus:border-white focus:outline-none cursor-pointer"
+                    >
+                      {(deviceModelsByBrand[selectedBrand] || []).map((m) => (
+                        <option key={m} value={m}>{m}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="pt-1 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <p className="text-[10px] text-zinc-400">
+                    {isModelMatched
+                      ? `✓ Confirmed compatible with ${selectedModel}.`
+                      : `Search all products compatible with ${selectedModel}.`}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/products?search=${encodeURIComponent(selectedModel || selectedBrand)}`)}
+                    className="px-3 py-1.5 bg-white text-zinc-950 hover:bg-zinc-200 rounded-lg text-[10px] font-extrabold uppercase tracking-wider transition-colors shrink-0 cursor-pointer self-start sm:self-auto"
+                  >
+                    View All {selectedBrand} Items
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* ── 3. Expandable Spec & Installation Accordions ── */}
             <div className="border-t border-zinc-200/80 pt-4 sm:pt-6 space-y-2.5 sm:space-y-3">
               
@@ -361,7 +530,7 @@ export default function ProductDetail({ product: propProduct }) {
                 </button>
                 {openAccordion === 'desc' && (
                   <div className="px-3.5 sm:px-4 pb-4 text-xs sm:text-sm text-zinc-600 border-t border-zinc-100 pt-3 leading-relaxed whitespace-pre-line">
-                    <p>{product.description || 'Flagship 9H tempered glass featuring revolutionary auto-alignment box applicator. Dust-free, bubble-free 10-second installation with oleophobic anti-fingerprint coating.'}</p>
+                    <p>{product.description || 'A premium Sync product engineered for exceptional performance, durability, and compatibility. Backed by direct brand warranty and designed to elevate your everyday tech experience.'}</p>
                   </div>
                 )}
               </div>
@@ -446,7 +615,13 @@ export default function ProductDetail({ product: propProduct }) {
 
         </div>
 
-        {/* ── 4. Related Products Recommendation Carousel ── */}
+        {/* ── 4. Customer Reviews & Comments Section ── */}
+        <ProductReviewsSection 
+          productId={product.id} 
+          productName={product.name} 
+        />
+
+        {/* ── 5. Related Products Recommendation Carousel (Only Existing Admin Products) ── */}
         {relatedProducts.length > 0 && (
           <div className="mt-14 sm:mt-20 pt-8 sm:pt-12 border-t border-zinc-200">
             <h2 className="font-display text-lg sm:text-2xl font-black uppercase tracking-tight text-zinc-900 mb-4 sm:mb-6">

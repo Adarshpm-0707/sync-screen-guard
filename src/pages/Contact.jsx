@@ -20,7 +20,7 @@ export default function Contact() {
   const [errorMsg, setErrorMsg] = useState(null);
   const [activeFaq, setActiveFaq] = useState(null);
 
-  const whatsappUrl = "https://wa.me/919846545949?text=Hi%20Sync%20Screen%20Guard%20Support%2C%20I%20have%20an%20inquiry%20regarding%20screen%20protectors.";
+  const whatsappUrl = "https://wa.me/919846545949?text=Hi%20Sync%20Support%2C%20I%20have%20an%20inquiry%20regarding%20Sync%20electronics%20and%20gadgets.";
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -45,7 +45,7 @@ export default function Contact() {
           "Accept": "application/json"
         },
         body: JSON.stringify({
-          _subject: `📬 [${formData.subject || 'Contact Form'}] ${formData.name} — Sync Screen Guard`,
+          _subject: `📬 [${formData.subject || 'Contact Form'}] ${formData.name} — Sync`,
           _template: "box",
           _captcha: "false",
           _replyto: formData.email,
@@ -55,7 +55,7 @@ export default function Contact() {
           "🏷️ Inquiry Topic": formData.subject || "General Inquiry",
           "💬 Message Content": formData.message,
           "🕐 Received Date & Time": dateStr,
-          "🌐 Website Source": "Sync Screen Guard — Contact Page (http://syncscreenguard.com)",
+          "🌐 Website Source": "Sync — Official Contact Page (https://syncforall.com)",
           "⚡ Store Action": `Reply directly to this email to answer ${formData.name} (${formData.email})`
         })
       });
@@ -79,12 +79,12 @@ export default function Contact() {
 
   const faqs = [
     {
-      q: 'How do I claim a replacement for damaged glass?',
-      a: 'If your protector arrives damaged or has manufacturing defects, email us at syncallfyp@gmail.com or message our WhatsApp support within 48 hours with a photo/video. We dispatch a free replacement immediately.'
+      q: 'How do I claim a replacement or warranty support?',
+      a: 'If your item arrives damaged or has manufacturing defects, email us at syncallfyp@gmail.com or message our official WhatsApp support within 48 hours with unboxing photos/video. We verify and dispatch a free replacement immediately.'
     },
     {
-      q: 'How does the 10-Second Auto Alignment Box work?',
-      a: 'Simply place your phone inside the applicator box, pull the static dust-removal strip, and swipe down the center. The glass aligns and applies automatically without bubbles.'
+      q: 'Are all Sync products covered under warranty?',
+      a: 'Yes, all genuine Sync electronics, smart gadgets, and tech accessories include our direct brand warranty against manufacturing defects.'
     },
     {
       q: 'What are your customer support timings?',
@@ -109,7 +109,7 @@ export default function Contact() {
             Get in Touch
           </h1>
           <p className="mt-3 text-sm sm:text-base text-zinc-400 max-w-lg mx-auto">
-            Have questions about our screen protectors or need order assistance? We’re always here to help.
+            Have questions about our electronics, gadgets, or need order assistance? We’re always here to help.
           </p>
 
         </div>
@@ -304,8 +304,8 @@ export default function Contact() {
                     >
                       <option value="General Inquiry">General Inquiry & Question</option>
                       <option value="Order Status & Delivery">Order Status & Delivery Help</option>
-                      <option value="Damaged / Replacement Request">Damaged / Replacement Claim</option>
-                      <option value="Product Fitment & Installation">Product Fitment & Installation Help</option>
+                      <option value="Warranty & Replacement Claim">Warranty & Replacement Claim</option>
+                      <option value="Product Specifications & Compatibility">Product Specifications & Compatibility</option>
                       <option value="Bulk & Wholesale Orders">Bulk & Wholesale Purchase</option>
                     </select>
                   </div>

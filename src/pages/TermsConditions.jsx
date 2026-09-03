@@ -13,13 +13,13 @@ export default function TermsConditions() {
       id: 'general',
       title: '1. Acceptance of Terms',
       icon: FileText,
-      content: `By accessing, browsing, or purchasing products from Sync Screen Guard ("the Website", "We", "Us", "Our"), you acknowledge that you have read, understood, and agree to be bound by these Terms & Conditions. If you do not agree with any part of these terms, you must refrain from using our store services.`
+      content: `By accessing, browsing, or purchasing products from Sync ("the Website", "We", "Us", "Our"), operating https://syncforall.com, you acknowledge that you have read, understood, and agree to be bound by these Terms & Conditions. Sync is an electronics, accessories, and gadgets brand. If you do not agree with any part of these terms, you must refrain from using our store services.`
     },
     {
       id: 'products',
       title: '2. Product Specifications & Usage',
       icon: ShieldCheck,
-      content: `Sync Screen Guard specializes in premium 9H tempered glass screen protectors equipped with patented auto-alignment installation boxes. All product specifications, compatibility models, and dimensions listed on our site are verified. Customers are responsible for selecting their device model accurately prior to completing orders.`
+      content: `Sync offers a wide range of consumer electronics, smart gadgets, and high-performance accessories including but not limited to earphones, chargers, cables, smart devices, phone cases, and more. All product specifications, compatibility details, voltage ratings, and dimensions listed on our store are verified. Customers are responsible for verifying compatibility with their specific device prior to completing orders.`
     },
     {
       id: 'pricing',
@@ -31,25 +31,25 @@ export default function TermsConditions() {
       id: 'shipping',
       title: '4. Shipping & Delivery Guidelines',
       icon: Truck,
-      content: `Orders are processed within 24 to 48 business hours. Standard delivery timeline ranges from 2 to 5 business days depending on the shipping destination. Real-time tracking IDs are provided upon dispatch via our Track Order portal.`
+      content: `Orders are processed within 24 to 48 business hours. Standard delivery timeline ranges from 2 to 5 business days depending on the shipping destination. Real-time courier tracking IDs are provided upon dispatch via our Track Order portal.`
     },
     {
       id: 'returns',
-      title: '5. Transit Protection & Quality Warranty',
+      title: '5. Brand Warranty & Replacement Policy',
       icon: RefreshCw,
-      content: `We offer a hassle-free transit protection guarantee for products damaged during transit or manufacturing defects. To report an issue, contact syncallfyp@gmail.com within 48 hours of delivery with unboxing proof.`
+      content: `Sync offers a direct brand warranty and transit protection guarantee for all electronics and accessories that are damaged during transit or affected by manufacturing defects. To report a defect or claim warranty support, contact syncallfyp@gmail.com or message our official WhatsApp support within 48 hours of delivery with unboxing proof.`
     },
     {
       id: 'liability',
       title: '6. Limitation of Liability',
       icon: AlertCircle,
-      content: `Sync Screen Guard shall not be liable for any indirect, incidental, or consequential damages resulting from improper third-party product installation. Screen protectors reduce display break risk significantly but do not guarantee complete immunity against extreme impact force.`
+      content: `Sync shall not be liable for any indirect, incidental, or consequential damages resulting from improper third-party product installation, unauthorized modifications, extreme physical force, liquid damage, or misuse outside specified electrical/operational guidelines.`
     },
     {
       id: 'contact',
       title: '7. Customer Support & Inquiries',
       icon: HelpCircle,
-      content: `For any legal inquiries, policy questions, or order support, reach out to our team at syncallfyp@gmail.com or call our helpline +91 98465 45949.`
+      content: `For any legal inquiries, policy questions, or order support, reach out to our team at syncallfyp@gmail.com or call our helpline +91 98465 45949. Our support team is available Mon–Sat, 10 AM to 7 PM IST.`
     }
   ];
 
@@ -72,7 +72,7 @@ export default function TermsConditions() {
             Terms & Conditions
           </h1>
           <p className="text-xs sm:text-sm text-zinc-500 font-medium mt-1">
-            Please review the terms and usage guidelines for Sync Screen Guard. Last updated: August 2026.
+            Please review the terms and usage guidelines for Sync. Last updated: September 2026.
           </p>
         </div>
       </div>

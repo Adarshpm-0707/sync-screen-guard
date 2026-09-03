@@ -200,7 +200,7 @@ export default function ProductCarousel({ products = [] }) {
         </h2>
         
         <p className="pc-sub text-xs sm:text-sm text-zinc-400 max-w-lg mx-auto font-medium">
-          Drag or swipe cards in 3D space &mdash; click any protector to explore full specifications
+          Drag or swipe cards in 3D space &mdash; click any product to explore full specifications
         </p>
       </div>
 
@@ -213,7 +213,7 @@ export default function ProductCarousel({ products = [] }) {
             const originalPrice = Number(product.original_price) || Math.round(price * 1.8);
             const categoryLabel = product.category 
               ? product.category.toUpperCase() 
-              : '9H TEMPERED';
+              : 'GENUINE SYNC';
 
             return (
               <li
@@ -291,7 +291,7 @@ export default function ProductCarousel({ products = [] }) {
 
         {/* ── Carousel Step Controls & Navigation ── */}
         <div className="pc-actions">
-          <button ref={prevRef} className="pc-btn group" aria-label="Previous Protector">
+          <button ref={prevRef} className="pc-btn group" aria-label="Previous Product">
             <ChevronLeft size={16} className="group-hover:-translate-x-0.5 transition-transform" />
             <span>Prev</span>
           </button>
@@ -300,7 +300,7 @@ export default function ProductCarousel({ products = [] }) {
             Drag to Rotate
           </div>
 
-          <button ref={nextRef} className="pc-btn group" aria-label="Next Protector">
+          <button ref={nextRef} className="pc-btn group" aria-label="Next Product">
             <span>Next</span>
             <ChevronRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
           </button>

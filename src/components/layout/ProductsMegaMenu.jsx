@@ -152,7 +152,7 @@ export default function ProductsMegaMenu({
                   onClick={onClose}
                   className="flex items-center justify-between p-2.5 rounded-2xl bg-zinc-900/60 hover:bg-zinc-800 border border-zinc-800 text-xs font-bold uppercase tracking-wider text-emerald-400 hover:text-emerald-300 transition-colors"
                 >
-                  <span>All Protectors ({products.length})</span>
+                  <span>All Products ({products.length})</span>
                   <ArrowRight className="h-3.5 w-3.5" />
                 </Link>
               </div>
@@ -171,7 +171,7 @@ export default function ProductsMegaMenu({
                       </span>
                     </h3>
                     <p className="text-[11px] text-zinc-400 mt-0.5 font-medium">
-                      {activeCategory.description || 'Precision engineered 9H tempered glass screen protectors'}
+                      {activeCategory.description || 'Premium Sync electronics, smart gadgets & accessories'}
                     </p>
                   </div>
 

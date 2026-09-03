@@ -14,7 +14,7 @@ export default function PrivacyPolicy() {
       id: 'overview',
       title: '1. Overview & Application Identity',
       icon: Globe,
-      content: `This Privacy Policy outlines how Sync Screen Guard ("Sync Screen Guard", "we", "us", or "our"), operating the website https://syncforall.com ("the Site"), collects, uses, protects, and discloses personal information when you access our store or use our authentication and purchasing services. We are dedicated to ensuring customer data privacy and transparency in accordance with global data protection standards and Google API Services policies.`
+      content: `This Privacy Policy outlines how Sync ("Sync", "we", "us", or "our"), operating the official website https://syncforall.com ("the Site"), collects, uses, protects, and discloses personal information when you access our store, browse our electronics, gadgets, and accessories, or use our authentication and purchasing services. We are dedicated to ensuring customer data privacy and transparency in accordance with global data protection standards and Google API Services policies.`
     },
     {
       id: 'collection',
@@ -22,27 +22,27 @@ export default function PrivacyPolicy() {
       icon: Eye,
       content: `We collect information necessary to fulfill orders and provide secure account functionality:
 • Account & Contact Data: Your name, email address, shipping and billing address, and phone number for delivery coordination.
-• Order & Transaction Details: Products purchased, payment transaction references (processed securely via Razorpay), and order fulfillment history.
-• Device & Technical Telemetry: Browser type, IP address, device model, operating system, and anonymous usage telemetry to optimize page performance and device compatibility selection.`
+• Order & Transaction Details: Products purchased (electronics, gadgets, accessories), payment transaction references (processed securely via Razorpay), and order fulfillment history.
+• Device & Technical Telemetry: Browser type, IP address, device model, operating system, and anonymous usage telemetry to optimize page performance and device compatibility.`
     },
     {
       id: 'google-oauth',
       title: '3. Google OAuth & Google User Data',
       icon: Key,
-      content: `When you choose to sign in or register using Google Sign-In (OAuth 2.0), Sync Screen Guard requests access only to basic profile information:
+      content: `When you choose to sign in or register using Google Sign-In (OAuth 2.0), Sync requests access only to basic profile information:
 • Data Accessed: Your Google primary email address, full name, and profile picture URL.
 • Purpose of Access: To authenticate your identity securely, create or link your customer account on https://syncforall.com, and send real-time order confirmations and dispatch tracking updates.
 • No Sale or Marketing Sharing: We do NOT sell, rent, or trade Google user data. Google user data is NEVER shared with third-party advertisers or external data brokers.
-• Google Limited Use Disclosure: Sync Screen Guard's use and transfer of information received from Google APIs to any other app will adhere to the Google API Services User Data Policy, including the Limited Use requirements.`
+• Google Limited Use Disclosure: Sync's use and transfer of information received from Google APIs to any other app will adhere to the Google API Services User Data Policy, including the Limited Use requirements.`
     },
     {
       id: 'usage',
       title: '4. How We Use Your Information',
       icon: UserCheck,
       content: `Your data is utilized strictly for legitimate business and transactional purposes:
-• Processing, packing, and dispatching your screen protector orders.
+• Processing, packing, and dispatching your electronics, gadgets, and accessories orders.
 • Sending transaction receipts, GST invoices, and automated courier tracking links.
-• Providing customer support, warranty replacements, and addressing inquiry tickets.
+• Providing customer support, warranty assistance for products, and addressing inquiry tickets.
 • Maintaining website security, preventing fraudulent transactions, and verifying authenticated access.`
     },
     {
@@ -52,7 +52,7 @@ export default function PrivacyPolicy() {
       content: `We implement enterprise-grade security controls to safeguard your personal data:
 • Encryption: 256-bit SSL/TLS encryption for all in-transit web traffic.
 • Secure Infrastructure: Customer authentication records and order details are stored in Supabase cloud databases with role-based access control (RLS) and encrypted database backups.
-• Payment Protection: Financial credentials (credit cards, UPI PINs, banking info) are processed directly by certified Level 1 PCI-DSS compliant payment gateways (Razorpay). Sync Screen Guard never stores payment card numbers.`
+• Payment Protection: Financial credentials (credit cards, UPI PINs, banking info) are processed directly by certified Level 1 PCI-DSS compliant payment gateways (Razorpay). Sync never stores payment card numbers.`
     },
     {
       id: 'thirdparty',
@@ -75,14 +75,14 @@ export default function PrivacyPolicy() {
       id: 'cookies',
       title: '8. Cookies & Local Browser Storage',
       icon: Cookie,
-      content: `Sync Screen Guard uses essential cookies and local storage tokens exclusively to maintain your active shopping session, persist items in your cart, and preserve your sign-in state securely. We do not use intrusive cross-site tracking cookies.`
+      content: `Sync uses essential cookies and local storage tokens exclusively to maintain your active shopping session, persist items in your cart, and preserve your sign-in state securely. We do not use intrusive cross-site tracking cookies.`
     },
     {
       id: 'contact',
       title: '9. Privacy Inquiries & Contact Info',
       icon: HelpCircle,
       content: `If you have questions, concerns, or requests regarding this Privacy Policy or our data handling practices, please contact our Data Protection Officer:
-• Brand / App: Sync Screen Guard
+• Brand / App: Sync
 • Email: syncallfyp@gmail.com
 • Official Support Helpline: +91 98465 45949`
     }
@@ -108,11 +108,11 @@ export default function PrivacyPolicy() {
               Privacy Policy
             </h1>
             <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold uppercase tracking-wider border border-emerald-200">
-              Sync Screen Guard Official Policy
+              Sync Official Policy
             </span>
           </div>
           <p className="text-xs sm:text-sm text-zinc-500 font-medium mt-2">
-            Official privacy notice for <strong>Sync Screen Guard</strong> (<a href="https://syncforall.com" className="text-zinc-800 underline">https://syncforall.com</a>). Detailing our customer data protection, Google OAuth integration, and privacy controls. Last updated: September 2026.
+            Official privacy notice for <strong>Sync</strong> (<a href="https://syncforall.com" className="text-zinc-800 underline">https://syncforall.com</a>). Detailing our customer data protection, Google OAuth integration, and privacy controls. Last updated: September 2026.
           </p>
         </div>
       </div>
@@ -176,7 +176,7 @@ export default function PrivacyPolicy() {
             <h3 className="text-base font-bold text-white">Google API Services User Data Policy Compliance</h3>
           </div>
           <p className="text-xs sm:text-sm text-emerald-200 leading-relaxed">
-            Sync Screen Guard strictly adheres to the <strong>Google API Services User Data Policy</strong>, including the Limited Use requirements. Information received from Google APIs is never utilized for advertising, user profiling outside the store, or transferred to unauthorized third parties.
+            Sync strictly adheres to the <strong>Google API Services User Data Policy</strong>, including the Limited Use requirements. Information received from Google APIs is never utilized for advertising, user profiling outside the store, or transferred to unauthorized third parties.
           </p>
         </div>
 

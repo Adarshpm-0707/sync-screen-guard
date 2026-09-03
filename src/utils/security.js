@@ -39,7 +39,7 @@ export function initClientSecurity() {
     setTimeout(() => {
       console.log('%c⚠️ SECURITY WARNING', bannerStyle);
       console.log(
-        '%cThis browser console is intended for developers only. Do NOT paste or run unknown scripts here. Unauthorized tampering with Sync Screen Guard client mechanisms violates store terms.',
+        '%cThis browser console is intended for developers only. Do NOT paste or run unknown scripts here. Unauthorized tampering with Sync client mechanisms violates store terms.',
         textStyle
       );
     }, 1000);

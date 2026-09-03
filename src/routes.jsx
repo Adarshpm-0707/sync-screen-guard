@@ -33,7 +33,10 @@ import Products from './admin/pages/Products';
 import Inventory from './admin/pages/Inventory';
 import Categories from './admin/pages/Categories';
 import Shipments from './admin/pages/Shipments';
+import Reviews from './admin/pages/Reviews';
+import DeviceModels from './admin/pages/DeviceModels';
 import Settings from './admin/pages/Settings';
+import Admins from './admin/pages/Admins';
 import AdminNotFound from './admin/pages/AdminNotFound';
 
 function CustomerLayout() {
@@ -73,12 +76,12 @@ export default function AppRoutes() {
         <Route path="*" element={<NotFound />} />
       </Route>
 
-      {/* Admin Gateway Login & Signup (Unprotected) */}
+      {/* Admin Gateway Login (Public Login Only) */}
       <Route path="admin/login" element={<AdminLogin />} />
-      <Route path="admin/signup" element={<AdminSignup />} />
 
-      {/* Protected Admin Routes */}
+      {/* Protected Admin Routes (Authorized Admins Only) */}
       <Route element={<AdminRoutes />}>
+        <Route path="admin/signup" element={<AdminSignup />} />
         <Route path="admin" element={<AdminLayout />}>
           <Route index element={<Dashboard />} />
           <Route path="orders" element={<Orders />} />
@@ -87,7 +90,10 @@ export default function AppRoutes() {
           <Route path="products" element={<Products />} />
           <Route path="inventory" element={<Inventory />} />
           <Route path="categories" element={<Categories />} />
+          <Route path="models" element={<DeviceModels />} />
+          <Route path="reviews" element={<Reviews />} />
           <Route path="shipments" element={<Shipments />} />
+          <Route path="admins" element={<Admins />} />
           <Route path="settings" element={<Settings />} />
           <Route path="*" element={<AdminNotFound />} />
         </Route>

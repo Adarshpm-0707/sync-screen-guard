@@ -1199,3 +1199,185 @@ export async function getCustomerDetail(req, res, next) {
   }
 }
 
+// ----------------------------------------------------
+// ADMIN PERSONNEL MANAGEMENT
+// ----------------------------------------------------
+export let mockAdmins = [
+  {
+    id: 'admin-root-001',
+    email: 'admin@syncarmor.in',
+    name: 'Sync Superadmin',
+    role: 'superadmin',
+    status: 'active',
+    created_at: '2025-01-01T00:00:00.000Z',
+    last_sign_in_at: new Date().toISOString(),
+    is_root: true,
+  },
+  {
+    id: 'admin-sec-002',
+    email: 'adarshpm0707@gmail.com',
+    name: 'Adarsh P M',
+    role: 'superadmin',
+    status: 'active',
+    created_at: '2025-01-15T00:00:00.000Z',
+    last_sign_in_at: new Date().toISOString(),
+    is_root: false,
+  }
+];
+
+export async function getAdmins(req, res, next) {
+  try {
+    if (isMockMode) {
+      return res.status(200).json({ success: true, admins: mockAdmins });
+    }
+
+    try {
+      const { data: { users }, error } = await supabaseAdmin.auth.admin.listUsers();
+      if (!error && users) {
+        const adminUsers = users
+          .filter(u => u.user_metadata?.is_admin === true || u.app_metadata?.is_admin === true || u.email?.includes('admin'))
+          .map(u => ({
+            id: u.id,
+            email: u.email,
+            name: u.user_metadata?.name || u.user_metadata?.display_name || u.email?.split('@')[0],
+            role: u.user_metadata?.role || (u.email === 'admin@syncarmor.in' ? 'superadmin' : 'admin'),
+            status: u.banned_until ? 'suspended' : 'active',
+            created_at: u.created_at,
+            last_sign_in_at: u.last_sign_in_at || u.created_at,
+            is_root: u.email === 'admin@syncarmor.in'
+          }));
+
+        // Merge with mockAdmins to guarantee root admins are always present
+        const merged = [...mockAdmins];
+        adminUsers.forEach(au => {
+          if (!merged.some(m => m.email.toLowerCase() === au.email.toLowerCase())) {
+            merged.push(au);
+          }
+        });
+
+        return res.status(200).json({ success: true, admins: merged });
+      }
+    } catch (e) {
+      console.warn('Supabase listUsers note:', e.message);
+    }
+
+    return res.status(200).json({ success: true, admins: mockAdmins });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function createAdminUser(req, res, next) {
+  try {
+    const { email, password, name, role = 'admin' } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ success: false, message: 'Email and password are required.' });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanName = (name || cleanEmail.split('@')[0]).trim();
+
+    if (mockAdmins.some(a => a.email.toLowerCase() === cleanEmail)) {
+      return res.status(400).json({ success: false, message: 'Admin with this email already exists.' });
+    }
+
+    let createdId = `admin-${Date.now()}`;
+    if (!isMockMode) {
+      try {
+        const { data, error } = await supabaseAdmin.auth.admin.createUser({
+          email: cleanEmail,
+          password: password.trim(),
+          email_confirm: true,
+          user_metadata: {
+            is_admin: true,
+            name: cleanName,
+            role,
+          }
+        });
+        if (error) {
+          console.warn('Supabase create user error:', error.message);
+        } else if (data?.user) {
+          createdId = data.user.id;
+        }
+      } catch (authErr) {
+        console.warn('Supabase admin create exception:', authErr.message);
+      }
+    }
+
+    const newAdmin = {
+      id: createdId,
+      email: cleanEmail,
+      name: cleanName,
+      role,
+      status: 'active',
+      created_at: new Date().toISOString(),
+      last_sign_in_at: null,
+      is_root: false,
+    };
+
+    mockAdmins.unshift(newAdmin);
+    return res.status(201).json({ success: true, admin: newAdmin, message: 'Admin account created successfully.' });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function updateAdminUser(req, res, next) {
+  try {
+    const { id } = req.params;
+    const { name, role, status } = req.body;
+
+    const adminIndex = mockAdmins.findIndex(a => a.id === id || a.email === id);
+    if (adminIndex >= 0) {
+      if (name) mockAdmins[adminIndex].name = name.trim();
+      if (role) mockAdmins[adminIndex].role = role;
+      if (status) mockAdmins[adminIndex].status = status;
+    }
+
+    if (!isMockMode) {
+      try {
+        await supabaseAdmin.auth.admin.updateUserById(id, {
+          user_metadata: { name, role, is_admin: true }
+        });
+      } catch (e) {
+        console.warn('Supabase update user note:', e.message);
+      }
+    }
+
+    const updated = adminIndex >= 0 ? mockAdmins[adminIndex] : { id, name, role, status };
+    return res.status(200).json({ success: true, admin: updated });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function deleteAdminUser(req, res, next) {
+  try {
+    const { id } = req.params;
+    const currentAdminEmail = req.user?.email;
+
+    const target = mockAdmins.find(a => a.id === id || a.email === id);
+    if (target?.is_root || target?.email === 'admin@syncarmor.in') {
+      return res.status(403).json({ success: false, message: 'Primary root administrator cannot be deleted.' });
+    }
+
+    if (target && target.email.toLowerCase() === currentAdminEmail?.toLowerCase()) {
+      return res.status(403).json({ success: false, message: 'You cannot delete your own active administrator account.' });
+    }
+
+    mockAdmins = mockAdmins.filter(a => a.id !== id && a.email !== id);
+
+    if (!isMockMode) {
+      try {
+        await supabaseAdmin.auth.admin.deleteUser(id);
+      } catch (e) {
+        console.warn('Supabase delete user note:', e.message);
+      }
+    }
+
+    return res.status(200).json({ success: true, message: 'Admin user deleted successfully.' });
+  } catch (err) {
+    next(err);
+  }
+}
+

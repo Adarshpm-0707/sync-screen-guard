@@ -40,7 +40,7 @@ export default function Cart() {
         </div>
         <h2 className="font-display text-2xl font-bold text-zinc-900 mb-2">Your Shopping Bag is Empty</h2>
         <p className="text-zinc-500 text-xs sm:text-sm max-w-sm mb-6">
-          Explore our flagship 9H tempered glass and privacy armor screen protectors with 10-second alignment applicators.
+          Explore our lineup of premium consumer electronics, smart gadgets, and cutting-edge tech accessories.
         </p>
         <Link 
           to="/products" 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { ShieldCheck, Mail, Lock, AlertCircle, Eye, EyeOff, KeyRound, ArrowRight } from 'lucide-react';
 import useAdminAuth from '../hooks/useAdminAuth';
 import AdminButton from '../components/common/AdminButton';
@@ -125,16 +125,6 @@ export default function AdminLogin() {
             <ArrowRight className="h-4 w-4" />
           </button>
         </form>
-
-        <div className="mt-8 pt-5 border-t border-slate-800/80 text-center">
-          <Link 
-            to="/admin/signup" 
-            className="inline-flex items-center space-x-1.5 text-xs font-extrabold text-indigo-400 hover:text-indigo-300 transition-colors"
-          >
-            <span>Register New Admin Account</span>
-            <ArrowRight className="h-3.5 w-3.5" />
-          </Link>
-        </div>
       </div>
     </div>
   );

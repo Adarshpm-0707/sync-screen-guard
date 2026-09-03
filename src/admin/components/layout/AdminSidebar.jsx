@@ -13,7 +13,9 @@ import {
   ShieldCheck, 
   X,
   ExternalLink,
-  ChevronRight
+  ChevronRight,
+  MessageSquare,
+  Smartphone
 } from 'lucide-react';
 import useAdminAuth from '../../hooks/useAdminAuth';
 
@@ -32,16 +34,19 @@ export default function AdminSidebar({ isOpen, onClose }) {
     },
 
     {
-      title: 'Catalog & Inventory',
+      title: 'Catalog & Models',
       items: [
         { to: '/admin/products', label: 'Products', icon: Box },
-        { to: '/admin/inventory', label: 'Inventory', icon: Warehouse },
+        { to: '/admin/models', label: 'Device Models', icon: Smartphone },
         { to: '/admin/categories', label: 'Categories', icon: FolderTree },
+        { to: '/admin/inventory', label: 'Inventory', icon: Warehouse },
+        { to: '/admin/reviews', label: 'Customer Reviews', icon: MessageSquare },
       ]
     },
     {
       title: 'System & Security',
       items: [
+        { to: '/admin/admins', label: 'Admins', icon: ShieldCheck },
         { to: '/admin/settings', label: 'Settings', icon: Settings },
       ]
     }

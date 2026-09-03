@@ -70,8 +70,8 @@ export default function Footer() {
                 <Sparkles className="h-4 w-4 sm:h-5 sm:w-5" />
               </div>
               <div className="min-w-0">
-                <h4 className="text-[11px] sm:text-xs font-bold text-white uppercase tracking-wider truncate">10-Sec Auto Align</h4>
-                <p className="text-[10px] sm:text-[11px] text-zinc-400 truncate mt-0.5">Applicator tray included</p>
+                <h4 className="text-[11px] sm:text-xs font-bold text-white uppercase tracking-wider truncate">Next-Gen Tech</h4>
+                <p className="text-[10px] sm:text-[11px] text-zinc-400 truncate mt-0.5">Innovative gadgets & accessories</p>
               </div>
             </div>
 
@@ -81,8 +81,8 @@ export default function Footer() {
                 <ShieldCheck className="h-4 w-4 sm:h-5 sm:w-5" />
               </div>
               <div className="min-w-0">
-                <h4 className="text-[11px] sm:text-xs font-bold text-white uppercase tracking-wider truncate">9H Diamond Hard</h4>
-                <p className="text-[10px] sm:text-[11px] text-zinc-400 truncate mt-0.5">Shatterproof shield</p>
+                <h4 className="text-[11px] sm:text-xs font-bold text-white uppercase tracking-wider truncate">Premium Build</h4>
+                <p className="text-[10px] sm:text-[11px] text-zinc-400 truncate mt-0.5">Engineered for durability</p>
               </div>
             </div>
 
@@ -104,7 +104,7 @@ export default function Footer() {
               </div>
               <div className="min-w-0">
                 <h4 className="text-[11px] sm:text-xs font-bold text-white uppercase tracking-wider truncate">100% Quality Assured</h4>
-                <p className="text-[10px] sm:text-[11px] text-zinc-400 truncate mt-0.5">Genuine sync guarantee</p>
+                <p className="text-[10px] sm:text-[11px] text-zinc-400 truncate mt-0.5">Direct brand warranty</p>
               </div>
             </div>
 
@@ -123,21 +123,21 @@ export default function Footer() {
             <Link to="/" className="inline-block transition-transform hover:opacity-95">
               <img
                 src={syncLogo}
-                alt="Sync Screen Guard"
-                className="h-10 sm:h-12 md:h-16 lg:h-20 w-auto object-contain brightness-110"
+                alt="Sync"
+                className="h-7 sm:h-7 md:h-7 lg:h-7 w-auto object-contain brightness-110"
               />
             </Link>
             
             <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed max-w-md font-normal">
-              Engineered with molecularly reinforced 9H aluminosilicate glass and foolproof 10-second alignment applicators. Military-grade precision protection for your flagship smartphones and smartwatches.
+              Sync is your go-to destination for premium consumer electronics, smart gadgets, and top-quality tech accessories. Genuine products, fast delivery, and direct brand warranty — all in one place.
             </p>
 
-          
+
 
             {/* Laptop Trust Badge */}
             <div className="hidden md:flex items-center gap-2 text-zinc-400 text-xs font-medium pt-1">
               <span className="flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              <span>100% Genuine Sync Screen Guard • Direct Manufacturer Warranty</span>
+              <span>100% Genuine Sync Electronics & Gadgets • Direct Brand Warranty</span>
             </div>
           </div>
 
@@ -244,7 +244,7 @@ export default function Footer() {
                 </a>
 
                 <a 
-                  href="https://wa.me/919846545949?text=Hi%20Sync%20Screen%20Guard%2C%20I%20have%20an%20inquiry%20regarding%20screen%20protectors." 
+                  href="https://wa.me/919846545949?text=Hi%20Sync%20Support%2C%20I%20have%20an%20inquiry%20regarding%20Sync%20products." 
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-start gap-3 p-3 rounded-xl bg-gradient-to-r from-emerald-950/40 to-zinc-950/80 border border-emerald-900/50 hover:border-emerald-700/60 hover:bg-emerald-950/60 transition-all duration-200 group"
@@ -326,7 +326,7 @@ export default function Footer() {
               <span>Call</span>
             </a>
             <a
-              href="https://wa.me/919846545949?text=Hi%20Sync%20Screen%20Guard%20Support%2C%20I%20have%20a%20query."
+              href="https://wa.me/919846545949?text=Hi%20Sync%20Support%2C%20I%20have%20a%20query."
               target="_blank"
               rel="noopener noreferrer"
               className="flex flex-col sm:flex-row items-center justify-center gap-1.5 py-3 px-2 bg-emerald-950/70 border border-emerald-800/80 rounded-xl text-emerald-300 text-[11px] font-bold uppercase tracking-wider active:bg-emerald-900 transition-colors text-center"
@@ -355,7 +355,7 @@ export default function Footer() {
         {/* ── 3. Bottom Bar: Copyright & Payment Badges ── */}
         <div className="mt-10 sm:mt-16 lg:mt-20 pt-6 sm:pt-8 border-t border-zinc-900 flex flex-col md:flex-row items-center justify-between gap-4 text-center md:text-left">
           <p className="text-[11px] sm:text-xs text-zinc-500 font-medium">
-            © {new Date().getFullYear()} Sync Screen Guard. All rights reserved.
+            © {new Date().getFullYear()} Sync. All rights reserved.
           </p>
 
          

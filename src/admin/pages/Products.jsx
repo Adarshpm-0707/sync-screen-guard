@@ -188,6 +188,11 @@ export default function Products() {
     const localAdded = JSON.parse(localStorage.getItem('local_added_products') || '[]');
     localStorage.setItem('local_added_products', JSON.stringify(localAdded.filter((p) => p.id !== productId)));
 
+    try {
+      const cached = JSON.parse(localStorage.getItem('sync_store_products_cache') || '[]');
+      localStorage.setItem('sync_store_products_cache', JSON.stringify(cached.filter((p) => p && p.id !== productId)));
+    } catch (e) {}
+
     window.dispatchEvent(new Event('products_updated'));
     setProducts((prev) => prev.filter((p) => p.id !== productId));
 

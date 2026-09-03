@@ -1,0 +1,18 @@
+{
+  "watch": [
+    "backend",
+    "server.js",
+    ".env"
+  ],
+  "ext": "js,cjs,mjs,json",
+  "ignore": [
+    "dist/*",
+    "src/*",
+    "public/*",
+    "node_modules/*",
+    ".git/*",
+    ".firebase/*",
+    "*.log"
+  ],
+  "delay": 500
+}

@@ -24,6 +24,10 @@ import {
   clearAllShipments,
   getSettings,
   updateSettings,
+  getAdmins,
+  createAdminUser,
+  updateAdminUser,
+  deleteAdminUser,
 } from '../controllers/admin.controller.js';
 
 const router = Router();
@@ -74,6 +78,12 @@ router.patch('/products/:id/stock', updateProductStock);
 // Store Payment settings
 router.get('/settings', getSettings);
 router.patch('/settings', updateSettings);
+
+// Admin Personnel Management
+router.get('/admins', getAdmins);
+router.post('/admins', createAdminUser);
+router.patch('/admins/:id', updateAdminUser);
+router.delete('/admins/:id', deleteAdminUser);
 
 export default router;
 

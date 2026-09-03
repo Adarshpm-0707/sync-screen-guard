@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { ShieldCheck, Mail, Lock, AlertCircle, CheckCircle2, Eye, EyeOff, UserPlus, ArrowRight } from 'lucide-react';
+import { ShieldCheck, Mail, Lock, AlertCircle, CheckCircle2, Eye, EyeOff, UserPlus, ArrowRight, ArrowLeft } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import useAdminAuth from '../hooks/useAdminAuth';
 
@@ -16,11 +16,23 @@ export default function AdminSignup() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // If already logged in as admin, redirect directly
-    if (adminUser && !authLoading) {
-      navigate('/admin');
+    // Admin Only: If not logged in as admin, redirect to admin login
+    if (!authLoading && !adminUser) {
+      navigate('/admin/login', { replace: true });
     }
   }, [adminUser, authLoading, navigate]);
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+        <div className="animate-spin h-8 w-8 border-4 border-violet-500 border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+  if (!adminUser) {
+    return null;
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -51,7 +63,13 @@ export default function AdminSignup() {
       // Always save to local admin database as backup fallback
       const localUsers = JSON.parse(localStorage.getItem('local_admin_users') || '[]');
       if (!localUsers.some(u => u.email.toLowerCase() === cleanEmail)) {
-        localUsers.push({ email: cleanEmail, password: cleanPassword });
+        localUsers.push({ 
+          email: cleanEmail, 
+          password: cleanPassword,
+          name: cleanEmail.split('@')[0],
+          role: 'admin',
+          created_at: new Date().toISOString()
+        });
         localStorage.setItem('local_admin_users', JSON.stringify(localUsers));
       }
 
@@ -66,6 +84,8 @@ export default function AdminSignup() {
           options: {
             data: {
               is_admin: true,
+              role: 'admin',
+              name: cleanEmail.split('@')[0]
             },
           },
         }).catch(() => {
@@ -75,7 +95,7 @@ export default function AdminSignup() {
 
       setSuccess(true);
       setTimeout(() => {
-        navigate('/admin/login');
+        navigate('/admin/admins');
       }, 1500);
     } catch (err) {
       setError(err.message || 'Registration failed.');
@@ -101,10 +121,10 @@ export default function AdminSignup() {
           <div>
             <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-violet-950/60 border border-violet-800/50 text-[9px] font-black uppercase tracking-widest text-violet-300 mb-2">
               <UserPlus className="h-3 w-3 text-violet-400" />
-              <span>Admin Personnel Portal</span>
+              <span>Admin Personnel Portal • Authorized Only</span>
             </div>
-            <h1 className="font-display text-2xl font-black tracking-wide text-white uppercase">Console Registration</h1>
-            <p className="text-xs text-slate-400 font-semibold mt-1">Create Admin Manager Credentials</p>
+            <h1 className="font-display text-2xl font-black tracking-wide text-white uppercase">Create Admin User</h1>
+            <p className="text-xs text-slate-400 font-semibold mt-1">Authorized Store Administrators Only</p>
           </div>
         </div>
 
@@ -112,7 +132,7 @@ export default function AdminSignup() {
         {success && (
           <div className="flex items-start space-x-2.5 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-xs font-semibold text-emerald-400 mb-6 animate-in fade-in duration-200">
             <CheckCircle2 className="h-4.5 w-4.5 shrink-0 text-emerald-400 mt-0.5" />
-            <span>Admin user created successfully! Redirecting to login...</span>
+            <span>Admin user created successfully! Redirecting to Admin Management...</span>
           </div>
         )}
 
@@ -127,7 +147,7 @@ export default function AdminSignup() {
         {/* Registration Form */}
         <form onSubmit={handleSubmit} className="space-y-5 text-left">
           <div>
-            <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Admin Email Address</label>
+            <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">New Admin Email Address</label>
             <div className="relative">
               <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-500 pointer-events-none">
                 <Mail className="h-4 w-4" />
@@ -197,11 +217,11 @@ export default function AdminSignup() {
 
         <div className="mt-8 pt-5 border-t border-slate-800/80 text-center">
           <Link 
-            to="/admin/login" 
+            to="/admin/admins" 
             className="inline-flex items-center space-x-1.5 text-xs font-extrabold text-indigo-400 hover:text-indigo-300 transition-colors"
           >
-            <span>Already have an admin account? Sign In</span>
-            <ArrowRight className="h-3.5 w-3.5" />
+            <ArrowLeft className="h-3.5 w-3.5" />
+            <span>Back to Admin Panel</span>
           </Link>
         </div>
 

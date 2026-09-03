@@ -35,7 +35,7 @@ export default function OrderTracking() {
     if ((!items || items.length === 0) && order.order_items && Array.isArray(order.order_items)) {
       items = order.order_items.map(oi => ({
         id: oi.product_id || oi.id,
-        name: oi.product_name || oi.name || 'Sync Armor Screen Protector',
+        name: oi.product_name || oi.name || 'Sync Product',
         quantity: oi.quantity || 1,
         price: oi.price || 0,
         image: oi.image || oi.product_image || null,
@@ -465,7 +465,7 @@ export default function OrderTracking() {
             </h3>
             <p className="text-xs text-zinc-500 font-medium max-w-sm mx-auto">
               {isLoggedIn
-                ? "You haven't placed any orders yet. Browse our premium screen protectors and place your first order!"
+                ? "You haven't placed any orders yet. Browse our premium electronics and gadgets to place your first order!"
                 : "Enter your checkout email address or Order ID in the search box above to view your ordered products, live dispatch status, and delivery milestones."}
             </p>
             <Link
@@ -644,7 +644,7 @@ export default function OrderTracking() {
                 <div className="text-xs text-zinc-700 space-y-1">
                   <p><strong>Payment Mode:</strong> {trackingData.payment_type?.toUpperCase() || 'PREPAID'}</p>
                   <p><strong>Total Paid:</strong> ₹{trackingData.total?.toLocaleString()}</p>
-                  <p className="text-emerald-600 font-semibold">● 100% Genuine Sync Screen Guard Protected</p>
+                  <p className="text-emerald-600 font-semibold">● 100% Genuine Sync Product & Warranty Covered</p>
                 </div>
               </div>
 
@@ -668,7 +668,7 @@ export default function OrderTracking() {
                           />
                         )}
                         <div className="min-w-0">
-                          <p className="text-xs font-bold text-zinc-900 truncate">{item.name || 'Screen Protector'}</p>
+                          <p className="text-xs font-bold text-zinc-900 truncate">{item.name || 'Sync Product'}</p>
                           <p className="text-[10px] text-zinc-500 font-medium">
                             Qty: {item.quantity}{item.selectedModel ? ` • ${item.selectedModel}` : ''}
                           </p>

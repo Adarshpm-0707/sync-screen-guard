@@ -3,14 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, X, TrendingUp, ArrowRight, ShieldCheck } from 'lucide-react';
 import { fetchStoreProducts } from '../../utils/productStore';
+import { isProductMatch, getProductSearchScore } from '../../utils/searchHelper';
 
 const POPULAR_SEARCHES = [
-  'iPhone 15 Pro Max',
+  'iPhone 16 Pro Max',
+  'iPhone 15',
   'Privacy Glass',
   'Samsung S24 Ultra',
   'Matte Anti-Glare',
-  'Camera Lens Protector',
-  'OnePlus 12'
+  'Camera Lens Protector'
 ];
 
 export default function SearchModal({ isOpen, onClose }) {
@@ -35,19 +36,27 @@ export default function SearchModal({ isOpen, onClose }) {
       setFilteredResults([]);
       return;
     }
-    const q = query.toLowerCase();
-    const results = products.filter(
-      (p) =>
-        p.name?.toLowerCase().includes(q) ||
-        p.category?.toLowerCase().includes(q) ||
-        p.description?.toLowerCase().includes(q)
-    );
-    setFilteredResults(results.slice(0, 6));
+    const allMatches = products
+      .filter((p) => isProductMatch(p, query))
+      .sort((a, b) => getProductSearchScore(b, query) - getProductSearchScore(a, query));
+    setFilteredResults(allMatches);
   }, [query, products]);
 
   const handleSelectProduct = (product) => {
     onClose();
     navigate('/product', { state: { product } });
+  };
+
+  const handleViewAllResults = () => {
+    if (!query.trim()) return;
+    onClose();
+    navigate(`/products?search=${encodeURIComponent(query.trim())}`);
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && query.trim()) {
+      handleViewAllResults();
+    }
   };
 
   const handlePopularClick = (term) => {
@@ -76,18 +85,26 @@ export default function SearchModal({ isOpen, onClose }) {
             className="relative z-10 w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl border border-zinc-200"
           >
             {/* Search Input Bar */}
-            <div className="flex items-center border-b border-zinc-100 px-5 py-4">
+            <form 
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleViewAllResults();
+              }}
+              className="flex items-center border-b border-zinc-100 px-5 py-4"
+            >
               <Search className="h-5 w-5 text-zinc-400 shrink-0" />
               <input
                 ref={inputRef}
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search screen protectors, privacy glass, models..."
+                onKeyDown={handleKeyDown}
+                placeholder="Search model, brand, screen guard, charger, cable..."
                 className="w-full bg-transparent px-3 text-sm font-medium text-zinc-900 placeholder:text-zinc-400 focus:outline-none"
               />
               {query && (
                 <button
+                  type="button"
                   onClick={() => setQuery('')}
                   className="p-1 text-zinc-400 hover:text-zinc-600 mr-2 cursor-pointer"
                 >
@@ -95,29 +112,30 @@ export default function SearchModal({ isOpen, onClose }) {
                 </button>
               )}
               <button
+                type="button"
                 onClick={onClose}
                 className="rounded-lg bg-zinc-100 px-2.5 py-1 text-xs font-semibold text-zinc-600 hover:bg-zinc-200 transition-colors cursor-pointer shrink-0"
               >
                 ESC
               </button>
-            </div>
+            </form>
 
             {/* Results or Popular Tags */}
             <div className="max-h-[60vh] overflow-y-auto p-5">
               {query.trim() ? (
                 <div>
                   <div className="flex items-center justify-between mb-3 text-xs font-bold text-zinc-400 uppercase tracking-wider">
-                    <span>Search Results ({filteredResults.length})</span>
+                    <span>Search Results ({filteredResults.length} {filteredResults.length === 1 ? 'Product' : 'Products'})</span>
                   </div>
 
                   {filteredResults.length === 0 ? (
                     <div className="py-10 text-center text-zinc-500 text-xs">
-                      <p className="font-semibold">No screen protectors found for "{query}"</p>
-                      <p className="text-zinc-400 mt-1">Try searching for "iPhone", "Privacy", or "Samsung"</p>
+                      <p className="font-semibold">No products found for "{query}"</p>
+                      <p className="text-zinc-400 mt-1">Try searching by model (e.g. "iPhone 16", "S24"), or category ("Privacy Glass", "Charger")</p>
                     </div>
                   ) : (
                     <div className="space-y-2">
-                      {filteredResults.map((product) => (
+                      {filteredResults.slice(0, 6).map((product) => (
                         <div
                           key={product.id}
                           onClick={() => handleSelectProduct(product)}
@@ -149,13 +167,23 @@ export default function SearchModal({ isOpen, onClose }) {
                                 </span>
                               )}
                               <span className="text-[9px] font-semibold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">
-                                9H Tempered
+                                Genuine Sync
                               </span>
                             </div>
                           </div>
                           <ArrowRight className="h-4 w-4 text-zinc-400 group-hover:text-zinc-900 group-hover:translate-x-0.5 transition-all" />
                         </div>
                       ))}
+
+                      {filteredResults.length > 0 && (
+                        <button
+                          onClick={handleViewAllResults}
+                          className="w-full mt-3 py-2.5 bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-bold uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2 shadow-sm"
+                        >
+                          <span>View All {filteredResults.length} Results in Catalog</span>
+                          <ArrowRight className="h-3.5 w-3.5" />
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -181,7 +209,7 @@ export default function SearchModal({ isOpen, onClose }) {
 
                   <div className="pt-3 border-t border-zinc-100">
                     <p className="text-[11px] font-medium text-zinc-400">
-                      💡 Pro-Tip: All Sync Screen Protectors include our 10-second auto-align installation box applicator!
+                      💡 Pro-Tip: All Sync products come with our direct brand guarantee and express dispatch!
                     </p>
                   </div>
                 </div>

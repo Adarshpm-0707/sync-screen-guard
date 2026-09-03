@@ -28,7 +28,7 @@ export default function AdminHeader({ onMenuToggle }) {
           </div>
 
           <div className="hidden md:block text-[11px] font-bold text-slate-400 uppercase tracking-widest pl-2">
-            SYNC SCREEN GUARD • CORE CONSOLE
+            SYNC • CORE CONSOLE
           </div>
         </div>
       </div>

@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Check, Star } from 'lucide-react';
 
-export default function ProductCard({ product, onAddToCart, isAdded }) {
+const ProductCard = memo(function ProductCard({ product, onAddToCart, isAdded }) {
   const navigate = useNavigate();
 
   if (!product) return null;
@@ -58,8 +58,11 @@ export default function ProductCard({ product, onAddToCart, isAdded }) {
           <img
             src={mainImage}
             alt={product.name}
+            width={300}
+            height={300}
             className="w-full h-full object-contain drop-shadow-sm group-hover:scale-105 transition-transform duration-300 ease-out"
             loading="lazy"
+            decoding="async"
           />
         </div>
 
@@ -116,4 +119,6 @@ export default function ProductCard({ product, onAddToCart, isAdded }) {
       </div>
     </div>
   );
-}
+});
+
+export default ProductCard;

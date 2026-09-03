@@ -70,7 +70,7 @@ export default function Checkout() {
     return (
       <div className="min-h-screen py-28 px-4 flex flex-col items-center justify-center bg-[#FAFAFA] text-center">
         <h2 className="font-display text-xl font-bold text-zinc-900 mb-2">No items in your bag</h2>
-        <p className="text-xs text-zinc-500 mb-6">Please add screen protectors to your cart before proceeding to checkout.</p>
+        <p className="text-xs text-zinc-500 mb-6">Please add items to your cart before proceeding to checkout.</p>
         <Link
           to="/products"
           className="px-6 py-2.5 bg-zinc-900 text-white rounded-full text-xs font-bold uppercase tracking-wider hover:bg-zinc-800 transition-colors"
@@ -337,7 +337,7 @@ export default function Checkout() {
         key: effectiveKeyId,
         amount: Math.round(orderTotal * 100), // amount in paise
         currency: 'INR',
-        name: 'Sync Screen Guard',
+        name: 'Sync',
         description: `Order Payment (${cart.length} item${cart.length > 1 ? 's' : ''})`,
         prefill: {
           name: formData.name.trim(),
@@ -601,7 +601,7 @@ export default function Checkout() {
                   </div>
                   <div>
                     <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-900">Shipping Address</h3>
-                    <p className="text-[11px] text-zinc-500 font-medium">Where should we deliver your screen protector?</p>
+                    <p className="text-[11px] text-zinc-500 font-medium">Where should we deliver your order?</p>
                   </div>
                 </div>
                 {formData.address && formData.pincode && currentStep !== 2 && (
@@ -831,7 +831,7 @@ export default function Checkout() {
 
             <div className="pt-1 text-center text-[10px] text-zinc-400 space-y-1">
               <p className="flex items-center justify-center gap-1 text-zinc-600 font-semibold">
-                <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" /> 100% Genuine Screen Guard & Safe Delivery
+                <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" /> 100% Genuine Sync Products & Safe Delivery
               </p>
             </div>
           </div>

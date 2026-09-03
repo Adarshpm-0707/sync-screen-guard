@@ -127,11 +127,11 @@ export default function Navbar() {
 
             {/* Logo: Centered on Mobile, Left-aligned on Desktop */}
             <div className="flex-1 flex justify-center md:flex-initial md:justify-start">
-              <Link to="/" title="Sync Screen Guard" aria-label="Sync Screen Guard" className="flex items-center group">
+              <Link to="/" title="Sync" aria-label="Sync" className="flex items-center group">
                 <img
                   src={syncLogo}
-                  alt="Sync Screen Guard"
-                  className="h-10 sm:h-12 md:h-14 w-auto object-contain transition-transform duration-200 group-hover:scale-102"
+                  alt="Sync"
+                  className="h-5 sm:h-5 md:h-5 w-auto object-contain transition-transform duration-200 group-hover:scale-102"
                 />
               </Link>
             </div>
