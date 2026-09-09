@@ -11,7 +11,8 @@ export const DEFAULT_CATEGORIES = [
 // In-memory cache for instant 0ms retrieval
 let _memoryCategoriesCache = null;
 let _categoriesCacheTimestamp = 0;
-const CATEGORIES_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+let _inFlightCategoriesPromise = null;
+const CATEGORIES_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
 // Synchronously return cached categories — no network, no wait
 export function getInstantCategories() {
@@ -34,7 +35,12 @@ export function getInstantCategories() {
   return [];
 }
 
-export async function fetchCategories({ forceRefresh = false } = {}) {
+export function fetchCategories({ forceRefresh = false } = {}) {
+  // Hydrate memory cache from localStorage if needed
+  if (!_memoryCategoriesCache) {
+    getInstantCategories();
+  }
+
   // Return memory cache immediately if still fresh
   const now = Date.now();
   if (
@@ -44,94 +50,76 @@ export async function fetchCategories({ forceRefresh = false } = {}) {
     _memoryCategoriesCache.length > 0 &&
     now - _categoriesCacheTimestamp < CATEGORIES_CACHE_TTL_MS
   ) {
-    return _memoryCategoriesCache;
+    return Promise.resolve(_memoryCategoriesCache);
   }
 
-  let dbCategories = [];
-  try {
-    const { data, error } = await supabase
-      .from('categories')
-      .select('id,name,description,created_at')
-      .order('created_at', { ascending: true });
-
-    if (!error && Array.isArray(data) && data.length > 0) {
-      dbCategories = data;
-    }
-  } catch (e) {
-    console.warn('Supabase categories fetch error:', e);
+  if (!forceRefresh && _inFlightCategoriesPromise) {
+    return _inFlightCategoriesPromise;
   }
 
-  // If Supabase has categories configured, use them
-  if (dbCategories.length > 0) {
-    _memoryCategoriesCache = dbCategories;
-    _categoriesCacheTimestamp = Date.now();
+  _inFlightCategoriesPromise = (async () => {
+    let dbCategories = [];
     try {
-      localStorage.setItem('sync_store_categories_cache', JSON.stringify(dbCategories));
-      localStorage.setItem('sync_store_categories_cache_ts', String(_categoriesCacheTimestamp));
-    } catch (e) {}
-    return dbCategories;
-  }
+      const { data, error } = await supabase
+        .from('categories')
+        .select('id,name,description')
+        .order('created_at', { ascending: true });
 
-  // Check localStorage for admin managed categories
-  let localCategories = null;
-  try {
-    const stored = localStorage.getItem('admin_categories');
-    if (stored !== null) {
-      localCategories = JSON.parse(stored);
+      if (!error && Array.isArray(data) && data.length > 0) {
+        dbCategories = data;
+      }
+    } catch (e) {
+      console.warn('Supabase categories fetch error:', e);
     }
-  } catch (e) {
-    localCategories = null;
-  }
 
-  if (localCategories !== null && Array.isArray(localCategories)) {
-    _memoryCategoriesCache = localCategories;
-    try { localStorage.setItem('sync_store_categories_cache', JSON.stringify(localCategories)); } catch (e) {}
-    return localCategories;
-  }
+    // If Supabase has categories configured, use them
+    if (dbCategories.length > 0) {
+      _memoryCategoriesCache = dbCategories;
+      _categoriesCacheTimestamp = Date.now();
+      try {
+        localStorage.setItem('sync_store_categories_cache', JSON.stringify(dbCategories));
+        localStorage.setItem('sync_store_categories_cache_ts', String(_categoriesCacheTimestamp));
+      } catch (e) {}
+      return dbCategories;
+    }
 
-  // No categories found — return empty so old defaults never re-seed
-  return [];
+    // Check localStorage for admin managed categories
+    let localCategories = null;
+    try {
+      const stored = localStorage.getItem('admin_categories');
+      if (stored !== null) {
+        localCategories = JSON.parse(stored);
+      }
+    } catch (e) {
+      localCategories = null;
+    }
+
+    if (localCategories !== null && Array.isArray(localCategories)) {
+      _memoryCategoriesCache = localCategories;
+      try { localStorage.setItem('sync_store_categories_cache', JSON.stringify(localCategories)); } catch (e) {}
+      return localCategories;
+    }
+
+    // No categories found — return empty so old defaults never re-seed
+    return [];
+  })().finally(() => {
+    _inFlightCategoriesPromise = null;
+  });
+
+  return _inFlightCategoriesPromise;
 }
-
-// Automatically prefetch categories on module load
-try {
-  fetchCategories().catch(() => {});
-} catch (e) {}
 
 const DEFAULT_CATEGORY_IDS = new Set(DEFAULT_CATEGORIES.map(c => c.id));
 
 /**
- * Returns ONLY categories that an admin has explicitly created
- * (Supabase or localStorage), excluding any system default categories.
- * Used by the Footer so only real admin-added categories appear (max 4).
+ * Returns categories for the Footer using the unified cache.
+ * Avoids firing redundant select('*') database queries.
  */
-export async function fetchAdminCategories() {
-  // 1. Try Supabase first — return ALL categories (admin-created)
-  try {
-    const { data, error } = await supabase
-      .from('categories')
-      .select('*')
-      .order('created_at', { ascending: true });
-
-    if (!error && Array.isArray(data) && data.length > 0) {
-      return data;
-    }
-  } catch (e) {
-    console.warn('Supabase categories fetch error:', e);
+export async function fetchAdminCategories({ forceRefresh = false } = {}) {
+  const cats = await fetchCategories({ forceRefresh });
+  if (Array.isArray(cats) && cats.length > 0) {
+    return cats.map(c => ({ id: c.id, name: c.name }));
   }
-
-  // 2. Fall back to localStorage — return all stored categories
-  try {
-    const stored = localStorage.getItem('admin_categories');
-    if (stored !== null) {
-      const parsed = JSON.parse(stored);
-      if (Array.isArray(parsed)) {
-        return parsed;
-      }
-    }
-  } catch (e) {}
-
-  // 3. No categories yet
   return [];
 }
 

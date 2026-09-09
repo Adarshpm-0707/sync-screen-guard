@@ -1,0 +1,81 @@
+/* ═══════════════════════════════════════════════════════════════════
+   SYNC DESIGN SYSTEM - THEME & TOKENS
+   ═══════════════════════════════════════════════════════════════════ */
+
+@theme {
+  --color-primary-50: #f5f3ff;
+  --color-primary-100: #ede9fe;
+  --color-primary-200: #ddd6fe;
+  --color-primary-500: #8b5cf6;
+  --color-primary-600: #7c3aed;
+  --color-primary-700: #6d28d9;
+  
+  --color-dark-bg: #0a0a0c;
+  --color-dark-card: rgba(22, 22, 26, 0.75);
+  --color-dark-border: rgba(255, 255, 255, 0.07);
+  
+  --font-sans: "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-display: "Space Grotesk", "Plus Jakarta Sans", sans-serif;
+  --font-heading: "Space Grotesk", sans-serif;
+  --font-luxury: "Space Grotesk", sans-serif;
+  --font-body: "Plus Jakarta Sans", sans-serif;
+  
+  --animate-fade-in-up: fade-in-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  --animate-slide-in-right: slide-in-right 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  --animate-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+:root {
+  --font-sans: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
+  --font-display: 'Space Grotesk', 'Outfit', 'Plus Jakarta Sans', system-ui, sans-serif;
+  
+  --bg-main: #FAFAFA;
+  --bg-card: #FFFFFF;
+  --bg-subtle: #F4F4F5;
+  --border-light: #E4E4E7;
+  --border-dark: #27272A;
+  
+  --text-main: #18181B;
+  --text-muted: #71717A;
+  --text-subtle: #A1A1AA;
+  
+  --brand-primary: #18181B;
+  --brand-accent: #E25C38;
+  --brand-accent-hover: #CC4E2C;
+  --badge-green: #059669;
+  --badge-amber: #D97706;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f4f4f5;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(156, 163, 175, 0.35);
+  border-radius: 9999px;
+  transition: all 0.25s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(156, 163, 175, 0.6);
+}
+
+/* Hide Scrollbar helper utility */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

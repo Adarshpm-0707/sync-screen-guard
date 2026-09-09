@@ -78,42 +78,56 @@ export function getInstantReviews(productId) {
   return [];
 }
 
+const _inFlightReviewsPromises = new Map();
+
 /**
  * Fetch reviews from Supabase and sync with local storage
  * Strictly deduplicates so each review comment appears exactly once (1 time)
  */
-export async function fetchProductReviews(productId) {
-  if (!productId) return [];
+export function fetchProductReviews(productId) {
+  if (!productId) return Promise.resolve([]);
 
-  // Clean any old duplicate keys from previous versions
-  try {
-    localStorage.removeItem(`sync_user_reviews_${productId}`);
-  } catch (e) {}
-
-  let dbReviews = [];
-  try {
-    const { data, error } = await supabase
-      .from('product_reviews')
-      .select('*')
-      .eq('product_id', String(productId))
-      .order('created_at', { ascending: false });
-
-    if (!error && Array.isArray(data)) {
-      dbReviews = data;
-    }
-  } catch (err) {
-    console.warn('Error fetching reviews from Supabase:', err);
+  const pidStr = String(productId);
+  if (_inFlightReviewsPromises.has(pidStr)) {
+    return _inFlightReviewsPromises.get(pidStr);
   }
 
-  // Deduplicate completely
-  const finalReviews = deduplicateReviews(dbReviews);
+  const promise = (async () => {
+    // Clean any old duplicate keys from previous versions
+    try {
+      localStorage.removeItem(`sync_user_reviews_${pidStr}`);
+    } catch (e) {}
 
-  // Cache in localStorage for instant 0ms retrieval next time
-  try {
-    localStorage.setItem(`sync_reviews_${productId}`, JSON.stringify(finalReviews));
-  } catch (e) {}
+    let dbReviews = [];
+    try {
+      const { data, error } = await supabase
+        .from('product_reviews')
+        .select('id, product_id, customer_name, rating, title, comment, is_verified_buyer, helpful_count, created_at')
+        .eq('product_id', pidStr)
+        .order('created_at', { ascending: false });
 
-  return finalReviews;
+      if (!error && Array.isArray(data)) {
+        dbReviews = data;
+      }
+    } catch (err) {
+      console.warn('Error fetching reviews from Supabase:', err);
+    }
+
+    // Deduplicate completely
+    const finalReviews = deduplicateReviews(dbReviews);
+
+    // Cache in localStorage for instant 0ms retrieval next time
+    try {
+      localStorage.setItem(`sync_reviews_${pidStr}`, JSON.stringify(finalReviews));
+    } catch (e) {}
+
+    return finalReviews;
+  })().finally(() => {
+    _inFlightReviewsPromises.delete(pidStr);
+  });
+
+  _inFlightReviewsPromises.set(pidStr, promise);
+  return promise;
 }
 
 /**
@@ -146,7 +160,7 @@ export async function addProductReview(productId, reviewData) {
         is_verified_buyer: true,
         helpful_count: 0
       })
-      .select()
+      .select('id, created_at')
       .single();
 
     if (!error && data) {

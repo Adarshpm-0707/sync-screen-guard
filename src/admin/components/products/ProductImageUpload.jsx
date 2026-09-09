@@ -22,6 +22,8 @@ import {
   RefreshCw
 } from 'lucide-react';
 
+import { compressImageFile, formatBytes } from '../../../utils/imageCompressor.js';
+
 // Curated high quality demo product image packs for 1-click loading
 const DEMO_IMAGE_PACKS = [
   {
@@ -54,6 +56,17 @@ export default function ProductImageUpload({ images = [], onImagesChange }) {
   const [dragOverIdx, setDragOverIdx] = useState(null);
   const fileInputRef = useRef(null);
 
+  // Calculate approximate total size of images in gallery
+  const totalGallerySize = images.reduce((acc, img) => {
+    if (typeof img === 'string') {
+      if (img.startsWith('data:')) {
+        return acc + Math.round((img.length * 3) / 4);
+      }
+      return acc + 100; // rough URL size
+    }
+    return acc;
+  }, 0);
+
   // ── Show status notification ─────────────────────────────────────────
   const showStatus = (type, msg, ms = 3500) => {
     setStatus({ type, msg });
@@ -77,14 +90,17 @@ export default function ProductImageUpload({ images = [], onImagesChange }) {
           const file = item.getAsFile();
           if (file) {
             setConverting(true);
+            setProgressMsg('Auto-compressing pasted image to WebP...');
             try {
-              const dataUrl = await readFileAsDataURL(file);
+              const { dataUrl, originalSize, compressedSize } = await compressImageFile(file);
               onImagesChange([...images, dataUrl]);
-              showStatus('success', 'Pasted image from clipboard successfully!');
+              const savedPct = originalSize > 0 ? Math.round((1 - compressedSize / originalSize) * 100) : 0;
+              showStatus('success', `Pasted & compressed (${formatBytes(originalSize)} → ${formatBytes(compressedSize)}${savedPct > 0 ? `, -${savedPct}%` : ''})`);
             } catch (err) {
-              showStatus('error', 'Failed to read pasted image.');
+              showStatus('error', 'Failed to compress pasted image.');
             } finally {
               setConverting(false);
+              setProgressMsg('');
             }
           }
           break;
@@ -140,16 +156,7 @@ export default function ProductImageUpload({ images = [], onImagesChange }) {
     showStatus('success', `Added ${urls.length} images from bulk URL list!`);
   };
 
-  // ── Helpers ──────────────────────────────────────────────────────────
-  const readFileAsDataURL = (file) =>
-    new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (e) => resolve(e.target.result);
-      reader.onerror = () => reject(new Error('FileReader error'));
-      reader.readAsDataURL(file);
-    });
-
-  // ── Upload multiple files at once ────────────────────────────────────
+  // ── Upload & auto-compress multiple files at once ────────────────────
   const handleFileUpload = async (e) => {
     const fileList = Array.from(e.target.files || []);
     if (fileList.length === 0) return;
@@ -159,33 +166,39 @@ export default function ProductImageUpload({ images = [], onImagesChange }) {
 
     const validDataUrls = [];
     let errorMsg = null;
+    let totalOrig = 0;
+    let totalComp = 0;
 
     for (let i = 0; i < fileList.length; i++) {
       const file = fileList[i];
-      setProgressMsg(`Processing image ${i + 1} of ${fileList.length}...`);
+      setProgressMsg(`Optimizing & compressing image ${i + 1} of ${fileList.length}...`);
 
       if (!file.type.startsWith('image/')) {
         errorMsg = 'Some non-image files were skipped.';
         continue;
       }
-      if (file.size > 4 * 1024 * 1024) {
-        errorMsg = 'Some files exceeded 4MB and were skipped.';
+      if (file.size > 25 * 1024 * 1024) {
+        errorMsg = 'Some files exceeded 25MB and were skipped.';
         continue;
       }
 
       try {
-        const dataUrl = await readFileAsDataURL(file);
+        const { dataUrl, originalSize, compressedSize } = await compressImageFile(file);
         validDataUrls.push(dataUrl);
+        totalOrig += originalSize;
+        totalComp += compressedSize;
       } catch (err) {
-        errorMsg = 'Failed to process some images.';
+        console.error('Compression error:', err);
+        errorMsg = 'Failed to process and compress some images.';
       }
     }
 
     if (validDataUrls.length > 0) {
       onImagesChange([...images, ...validDataUrls]);
+      const savedPct = totalOrig > 0 ? Math.round((1 - totalComp / totalOrig) * 100) : 0;
       showStatus(
         'success', 
-        `Added ${validDataUrls.length} image${validDataUrls.length > 1 ? 's' : ''} to product.`
+        `Added & optimized ${validDataUrls.length} image${validDataUrls.length > 1 ? 's' : ''}! (${formatBytes(totalOrig)} → ${formatBytes(totalComp)}${savedPct > 0 ? `, -${savedPct}% saved` : ''})`
       );
     } else if (errorMsg) {
       showStatus('error', errorMsg);
@@ -473,8 +486,17 @@ export default function ProductImageUpload({ images = [], onImagesChange }) {
                 Product Gallery
               </span>
               <span className="px-2.5 py-0.5 rounded-full bg-violet-500/20 border border-violet-500/30 text-violet-300 text-[10px] font-black">
-                {images.length} {images.length === 1 ? 'image' : 'images'} added
+                {images.length} {images.length === 1 ? 'image' : 'images'}
               </span>
+              {totalGallerySize > 0 && (
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                  totalGallerySize < 1.5 * 1024 * 1024 
+                    ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300' 
+                    : 'bg-amber-500/15 border-amber-500/30 text-amber-300'
+                }`}>
+                  {formatBytes(totalGallerySize)} {totalGallerySize < 1.5 * 1024 * 1024 ? '✓ Lightweight' : '⚠ High payload'}
+                </span>
+              )}
             </div>
 
             <div className="flex items-center gap-2">

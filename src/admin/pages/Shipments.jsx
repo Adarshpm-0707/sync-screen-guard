@@ -46,7 +46,7 @@ export default function Shipments() {
       }
 
       if (!Array.isArray(fetchedShipments) || fetchedShipments.length === 0) {
-        const { data: dbShipments } = await supabase.from('shipments').select('*');
+        const { data: dbShipments } = await supabase.from('shipments').select('id, order_id, tracking_number, courier, status, shipped_at, delivered_at, created_at');
         fetchedShipments = dbShipments || [];
       }
 
@@ -67,7 +67,7 @@ export default function Shipments() {
       }
 
       if (allOrders.length === 0) {
-        const { data: dbOrders } = await supabase.from('orders').select('*');
+        const { data: dbOrders } = await supabase.from('orders').select('id, customer_name, phone, address, city, state, pincode, status, total, created_at');
         allOrders = dbOrders || [];
         
         const localSaved = JSON.parse(localStorage.getItem('customer_orders') || '[]');

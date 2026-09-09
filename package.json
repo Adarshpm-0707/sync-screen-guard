@@ -12,7 +12,7 @@
     "preview": "vite preview",
     "start": "node server.js",
     "db:migrate": "node backend/auto-migrate.cjs",
-    "db:setup": "node setup-database.cjs"
+    "db:setup": "node scripts/database/setup-database.cjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",

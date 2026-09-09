@@ -17,7 +17,7 @@ import StockEditor from '../components/products/StockEditor';
 import ProductForm from '../components/products/ProductForm';
 import AdminModal from '../components/common/AdminModal';
 import { supabase } from '../../supabaseClient';
-import { fetchStoreProducts } from '../../utils/productStore';
+import { fetchStoreProducts, clearAllStoreProducts } from '../../utils/productStore';
 
 export default function Products() {
   const [loading, setLoading] = useState(true);
@@ -112,19 +112,26 @@ export default function Products() {
         const { data: dbData, error: dbErr } = await supabase
           .from('products')
           .insert(newObj)
-          .select()
+          .select('id, created_at')
           .single();
 
         if (dbErr) {
-          console.warn('Supabase insert warning, falling back to local store:', dbErr);
+          console.error('Supabase product insert error:', dbErr);
+          throw new Error(`Database error: ${dbErr.message || 'Failed to save product in Supabase'}`);
+        }
+
+        // Safely cache in local store if quota allows
+        try {
           const localAdded = JSON.parse(localStorage.getItem('local_added_products') || '[]');
-          const localItem = {
-            ...newObj,
-            id: `prod_${Date.now()}`,
-            created_at: new Date().toISOString()
+          const safeItem = {
+            ...(dbData || newObj),
+            id: dbData?.id || `prod_${Date.now()}`,
+            created_at: dbData?.created_at || new Date().toISOString()
           };
-          localAdded.unshift(localItem);
+          localAdded.unshift(safeItem);
           localStorage.setItem('local_added_products', JSON.stringify(localAdded));
+        } catch (storageErr) {
+          console.warn('LocalStorage save skipped (quota protection):', storageErr);
         }
       } else {
         const updatePayload = {
@@ -150,15 +157,20 @@ export default function Products() {
           .eq('id', editingProduct.id);
 
         if (dbErr) {
-          console.warn('Supabase update warning, syncing locally:', dbErr);
+          console.error('Supabase product update error:', dbErr);
+          throw new Error(`Database error: ${dbErr.message || 'Failed to update product in Supabase'}`);
         }
 
-        // Also update locally cached products if present
-        const localAdded = JSON.parse(localStorage.getItem('local_added_products') || '[]');
-        const idx = localAdded.findIndex(p => p.id === editingProduct.id);
-        if (idx >= 0) {
-          localAdded[idx] = { ...localAdded[idx], ...updatePayload };
-          localStorage.setItem('local_added_products', JSON.stringify(localAdded));
+        // Also safely update locally cached products if present
+        try {
+          const localAdded = JSON.parse(localStorage.getItem('local_added_products') || '[]');
+          const idx = localAdded.findIndex(p => p.id === editingProduct.id);
+          if (idx >= 0) {
+            localAdded[idx] = { ...localAdded[idx], ...updatePayload };
+            localStorage.setItem('local_added_products', JSON.stringify(localAdded));
+          }
+        } catch (storageErr) {
+          console.warn('LocalStorage cache update skipped:', storageErr);
         }
       }
 
@@ -200,6 +212,23 @@ export default function Products() {
       await supabase.from('products').delete().eq('id', productId);
     } catch (err) {
       console.error('Error deleting product:', err);
+    }
+  };
+
+  const handleDeleteAllProducts = async () => {
+    if (!window.confirm('⚠️ WARNING: Are you sure you want to permanently DELETE ALL PRODUCTS from both the database and admin storage? This action cannot be undone.')) {
+      return;
+    }
+    setLoading(true);
+    try {
+      await clearAllStoreProducts();
+      setProducts([]);
+      alert('All products have been completely deleted.');
+    } catch (e) {
+      console.error('Error clearing products:', e);
+      alert('Failed to delete all products: ' + e.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -279,6 +308,18 @@ export default function Products() {
             <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin text-indigo-400' : ''}`} />
             <span>Refresh</span>
           </button>
+
+          {products.length > 0 && (
+            <button
+              onClick={handleDeleteAllProducts}
+              disabled={loading}
+              className="flex items-center space-x-1.5 px-3.5 py-2.5 bg-rose-500/10 hover:bg-rose-600 border border-rose-500/30 hover:border-rose-500 text-xs font-bold text-rose-300 hover:text-white rounded-xl transition-all cursor-pointer active:scale-95 shadow-sm"
+              title="Permanently delete all products from database and admin storage"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              <span>Delete All Products</span>
+            </button>
+          )}
         </div>
       </div>
 

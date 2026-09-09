@@ -64,7 +64,7 @@ export default function useCustomers(initialFilters = {}) {
         try {
           const { data, error: dbErr } = await supabase
             .from('orders')
-            .select('*')
+            .select('id, user_id, customer_name, customer_email, phone, address, city, state, pincode, total, status, is_guest, created_at')
             .order('created_at', { ascending: false });
           if (!dbErr && data) {
             dbOrders = data;

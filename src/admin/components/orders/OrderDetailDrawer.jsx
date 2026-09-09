@@ -68,14 +68,14 @@ export default function OrderDetailDrawer({ isOpen, onClose, orderId, initialOrd
       try {
         const { data: dbOrder } = await supabase
           .from('orders')
-          .select('*')
+          .select('id, user_id, customer_name, customer_email, phone, address, city, state, pincode, status, tracking_number, courier, payment_type, payment_status, razorpay_payment_id, razorpay_order_id, total, cod_fee, is_guest, notes, created_at')
           .eq('id', orderId)
           .maybeSingle();
 
         if (dbOrder) {
           const { data: dbItems } = await supabase
             .from('order_items')
-            .select('*')
+            .select('id, order_id, product_id, product_name, quantity, price')
             .eq('order_id', orderId);
 
           setOrder({

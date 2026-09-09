@@ -5,12 +5,15 @@ import {
   Sparkles, Check, ArrowRight, Lock, ChevronDown, ChevronUp 
 } from 'lucide-react';
 import syncLogo from '../../assets/sync-logo.png';
-import { fetchAdminCategories } from '../../utils/categoryStore';
+import { fetchAdminCategories, getInstantCategories } from '../../utils/categoryStore';
 
 export default function Footer() {
   const [email, setEmail] = useState('');
   const [subscribed, setSubscribed] = useState(false);
-  const [categories, setCategories] = useState([]);
+  const [categories, setCategories] = useState(() => {
+    const instant = getInstantCategories();
+    return Array.isArray(instant) && instant.length > 0 ? instant.slice(0, 4) : [];
+  });
   
   // Mobile accordion collapse states
   const [mobileAccordions, setMobileAccordions] = useState({

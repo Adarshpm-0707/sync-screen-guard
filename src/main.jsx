@@ -3,9 +3,27 @@ import { createRoot } from 'react-dom/client'
 import './styles/globals.css'
 import App from './App.jsx'
 import { initClientSecurity } from './utils/security.js'
+import { cleanBloatedStorage } from './utils/storageCleaner.js'
 
 // Initialize client-side security protections
 initClientSecurity();
+
+// ── Auto-healing: Purge any bloated caches or legacy offline stores (>250KB) ──
+cleanBloatedStorage();
+
+// ── Full Product Cleanup: Purge any admin-added products and product caches from localStorage ──
+(function purgeProductsFullCleanup() {
+  const PURGE_KEY = 'sync_products_full_cleanup_v1';
+  if (!localStorage.getItem(PURGE_KEY)) {
+    try {
+      localStorage.removeItem('local_added_products');
+      localStorage.removeItem('sync_store_products_cache');
+      localStorage.removeItem('sync_store_products_cache_ts');
+      localStorage.removeItem('deleted_product_ids');
+    } catch (e) {}
+    localStorage.setItem(PURGE_KEY, '1');
+  }
+})();
 
 // ── One-time migration: remove old screen guard default categories from localStorage ──
 // This runs once to clean up stale seeded data from the previous screen guard brand.

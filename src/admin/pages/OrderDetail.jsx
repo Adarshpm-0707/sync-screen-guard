@@ -60,9 +60,9 @@ export default function OrderDetail() {
       if (fetched && fetched.id && !isOrderDeleted(fetched.id)) {
         setOrder(fetched);
       } else {
-        const { data: dbOrder } = await supabase.from('orders').select('*').eq('id', id).maybeSingle();
+        const { data: dbOrder } = await supabase.from('orders').select('id, user_id, customer_name, customer_email, phone, address, city, state, pincode, status, tracking_number, courier, payment_type, payment_status, razorpay_payment_id, razorpay_order_id, total, cod_fee, is_guest, notes, created_at').eq('id', id).maybeSingle();
         if (dbOrder && !isOrderDeleted(dbOrder.id)) {
-          const { data: dbItems } = await supabase.from('order_items').select('*').eq('order_id', id);
+          const { data: dbItems } = await supabase.from('order_items').select('id, order_id, product_id, product_name, quantity, price').eq('order_id', id);
           setOrder({
             ...dbOrder,
             items: dbItems || [{ id: '1', product_name: 'Sync Screenguard', quantity: 1, price: dbOrder.total }]

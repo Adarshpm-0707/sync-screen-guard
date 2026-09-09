@@ -97,7 +97,7 @@ export default function Orders() {
         setOrders(fetchedOrders);
       } else {
         // Direct Supabase query
-        let query = supabase.from('orders').select('*', { count: 'exact' });
+        let query = supabase.from('orders').select('id, user_id, customer_name, customer_email, phone, address, city, state, pincode, status, payment_type, payment_status, total, cod_fee, is_guest, tracking_number, courier, created_at', { count: 'exact' });
         if (statusFilter !== 'all') query = query.eq('status', statusFilter);
         if (paymentFilter !== 'all') query = query.eq('payment_type', paymentFilter);
         if (customerTypeFilter !== 'all') {

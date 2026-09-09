@@ -82,7 +82,7 @@ export default function OrderTracking() {
 
       // 1. Try Supabase first — fetch orders matching strictly this user or email
       try {
-        let query = supabase.from('orders').select('*, order_items(*)');
+        let query = supabase.from('orders').select('id, user_id, customer_name, customer_email, phone, address, city, state, pincode, status, tracking_number, courier, payment_type, payment_status, total, cod_fee, created_at, order_items(id, order_id, product_id, product_name, quantity, price)');
         
         if (userId && !userId.startsWith('guest-') && userEmail) {
           query = query.or(`user_id.eq.${userId},customer_email.ilike.${userEmail}`);
@@ -190,7 +190,7 @@ export default function OrderTracking() {
           try {
             const { data, error: sbErr } = await supabase
               .from('orders')
-              .select('*, order_items(*)')
+              .select('id, user_id, customer_name, customer_email, phone, address, city, state, pincode, status, tracking_number, courier, payment_type, payment_status, total, cod_fee, created_at, order_items(id, order_id, product_id, product_name, quantity, price)')
               .ilike('customer_email', searchEmail)
               .order('created_at', { ascending: false });
 
@@ -238,7 +238,7 @@ export default function OrderTracking() {
             try {
               const { data, error: sbErr } = await supabase
                 .from('orders')
-                .select('*, order_items(*)')
+                .select('id, user_id, customer_name, customer_email, phone, address, city, state, pincode, status, tracking_number, courier, payment_type, payment_status, total, cod_fee, created_at, order_items(id, order_id, product_id, product_name, quantity, price)')
                 .eq('id', queryStr)
                 .maybeSingle();
 

@@ -69,7 +69,7 @@ export default function Dashboard() {
     } else {
       // Direct Supabase + local calculation fallback
       try {
-        const { data: dbOrders } = await supabase.from('orders').select('*').order('created_at', { ascending: false });
+        const { data: dbOrders } = await supabase.from('orders').select('id, status, payment_type, total, created_at').order('created_at', { ascending: false });
         let allOrders = dbOrders || [];
 
         const localSaved = JSON.parse(localStorage.getItem('customer_orders') || '[]');

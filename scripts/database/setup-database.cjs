@@ -15,7 +15,7 @@ const path = require('path');
 
 // Load .env manually (no external deps needed)
 function loadEnv() {
-  const envPath = path.join(__dirname, '.env');
+  const envPath = [path.join(process.cwd(), '.env'), path.join(__dirname, '../../.env'), path.join(__dirname, '.env')].find(p => fs.existsSync(p));
   if (!fs.existsSync(envPath)) return;
   const lines = fs.readFileSync(envPath, 'utf8').split('\n');
   for (const line of lines) {
@@ -269,7 +269,7 @@ const SEED_PRODUCTS = [];
 // ─── Update .env with correct service key ────────────────────────────────────
 
 function updateEnvServiceKey(key) {
-  const envPath = path.join(__dirname, '.env');
+  const envPath = [path.join(process.cwd(), '.env'), path.join(__dirname, '../../.env'), path.join(__dirname, '.env')].find(p => fs.existsSync(p));
   let content = fs.readFileSync(envPath, 'utf8');
   if (content.includes('SUPABASE_SERVICE_ROLE_KEY=')) {
     content = content.replace(/SUPABASE_SERVICE_ROLE_KEY=.*/g, `SUPABASE_SERVICE_ROLE_KEY=${key}`);

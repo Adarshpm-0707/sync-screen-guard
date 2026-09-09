@@ -1,10 +1,18 @@
-import React from 'react';
-import { Menu, User, LogOut, Shield, Sparkles } from 'lucide-react';
+import React, { useState } from 'react';
+import { Menu, User, LogOut, Shield, Sparkles, Trash2, CheckCircle2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import useAdminAuth from '../../hooks/useAdminAuth';
+import { cleanBloatedStorage, getStorageUsage } from '../../../utils/storageCleaner.js';
 
 export default function AdminHeader({ onMenuToggle }) {
   const { adminUser, logout } = useAdminAuth();
+  const [cleaningStatus, setCleaningStatus] = useState(null);
+
+  const handleCleanStorage = () => {
+    const res = cleanBloatedStorage({ forceAllCaches: true });
+    setCleaningStatus(`Cleaned! Freed ${res.formattedFreed}`);
+    setTimeout(() => setCleaningStatus(null), 3500);
+  };
 
   return (
     <header className="h-16 md:h-18 border-b border-slate-800/80 bg-[#0E1322]/80 backdrop-blur-xl px-4 sm:px-6 lg:px-8 flex items-center justify-between z-30 shrink-0 sticky top-0">
@@ -33,8 +41,27 @@ export default function AdminHeader({ onMenuToggle }) {
         </div>
       </div>
 
-      {/* Right: User Actions */}
-      <div className="flex items-center space-x-2.5 sm:space-x-3">
+      {/* Right: User Actions & Clean Cache Button */}
+      <div className="flex items-center space-x-2 sm:space-x-3">
+        {/* Quick Purge Storage Button */}
+        <button
+          onClick={handleCleanStorage}
+          className="relative flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-800 bg-slate-900/80 hover:border-violet-500/40 hover:bg-violet-500/10 text-slate-400 hover:text-violet-300 transition-all text-xs font-semibold cursor-pointer"
+          title="Purge bloated local storage & cached products"
+        >
+          {cleaningStatus ? (
+            <>
+              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 animate-pulse" />
+              <span className="text-emerald-400 text-[11px]">{cleaningStatus}</span>
+            </>
+          ) : (
+            <>
+              <Trash2 className="h-3.5 w-3.5 text-slate-400 group-hover:text-violet-300" />
+              <span className="hidden sm:inline text-[11px]">Clean Storage</span>
+            </>
+          )}
+        </button>
+
         {/* User Card Link to Settings */}
         <Link 
           to="/admin/settings"

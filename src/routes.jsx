@@ -1,8 +1,6 @@
-import React, { useEffect } from 'react';
-import { Routes, Route, Outlet, useLocation } from 'react-router-dom';
-import Navbar from './components/layout/Navbar';
-import Footer from './components/layout/Footer';
-import ScrollToTop from './components/common/ScrollToTop';
+import React from 'react';
+import { Routes, Route } from 'react-router-dom';
+import CustomerLayout from './components/layout/CustomerLayout';
 
 // Page Imports
 import Home from './pages/Home';
@@ -38,19 +36,6 @@ import DeviceModels from './admin/pages/DeviceModels';
 import Settings from './admin/pages/Settings';
 import Admins from './admin/pages/Admins';
 import AdminNotFound from './admin/pages/AdminNotFound';
-
-function CustomerLayout() {
-  return (
-    <div className="flex min-h-screen flex-col bg-[#FAFAFA] text-zinc-900 font-sans selection:bg-zinc-900 selection:text-white">
-      <ScrollToTop />
-      <Navbar />
-      <main className="flex-1 w-full">
-        <Outlet />
-      </main>
-      <Footer />
-    </div>
-  );
-}
 
 export default function AppRoutes() {
   return (

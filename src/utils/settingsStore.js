@@ -6,56 +6,82 @@ const DEFAULT_SETTINGS = {
   razorpay_key_id: '',
 };
 
-export async function fetchStoreSettings() {
-  let settings = { ...DEFAULT_SETTINGS };
+let _memorySettingsCache = null;
+let _settingsCacheTimestamp = 0;
+let _inFlightSettingsPromise = null;
+const SETTINGS_CACHE_TTL_MS = 5 * 60 * 1000;
 
-  // 1. Try local storage cache
-  try {
-    const cached = localStorage.getItem('sync_store_settings');
-    if (cached) {
-      const parsed = JSON.parse(cached);
-      settings = { ...settings, ...parsed };
-    }
-  } catch (e) {
-    console.warn('Local settings parse error:', e);
+export function fetchStoreSettings({ forceRefresh = false } = {}) {
+  const now = Date.now();
+  if (
+    !forceRefresh &&
+    _memorySettingsCache &&
+    now - _settingsCacheTimestamp < SETTINGS_CACHE_TTL_MS
+  ) {
+    return Promise.resolve(_memorySettingsCache);
   }
 
-  // 2. Try Supabase store_settings table
-  try {
-    const { data: dbData, error } = await supabase
-      .from('store_settings')
-      .select('*')
-      .limit(1)
-      .maybeSingle();
-
-    if (!error && dbData) {
-      settings = {
-        ...settings,
-        cod_fee: dbData.cod_fee !== undefined ? Number(dbData.cod_fee) : settings.cod_fee,
-        cod_enabled: dbData.cod_enabled !== undefined ? Boolean(dbData.cod_enabled) : settings.cod_enabled,
-        razorpay_key_id: dbData.razorpay_key_id || settings.razorpay_key_id,
-      };
-      localStorage.setItem('sync_store_settings', JSON.stringify(settings));
-    }
-  } catch (err) {
-    // Supabase table may not exist or offline, fallback safely
+  if (!forceRefresh && _inFlightSettingsPromise) {
+    return _inFlightSettingsPromise;
   }
 
-  // 3. Try Backend API endpoint if online
-  try {
-    const res = await fetch('http://localhost:5000/api/settings');
-    if (res.ok) {
-      const apiData = await res.json();
-      if (apiData) {
-        settings = { ...settings, ...apiData };
+  _inFlightSettingsPromise = (async () => {
+    let settings = { ...DEFAULT_SETTINGS };
+
+    // 1. Try local storage cache
+    try {
+      const cached = localStorage.getItem('sync_store_settings');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        settings = { ...settings, ...parsed };
+      }
+    } catch (e) {
+      console.warn('Local settings parse error:', e);
+    }
+
+    // 2. Try Supabase store_settings table (select only needed columns)
+    try {
+      const { data: dbData, error } = await supabase
+        .from('store_settings')
+        .select('cod_fee, cod_enabled, razorpay_key_id')
+        .limit(1)
+        .maybeSingle();
+
+      if (!error && dbData) {
+        settings = {
+          ...settings,
+          cod_fee: dbData.cod_fee !== undefined ? Number(dbData.cod_fee) : settings.cod_fee,
+          cod_enabled: dbData.cod_enabled !== undefined ? Boolean(dbData.cod_enabled) : settings.cod_enabled,
+          razorpay_key_id: dbData.razorpay_key_id || settings.razorpay_key_id,
+        };
         localStorage.setItem('sync_store_settings', JSON.stringify(settings));
       }
+    } catch (err) {
+      // Supabase table may not exist or offline, fallback safely
     }
-  } catch (apiErr) {
-    // Backend API optional
-  }
 
-  return settings;
+    // 3. Try Backend API endpoint if online
+    try {
+      const res = await fetch('http://localhost:5000/api/settings');
+      if (res.ok) {
+        const apiData = await res.json();
+        if (apiData) {
+          settings = { ...settings, ...apiData };
+          localStorage.setItem('sync_store_settings', JSON.stringify(settings));
+        }
+      }
+    } catch (apiErr) {
+      // Backend API optional
+    }
+
+    _memorySettingsCache = settings;
+    _settingsCacheTimestamp = Date.now();
+    return settings;
+  })().finally(() => {
+    _inFlightSettingsPromise = null;
+  });
+
+  return _inFlightSettingsPromise;
 }
 
 export async function saveStoreSettings(newSettings) {
@@ -67,7 +93,9 @@ export async function saveStoreSettings(newSettings) {
     updated_at: new Date().toISOString(),
   };
 
-  // 1. Save to local storage
+  // 1. Save to local storage & in-memory cache
+  _memorySettingsCache = merged;
+  _settingsCacheTimestamp = Date.now();
   try {
     localStorage.setItem('sync_store_settings', JSON.stringify(merged));
   } catch (e) {}

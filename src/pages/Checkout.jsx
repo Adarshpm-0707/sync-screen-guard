@@ -216,7 +216,7 @@ export default function Checkout() {
               total: orderTotal,
               cod_fee: codFee
             })
-            .select()
+            .select('id')
             .single();
 
           if (!dbErr && dbOrder?.id) {

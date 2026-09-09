@@ -67,11 +67,13 @@ export default function Inventory() {
     try {
       let result = await supabase
         .from('products')
-        .select('*')
+        .select('id, name, price, original_price, purchasing_price, stock, category, images, created_at')
         .order('created_at', { ascending: false });
 
       if (result.error) {
-        result = await supabase.from('products').select('*');
+        result = await supabase
+          .from('products')
+          .select('id, name, price, original_price, purchasing_price, stock, category, images, created_at');
       }
 
       if (result.error) throw result.error;

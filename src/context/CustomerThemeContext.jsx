@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
+import { getInstantProducts } from '../utils/productStore';
 
 const CustomerThemeContext = createContext();
 
@@ -69,8 +70,20 @@ export function CustomerThemeProvider({ children }) {
   useEffect(() => {
     async function initTheme() {
       try {
+        const cached = localStorage.getItem('sync_customer_theme_color');
+        if (cached) {
+          updateThemeByColor(cached);
+          return;
+        }
+        const instantProds = getInstantProducts();
+        if (instantProds && instantProds[0]?.theme_color) {
+          localStorage.setItem('sync_customer_theme_color', instantProds[0].theme_color);
+          updateThemeByColor(instantProds[0].theme_color);
+          return;
+        }
         const { data } = await supabase.from('products').select('theme_color').limit(1).maybeSingle();
         if (data?.theme_color) {
+          localStorage.setItem('sync_customer_theme_color', data.theme_color);
           updateThemeByColor(data.theme_color);
         }
       } catch (e) {

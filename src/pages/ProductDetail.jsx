@@ -14,6 +14,7 @@ import useCustomerAuth from '../hooks/useCustomerAuth';
 import useStoreSettings from '../hooks/useStoreSettings';
 import { 
   fetchStoreProducts, 
+  fetchProductById,
   getInstantProducts,
   DEFAULT_SPECIFICATIONS,
   DEFAULT_INSTALLATION_GUIDE,
@@ -165,6 +166,17 @@ export default function ProductDetail({ product: propProduct }) {
     }
   }, [location.state]);
 
+  // Fetch full specifications and guides for this product on-demand
+  useEffect(() => {
+    if (product?.id) {
+      fetchProductById(product.id).then(fullProd => {
+        if (fullProd) {
+          setProduct(prev => ({ ...prev, ...fullProd }));
+        }
+      });
+    }
+  }, [product?.id]);
+
   // Sync reviews stats when product changes or reviews update
   useEffect(() => {
     if (product?.id) {
@@ -186,6 +198,19 @@ export default function ProductDetail({ product: propProduct }) {
       window.removeEventListener('reviews_updated', handleReviewsUpdated);
     };
   }, [product?.id]);
+
+  // Filter out current product and any deleted products for related items using smart category & relevance match
+  const relatedProducts = useMemo(() => {
+    if (!product) return [];
+    const deletedIds = new Set(JSON.parse(localStorage.getItem('deleted_product_ids') || '[]'));
+    const candidates = allProducts.filter(p => p && p.id && p.id !== product?.id && !deletedIds.has(p.id));
+    
+    // Prioritize same category items
+    const matchingCategory = candidates.filter(p => isCategoryMatch(p, product?.category));
+    const others = candidates.filter(p => !isCategoryMatch(p, product?.category));
+    
+    return [...matchingCategory, ...others].slice(0, 4);
+  }, [allProducts, product]);
 
   if (!product) {
     return (
@@ -252,18 +277,6 @@ export default function ProductDetail({ product: propProduct }) {
   const discountPercent = originalPrice > price 
     ? Math.round(((originalPrice - price) / originalPrice) * 100) 
     : 0;
-
-  // Filter out current product and any deleted products for related items using smart category & relevance match
-  const relatedProducts = useMemo(() => {
-    const deletedIds = new Set(JSON.parse(localStorage.getItem('deleted_product_ids') || '[]'));
-    const candidates = allProducts.filter(p => p && p.id && p.id !== product?.id && !deletedIds.has(p.id));
-    
-    // Prioritize same category items
-    const matchingCategory = candidates.filter(p => isCategoryMatch(p, product?.category));
-    const others = candidates.filter(p => !isCategoryMatch(p, product?.category));
-    
-    return [...matchingCategory, ...others].slice(0, 4);
-  }, [allProducts, product]);
 
   return (
     <div className="min-h-screen bg-[#FAFAFA] text-zinc-900 pb-24 font-sans w-full">

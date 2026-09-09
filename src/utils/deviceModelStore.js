@@ -60,15 +60,28 @@ export function groupModelsByBrand(modelsList = []) {
   return map;
 }
 
+// In-memory cache for instant 0ms retrieval
+let _memoryDeviceModelsCache = null;
+let _deviceModelsCacheTimestamp = 0;
+let _inFlightDeviceModelsPromise = null;
+const DEVICE_MODELS_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+
 /**
  * Synchronous instant retrieval
  */
 export function getInstantDeviceModels() {
+  if (_memoryDeviceModelsCache && Array.isArray(_memoryDeviceModelsCache) && _memoryDeviceModelsCache.length > 0) {
+    return _memoryDeviceModelsCache;
+  }
+
   try {
     const cached = localStorage.getItem('sync_device_models_cache');
     if (cached) {
       const parsed = JSON.parse(cached);
       if (Array.isArray(parsed) && parsed.length > 0) {
+        _memoryDeviceModelsCache = parsed;
+        const ts = localStorage.getItem('sync_device_models_cache_ts');
+        if (ts) _deviceModelsCacheTimestamp = Number(ts) || 0;
         return parsed;
       }
     }
@@ -85,62 +98,96 @@ export function getInstantGroupedModels() {
 }
 
 /**
- * Fetch device models from Supabase with localStorage caching
+ * Fetch device models from Supabase with in-memory TTL caching & request deduplication.
+ * Selects only required columns (id, brand, model_name) to minimize Data API egress.
  */
-export async function fetchDeviceModels() {
-  let dbModels = [];
-  try {
-    const { data, error } = await supabase
-      .from('device_models')
-      .select('*')
-      .order('brand', { ascending: true });
-
-    if (!error && Array.isArray(data)) {
-      dbModels = data;
-    }
-  } catch (err) {
-    console.warn('Supabase device models fetch error:', err);
+export function fetchDeviceModels({ forceRefresh = false } = {}) {
+  // Hydrate memory cache from localStorage if needed
+  if (!_memoryDeviceModelsCache) {
+    getInstantDeviceModels();
   }
 
-  // If database has models configured, use them
-  if (dbModels.length > 0) {
+  const now = Date.now();
+  if (
+    !forceRefresh &&
+    _memoryDeviceModelsCache &&
+    Array.isArray(_memoryDeviceModelsCache) &&
+    _memoryDeviceModelsCache.length > 0 &&
+    now - _deviceModelsCacheTimestamp < DEVICE_MODELS_CACHE_TTL_MS
+  ) {
+    return Promise.resolve(_memoryDeviceModelsCache);
+  }
+
+  if (!forceRefresh && _inFlightDeviceModelsPromise) {
+    return _inFlightDeviceModelsPromise;
+  }
+
+  _inFlightDeviceModelsPromise = (async () => {
+    let dbModels = [];
     try {
-      localStorage.setItem('sync_device_models_cache', JSON.stringify(dbModels));
-    } catch (e) {}
-    return dbModels;
-  }
+      const { data, error } = await supabase
+        .from('device_models')
+        .select('id, brand, model_name')
+        .order('brand', { ascending: true });
 
-  // Check if admin has customized models in localStorage
-  try {
-    const local = localStorage.getItem('sync_device_models_cache');
-    if (local) {
-      const parsed = JSON.parse(local);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
+      if (!error && Array.isArray(data)) {
+        dbModels = data;
       }
+    } catch (err) {
+      console.warn('Supabase device models fetch error:', err);
     }
-  } catch (e) {}
 
-  // Initial seed to database & localStorage
-  try {
-    localStorage.setItem('sync_device_models_cache', JSON.stringify(DEFAULT_INITIAL_MODELS));
-    // Seed initial to DB in background
-    supabase.from('device_models').insert(
-      DEFAULT_INITIAL_MODELS.map(m => ({
-        brand: m.brand,
-        model_name: m.model_name
-      }))
-    ).then(() => {}).catch(() => {});
-  } catch (e) {}
+    // If database has models configured, use them
+    if (dbModels.length > 0) {
+      _memoryDeviceModelsCache = dbModels;
+      _deviceModelsCacheTimestamp = Date.now();
+      try {
+        localStorage.setItem('sync_device_models_cache', JSON.stringify(dbModels));
+        localStorage.setItem('sync_device_models_cache_ts', String(_deviceModelsCacheTimestamp));
+      } catch (e) {}
+      return dbModels;
+    }
 
-  return DEFAULT_INITIAL_MODELS;
+    // Check if admin has customized models in localStorage
+    try {
+      const local = localStorage.getItem('sync_device_models_cache');
+      if (local) {
+        const parsed = JSON.parse(local);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          _memoryDeviceModelsCache = parsed;
+          return parsed;
+        }
+      }
+    } catch (e) {}
+
+    // Initial seed to database & localStorage
+    try {
+      _memoryDeviceModelsCache = DEFAULT_INITIAL_MODELS;
+      _deviceModelsCacheTimestamp = Date.now();
+      localStorage.setItem('sync_device_models_cache', JSON.stringify(DEFAULT_INITIAL_MODELS));
+      localStorage.setItem('sync_device_models_cache_ts', String(_deviceModelsCacheTimestamp));
+      // Seed initial to DB in background
+      supabase.from('device_models').insert(
+        DEFAULT_INITIAL_MODELS.map(m => ({
+          brand: m.brand,
+          model_name: m.model_name
+        }))
+      ).then(() => {}).catch(() => {});
+    } catch (e) {}
+
+    return DEFAULT_INITIAL_MODELS;
+  })().finally(() => {
+    _inFlightDeviceModelsPromise = null;
+  });
+
+  return _inFlightDeviceModelsPromise;
 }
 
 /**
  * Fetch grouped models by brand
  */
-export async function fetchGroupedModels() {
-  const list = await fetchDeviceModels();
+export async function fetchGroupedModels({ forceRefresh = false } = {}) {
+  const list = await fetchDeviceModels({ forceRefresh });
   return groupModelsByBrand(list);
 }
 
@@ -170,7 +217,7 @@ export async function addDeviceModel(brand, modelName) {
         brand: cleanBrand,
         model_name: cleanModel
       })
-      .select()
+      .select('id')
       .single();
 
     if (!error && data) {
@@ -180,7 +227,7 @@ export async function addDeviceModel(brand, modelName) {
     console.warn('Supabase device model insert warning:', err);
   }
 
-  // 2. Update localStorage cache
+  // 2. Update localStorage and memory cache
   try {
     const current = getInstantDeviceModels();
     const exists = current.some(
@@ -188,6 +235,8 @@ export async function addDeviceModel(brand, modelName) {
     );
     if (!exists) {
       current.push(newObj);
+      _memoryDeviceModelsCache = current;
+      _deviceModelsCacheTimestamp = Date.now();
       localStorage.setItem('sync_device_models_cache', JSON.stringify(current));
     }
   } catch (e) {}
@@ -215,7 +264,7 @@ export async function deleteDeviceModel(id, brand, modelName) {
     console.warn('Supabase device model delete warning:', err);
   }
 
-  // 2. Remove from local storage cache
+  // 2. Remove from local storage cache & memory cache
   try {
     const current = getInstantDeviceModels();
     const filtered = current.filter(m => {
@@ -223,6 +272,8 @@ export async function deleteDeviceModel(id, brand, modelName) {
       if (brand && modelName && m.brand === brand && m.model_name === modelName) return false;
       return true;
     });
+    _memoryDeviceModelsCache = filtered;
+    _deviceModelsCacheTimestamp = Date.now();
     localStorage.setItem('sync_device_models_cache', JSON.stringify(filtered));
   } catch (e) {}
 
@@ -242,10 +293,12 @@ export async function deleteBrand(brand) {
     console.warn('Supabase delete brand warning:', err);
   }
 
-  // 2. Remove from local storage
+  // 2. Remove from local storage & memory cache
   try {
     const current = getInstantDeviceModels();
     const filtered = current.filter(m => m.brand?.toLowerCase() !== brand.toLowerCase());
+    _memoryDeviceModelsCache = filtered;
+    _deviceModelsCacheTimestamp = Date.now();
     localStorage.setItem('sync_device_models_cache', JSON.stringify(filtered));
   } catch (e) {}
 

@@ -39,7 +39,7 @@ export default function Reviews() {
       // 2. Fetch all customer reviews from Supabase
       const { data, error } = await supabase
         .from('product_reviews')
-        .select('*')
+        .select('id, product_id, customer_name, rating, title, comment, is_verified_buyer, helpful_count, created_at')
         .order('created_at', { ascending: false });
 
       if (!error && Array.isArray(data)) {

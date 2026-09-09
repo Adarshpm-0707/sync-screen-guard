@@ -59,17 +59,23 @@ export default function Home() {
     loadCatalog();
     loadBrandsAndModels();
 
+    const handleStorage = (e) => {
+      if (!e.key || e.key === 'deleted_product_ids' || e.key === 'local_added_products') {
+        loadCatalog();
+      }
+      if (!e.key || e.key === 'sync_device_models_cache') {
+        loadBrandsAndModels();
+      }
+    };
+
     window.addEventListener('products_updated', loadCatalog);
     window.addEventListener('device_models_updated', loadBrandsAndModels);
-    window.addEventListener('storage', () => {
-      loadCatalog();
-      loadBrandsAndModels();
-    });
+    window.addEventListener('storage', handleStorage);
 
     return () => {
       window.removeEventListener('products_updated', loadCatalog);
       window.removeEventListener('device_models_updated', loadBrandsAndModels);
-      window.removeEventListener('storage', loadCatalog);
+      window.removeEventListener('storage', handleStorage);
     };
   }, []);
 
