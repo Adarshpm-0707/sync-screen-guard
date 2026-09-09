@@ -84,7 +84,7 @@ export default function ProductsPage() {
     return (categoriesList || []).filter(c => c && c.id);
   }, [categoriesList]);
 
-  // Category filter tabs with real live counts
+  // Category filter tabs with real live counts — only show categories that have products
   const filterTabs = useMemo(() => {
     const tabs = [
       { id: 'all', name: 'All Products', count: validProducts.length }
@@ -92,11 +92,13 @@ export default function ProductsPage() {
 
     activeCategories.forEach(c => {
       const count = validProducts.filter(p => isCategoryMatch(p, c.id, c.name)).length;
-      tabs.push({
-        id: c.id,
-        name: c.name,
-        count
-      });
+      if (count > 0) {
+        tabs.push({
+          id: c.id,
+          name: c.name,
+          count
+        });
+      }
     });
 
     return tabs;
@@ -173,10 +175,10 @@ export default function ProductsPage() {
 
     const sections = [];
 
-    // Include ALL categories — even empty ones — so newly added categories always appear
+    // ONLY include categories that actually have products added under them!
     activeCategories.forEach(cat => {
       const g = catMap[cat.id.toLowerCase()];
-      if (g) {
+      if (g && g.items.length > 0) {
         if (sortBy === 'price-low') {
           g.items.sort((a, b) => Number(a.price) - Number(b.price));
         } else if (sortBy === 'price-high') {

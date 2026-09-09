@@ -7,7 +7,7 @@ import {
   DEFAULT_INSTALLATION_GUIDE, 
   DEFAULT_BOX_CONTENTS 
 } from '../../../utils/productStore';
-import { Sparkles, DollarSign, Home, Tag, Image, Palette, Lock, Layers } from 'lucide-react';
+import { Sparkles, DollarSign, Home, Tag, Image, Palette, Lock, Layers, FileText } from 'lucide-react';
 
 const PRESET_COLORS = [
   { label: 'Sky Blue', hex: '#3b82f6' },
@@ -25,7 +25,7 @@ export default function ProductForm({ product, onSubmit, isSaving }) {
   const [categoriesList, setCategoriesList] = useState([]);
   const [formData, setFormData] = useState({
     name: '',
-    category: 'glass',
+    category: '',
     price: '',
     original_price: '',
     purchasing_price: '',
@@ -43,12 +43,16 @@ export default function ProductForm({ product, onSubmit, isSaving }) {
   useEffect(() => {
     async function loadCats() {
       const list = await fetchCategories();
-      setCategoriesList(list || []);
-      if (!product && list && list.length > 0) {
-        setFormData(prev => ({
-          ...prev,
-          category: prev.category === 'glass' ? list[0].id : prev.category
-        }));
+      const validList = list || [];
+      setCategoriesList(validList);
+      if (validList.length > 0) {
+        setFormData(prev => {
+          const isValid = prev.category && validList.some(c => c.id === prev.category);
+          return {
+            ...prev,
+            category: isValid ? prev.category : validList[0].id
+          };
+        });
       }
     }
     loadCats();
@@ -61,9 +65,17 @@ export default function ProductForm({ product, onSubmit, isSaving }) {
         if (c && c.startsWith('#')) return c;
         return nameToHex[c] || '#3b82f6';
       };
+
+      const matchedCat = categoriesList.find(c => 
+        c.id === product.category || 
+        c.name.toLowerCase() === (product.category || '').toLowerCase() ||
+        c.id.toLowerCase() === (product.category || '').toLowerCase()
+      );
+      const resolvedCat = matchedCat ? matchedCat.id : (product.category || categoriesList[0]?.id || '');
+
       setFormData({
         name: product.name || '',
-        category: product.category || (categoriesList[0]?.id || 'glass'),
+        category: resolvedCat,
         price: product.price || '',
         original_price: product.original_price || '',
         purchasing_price: product.purchasing_price || '',
@@ -105,7 +117,7 @@ export default function ProductForm({ product, onSubmit, isSaving }) {
     e.preventDefault();
     onSubmit({
       ...formData,
-      category: formData.category || 'glass',
+      category: formData.category || categoriesList[0]?.id || '',
       price: parseFloat(formData.price),
       original_price: formData.original_price ? parseFloat(formData.original_price) : null,
       purchasing_price: formData.purchasing_price ? parseFloat(formData.purchasing_price) : null,
@@ -162,6 +174,35 @@ export default function ProductForm({ product, onSubmit, isSaving }) {
                 </option>
               ))}
             </select>
+          </div>
+        </div>
+
+        {/* Dedicated Product Description Section */}
+        <div className="rounded-2xl border border-slate-800/90 bg-[#0E1322]/70 p-4 space-y-2.5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+            <div className="flex items-center space-x-2">
+              <FileText className="h-4 w-4 text-sky-400" />
+              <label className="text-[10px] font-extrabold uppercase tracking-wider text-white">
+                Product Description (Storefront Paragraph)
+              </label>
+            </div>
+            <span className="text-[9px] text-sky-300 font-bold uppercase tracking-wider bg-sky-500/10 border border-sky-500/20 px-2 py-0.5 rounded-full self-start sm:self-auto">
+              Home Page • Catalog • Product Detail
+            </span>
+          </div>
+
+          <textarea
+            name="description"
+            rows="4"
+            value={formData.description}
+            onChange={handleInputChange}
+            className="w-full rounded-xl border border-slate-800 bg-[#090D16]/90 p-3.5 text-white focus:border-sky-500 focus:outline-none transition-colors resize-y text-xs leading-relaxed"
+            placeholder="Enter the product description paragraph that will be displayed to customers on the Home page, Products catalog, and the Product Detail overview..."
+          />
+
+          <div className="flex items-center justify-between text-[10px] text-slate-500 pt-0.5">
+            <span>This paragraph directly describes the product across storefront cards and product pages.</span>
+            <span className="font-mono text-slate-400 font-bold">{formData.description?.length || 0} characters</span>
           </div>
         </div>
       </div>
@@ -329,15 +370,15 @@ export default function ProductForm({ product, onSubmit, isSaving }) {
             <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-300">
               1. Overview & Key Highlights (Product Description)
             </label>
-            <span className="text-[9px] text-slate-500 font-semibold">Summary & Accordion 1</span>
+            <span className="text-[9px] text-sky-400/80 font-semibold">Synced with Main Product Description above</span>
           </div>
           <textarea
             name="description"
             rows="3"
             value={formData.description}
             onChange={handleInputChange}
-            className="w-full rounded-xl border border-slate-800 bg-[#090D16]/90 p-3 text-white focus:border-emerald-500 focus:outline-none transition-colors resize-none text-xs leading-relaxed"
-            placeholder="e.g. Flagship 9H tempered glass featuring revolutionary auto-alignment box applicator. Dust-free, bubble-free 10-second installation..."
+            className="w-full rounded-xl border border-slate-800 bg-[#090D16]/90 p-3 text-white focus:border-emerald-500 focus:outline-none transition-colors resize-y text-xs leading-relaxed"
+            placeholder="Synced with Main Product Description above..."
           />
         </div>
 

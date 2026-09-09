@@ -82,12 +82,12 @@ export function fetchStoreProducts({ forceRefresh = false, limit = 50 } = {}) {
       deletedIds = new Set(JSON.parse(localStorage.getItem('deleted_product_ids') || '[]'));
     } catch (e) {}
 
-    // 1. Fetch only essential listing columns from Supabase products table (avoids heavy guides & descriptions)
+    // 1. Fetch listing columns from Supabase products table
     let dbProducts = [];
     try {
       const { data, error } = await supabase
         .from('products')
-        .select('id,name,price,original_price,images,category,is_best_seller,show_on_home,stock,created_at')
+        .select('id,name,price,original_price,purchasing_price,images,category,description,is_best_seller,show_on_home,stock,created_at')
         .order('created_at', { ascending: false })
         .limit(limit);
 
@@ -126,9 +126,9 @@ export function fetchStoreProducts({ forceRefresh = false, limit = 50 } = {}) {
           category: p.category || 'glass',
           price: Number(p.price) || 640,
           original_price: p.original_price ? Number(p.original_price) : Math.round((Number(p.price) || 640) * 1.8),
-          purchasing_price: p.purchasing_price ? Number(p.purchasing_price) : null,
+          purchasing_price: (p.purchasing_price !== null && p.purchasing_price !== undefined && p.purchasing_price !== '') ? Number(p.purchasing_price) : null,
           stock: typeof p.stock === 'number' ? p.stock : (Number(p.stock) || 0),
-          description: p.description || 'Premium quality Sync electronics and accessories — built for performance, durability, and your everyday digital lifestyle.',
+          description: (p.description !== null && p.description !== undefined) ? p.description : '',
           specifications: p.specifications || DEFAULT_SPECIFICATIONS,
           installation_guide: p.installation_guide || DEFAULT_INSTALLATION_GUIDE,
           box_contents: p.box_contents || DEFAULT_BOX_CONTENTS,
@@ -206,8 +206,9 @@ export async function fetchProductById(productId) {
         category: data.category || 'glass',
         price: Number(data.price) || 640,
         original_price: data.original_price ? Number(data.original_price) : Math.round((Number(data.price) || 640) * 1.8),
+        purchasing_price: (data.purchasing_price !== null && data.purchasing_price !== undefined && data.purchasing_price !== '') ? Number(data.purchasing_price) : null,
         stock: typeof data.stock === 'number' ? data.stock : (Number(data.stock) || 0),
-        description: data.description || 'Premium quality Sync electronics and accessories — built for performance, durability, and your everyday digital lifestyle.',
+        description: (data.description !== null && data.description !== undefined) ? data.description : '',
         specifications: data.specifications || DEFAULT_SPECIFICATIONS,
         installation_guide: data.installation_guide || DEFAULT_INSTALLATION_GUIDE,
         box_contents: data.box_contents || DEFAULT_BOX_CONTENTS,
@@ -252,4 +253,17 @@ export async function clearAllStoreProducts() {
 
   window.dispatchEvent(new Event('products_updated'));
   return { success: !dbError, error: dbError };
+}
+
+// Automatically invalidate in-memory and local cache on products_updated event
+if (typeof window !== 'undefined') {
+  window.addEventListener('products_updated', () => {
+    _memoryProductsCache = null;
+    _cacheTimestamp = 0;
+    _singleProductCache.clear();
+    try {
+      localStorage.removeItem('sync_store_products_cache');
+      localStorage.removeItem('sync_store_products_cache_ts');
+    } catch (e) {}
+  });
 }

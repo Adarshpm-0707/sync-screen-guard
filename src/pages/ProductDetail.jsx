@@ -362,10 +362,10 @@ export default function ProductDetail({ product: propProduct }) {
               {/* Product Description */}
               {product.description && (
                 <div className="pt-3.5 border-t border-zinc-200/70">
-                  <h3 className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-zinc-400 mb-1.5">
-                    Product Description
+                  <h3 className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-zinc-500 mb-1.5 flex items-center gap-1.5">
+                    <span>Product Overview & Description</span>
                   </h3>
-                  <p className="text-xs sm:text-sm text-zinc-600 leading-relaxed font-medium">
+                  <p className="text-xs sm:text-sm text-zinc-700 leading-relaxed font-normal whitespace-pre-line">
                     {product.description}
                   </p>
                 </div>

@@ -37,7 +37,7 @@ export default function Products() {
   const fetchProducts = async () => {
     setLoading(true);
     try {
-      const items = await fetchStoreProducts();
+      const items = await fetchStoreProducts({ forceRefresh: true });
       setProducts(items || []);
     } catch (err) {
       console.error('Error fetching products:', err);
@@ -96,7 +96,7 @@ export default function Products() {
           name: formData.name,
           price: Number(formData.price),
           original_price: formData.original_price ? Number(formData.original_price) : null,
-          purchasing_price: formData.purchasing_price ? Number(formData.purchasing_price) : null,
+          purchasing_price: (formData.purchasing_price !== null && formData.purchasing_price !== undefined && formData.purchasing_price !== '') ? Number(formData.purchasing_price) : null,
           description: formData.description || '',
           specifications: formData.specifications || '',
           installation_guide: formData.installation_guide || '',
@@ -104,7 +104,7 @@ export default function Products() {
           images: formData.images && formData.images.length > 0 ? formData.images : [],
           stock: Number(formData.stock),
           theme_color: formData.theme_color || '#3b82f6',
-          category: formData.category || 'glass',
+          category: formData.category || '',
           is_best_seller: Boolean(formData.is_best_seller),
           show_on_home: Boolean(formData.show_on_home),
         };
@@ -124,7 +124,8 @@ export default function Products() {
         try {
           const localAdded = JSON.parse(localStorage.getItem('local_added_products') || '[]');
           const safeItem = {
-            ...(dbData || newObj),
+            ...newObj,
+            ...(dbData || {}),
             id: dbData?.id || `prod_${Date.now()}`,
             created_at: dbData?.created_at || new Date().toISOString()
           };
@@ -136,10 +137,10 @@ export default function Products() {
       } else {
         const updatePayload = {
           name: formData.name,
-          category: formData.category || 'glass',
+          category: formData.category || '',
           price: Number(formData.price),
           original_price: formData.original_price ? Number(formData.original_price) : null,
-          purchasing_price: formData.purchasing_price ? Number(formData.purchasing_price) : null,
+          purchasing_price: (formData.purchasing_price !== null && formData.purchasing_price !== undefined && formData.purchasing_price !== '') ? Number(formData.purchasing_price) : null,
           description: formData.description || '',
           specifications: formData.specifications || '',
           installation_guide: formData.installation_guide || '',
@@ -173,6 +174,12 @@ export default function Products() {
           console.warn('LocalStorage cache update skipped:', storageErr);
         }
       }
+
+      // Bust cache so storefront updates immediately
+      try {
+        localStorage.removeItem('sync_store_products_cache');
+        localStorage.removeItem('sync_store_products_cache_ts');
+      } catch (e) {}
 
       window.dispatchEvent(new Event('products_updated'));
       setModalOpen(false);
@@ -279,7 +286,7 @@ export default function Products() {
             onClick={() => {
               setEditingProduct({ 
                 name: '', 
-                category: 'glass', 
+                category: '', 
                 price: '', 
                 original_price: '', 
                 purchasing_price: '', 
@@ -397,14 +404,20 @@ export default function Products() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 text-xs border-y border-slate-800/80 py-2.5">
+                <div className="grid grid-cols-3 gap-2 text-xs border-y border-slate-800/80 py-2.5">
                   <div>
                     <span className="text-slate-500 text-[10px] uppercase font-bold block">Selling Price</span>
-                    <span className="font-black text-white text-sm">₹{salePrice.toLocaleString()}</span>
+                    <span className="font-black text-white text-xs sm:text-sm">₹{salePrice.toLocaleString()}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 text-[10px] uppercase font-bold block">Cost Price 🔒</span>
+                    <span className="font-black text-violet-300 text-xs sm:text-sm">
+                      {costPrice > 0 ? `₹${costPrice.toLocaleString()}` : '— not set'}
+                    </span>
                   </div>
                   <div>
                     <span className="text-slate-500 text-[10px] uppercase font-bold block">Stock Available</span>
-                    <span className="font-black text-slate-200 text-sm">{product.stock} units</span>
+                    <span className="font-black text-slate-200 text-xs sm:text-sm">{product.stock} units</span>
                   </div>
                 </div>
 

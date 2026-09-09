@@ -71,9 +71,9 @@ const ProductCard = memo(function ProductCard({ product, onAddToCart, isAdded })
           <h3 className="text-xs sm:text-sm font-bold text-zinc-900 tracking-tight leading-snug line-clamp-2 group-hover:text-zinc-600 transition-colors">
             {product.name}
           </h3>
-          {product.description && (
+          {product.description?.trim() && (
             <p className="text-[11px] sm:text-xs text-zinc-500 font-normal leading-relaxed line-clamp-2">
-              {product.description}
+              {product.description.trim()}
             </p>
           )}
         </div>

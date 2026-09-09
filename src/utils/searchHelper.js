@@ -316,34 +316,31 @@ export function isCategoryMatch(product, categoryId, categoryName = '') {
   const cId = categoryId.toLowerCase().trim();
   const cName = categoryName.toLowerCase().trim();
 
-  // 1. Direct equality with id or name
-  if (pCat === cId || pCat === cName) return true;
+  // 1. If product has an explicit category assigned, match strictly by category identifier & slug
+  if (pCat) {
+    if (pCat === cId || pCat === cName) return true;
 
-  // 2. Normalized slug check (remove dashes, underscores, spaces)
-  const normPCat = pCat.replace(/[\s\-_]+/g, '');
-  const normCId = cId.replace(/[\s\-_]+/g, '');
-  const normCName = cName.replace(/[\s\-_]+/g, '');
+    const normPCat = pCat.replace(/[\s\-_]+/g, '');
+    const normCId = cId.replace(/[\s\-_]+/g, '');
+    const normCName = cName.replace(/[\s\-_]+/g, '');
 
-  if (normPCat === normCId || (normCName && normPCat === normCName)) return true;
+    if (normPCat === normCId || (normCName && normPCat === normCName)) return true;
+    if (cId.includes(pCat) || (pCat.length > 2 && pCat.includes(cId))) return true;
+    if (normCId.includes(normPCat) || (normPCat.length > 2 && normPCat.includes(normCId))) return true;
+    if (normCName && (normCName.includes(normPCat) || normPCat.includes(normCName))) return true;
 
-  // 3. Substring / slug containment check
-  if (cId.includes(pCat) || (pCat.length > 2 && pCat.includes(cId))) return true;
-  if (normCId.includes(normPCat) || (normPCat.length > 2 && normPCat.includes(normCId))) return true;
-  if (normCName && (normCName.includes(normPCat) || normPCat.includes(normCName))) return true;
+    return false;
+  }
 
-  // 4. Content / description keyword match
+  // 2. Fallback: If product has NO category assigned at all, match against product name keywords
   const pName = (product.name || '').toLowerCase();
-  const pDesc = (product.description || '').toLowerCase();
-  const fullText = `${pName} ${pDesc} ${pCat}`;
-
   const catKeywords = `${cId} ${cName}`
     .replace(/[\s\-_]+/g, ' ')
     .split(/\s+/)
     .filter(w => w.length >= 3 && !['screen', 'guard', 'guards', 'protector', 'protectors', 'film', 'tempered'].includes(w));
 
-  if (catKeywords.length > 0) {
-    const hasMatch = catKeywords.some(kw => fullText.includes(kw));
-    if (hasMatch) return true;
+  if (catKeywords.length > 0 && catKeywords.some(kw => pName.includes(kw))) {
+    return true;
   }
 
   return false;
